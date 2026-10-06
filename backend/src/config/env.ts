@@ -24,8 +24,8 @@ const envSchema = z.object({
   LOG_REQUESTS: z.coerce.boolean().default(true),
 }).superRefine((value, ctx) => {
   if (value.NODE_ENV === "production") {
-    if (value.JWT_SECRET.length < 64 || value.JWT_SECRET.includes("replace")) {
-      ctx.addIssue({ code: "custom", path: ["JWT_SECRET"], message: "Use a long random JWT secret in production" });
+    if (value.JWT_SECRET.length < 32 || value.JWT_SECRET.includes("replace")) {
+      ctx.addIssue({ code: "custom", path: ["JWT_SECRET"], message: "Use a long random JWT secret (at least 32 characters) in production" });
     }
     if (value.FRONTEND_URL.split(",").some((origin) => !origin.trim().startsWith("https://"))) {
       ctx.addIssue({ code: "custom", path: ["FRONTEND_URL"], message: "Production frontend origins must use HTTPS" });
