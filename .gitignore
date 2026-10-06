@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.pem
+*.key
+*.p12
+*.keystore
+
+# Build output / generated files
+dist/
+**/dist/
+build/
+**/build/
+.vite/
+**/.vite/
+coverage/
+*.tsbuildinfo
+
+# Logs and local runtime data
+*.log
+logs/
+*.sqlite
+*.sqlite3
+*.db
+
+# IDE / OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Prisma generated client (generated during install)
+backend/node_modules/.prisma/
+backend/node_modules/@prisma/client/
+
+# Contract tooling output
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+

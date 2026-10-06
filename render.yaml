@@ -1,0 +1,83 @@
+services:
+  - type: web
+    name: daovault-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm ci && npx prisma generate && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: API_PREFIX
+        value: /api/v1
+      - key: DATABASE_URL
+        fromDatabase:
+          name: daovault-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        sync: false
+      - key: BSC_RPC_URL
+        value: https://bsc-dataseed.binance.org/
+      - key: BSC_CHAIN_ID
+        value: 56
+      - key: TRUST_PROXY
+        value: 1
+      - key: API_RATE_LIMIT_WINDOW_MS
+        value: 60000
+      - key: API_RATE_LIMIT_MAX
+        value: 120
+      - key: AUTH_RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: AUTH_RATE_LIMIT_MAX
+        value: 20
+      - key: FINANCIAL_RATE_LIMIT_WINDOW_MS
+        value: 60000
+      - key: FINANCIAL_RATE_LIMIT_MAX
+        value: 20
+      - key: LOG_REQUESTS
+        value: true
+      - key: SEED_WALLET_ADDRESS
+        sync: false
+      - key: SEED_ACTIVE_DIRECTS
+        value: 0
+      - key: SEED_EARNED_USD
+        value: 0
+      - key: USDT_CONTRACT_ADDRESS
+        sync: false
+      - key: COMPANY_WALLET_ADDRESS
+        sync: false
+      - key: PAYMENT_CONTRACT_ADDRESS
+        sync: false
+      - key: ACTIVATION_AMOUNT_USDT
+        value: 300
+
+  - type: web
+    name: daovault-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+      - key: VITE_BSC_CHAIN_ID
+        value: 56
+      - key: VITE_BSC_RPC_URL
+        value: https://bsc-dataseed.binance.org/
+      - key: VITE_USDT_CONTRACT_ADDRESS
+        sync: false
+      - key: VITE_PAYMENT_CONTRACT_ADDRESS
+        sync: false
+      - key: VITE_ACTIVATION_AMOUNT_USDT
+        value: 300
+
+databases:
+  - name: daovault-db
+    plan: free

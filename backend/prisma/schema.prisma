@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PackageStatus {
+  ACTIVE
+  CAPPED
+  EXPIRED
+}
+
+enum EarningType {
+  LEVEL_COMMISSION
+  RANK_REWARD
+}
+
+enum WithdrawalStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+model User {
+  id                 String         @id @default(uuid()) @db.Uuid
+  walletAddress      String         @unique @map("wallet_address") @db.VarChar(42)
+  referralCode       String         @unique @map("referral_code") @db.VarChar(16)
+  uplineId           String?        @map("upline_id") @db.Uuid
+  activeDirectsCount Int            @default(0) @map("active_directs_count")
+  currentRank        Int            @default(0) @map("current_rank")
+  /// activated packages anywhere below this member (1 DAO = 1 package); own package not included
+  teamVolume         Int            @default(0) @map("team_volume")
+  createdAt          DateTime       @default(now()) @map("created_at")
+  upline             User?          @relation("UserUpline", fields: [uplineId], references: [id])
+  downline            User[]        @relation("UserUpline")
+  packages           Package[]
+  receivedEarnings   Earning[]      @relation("EarningRecipient")
+  sourceEarnings     Earning[]      @relation("EarningSource")
+  withdrawals        Withdrawal[]
+
+  @@index([uplineId])
+  @@map("users")
+}
+
+model Package {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String        @map("user_id") @db.Uuid
+  packageAmount   Decimal       @default(300) @map("package_amount") @db.Decimal(18, 2)
+  totalEarned     Decimal       @default(0) @map("total_earned") @db.Decimal(18, 2)
+  maxCapLimit     Decimal       @default(3000) @map("max_cap_limit") @db.Decimal(18, 2)
+  status          PackageStatus @default(ACTIVE)
+  activationTxHash String       @unique @map("activation_tx_hash") @db.VarChar(66)
+  createdAt       DateTime      @default(now()) @map("created_at")
+  user            User          @relation(fields: [userId], references: [id])
+  earnings        Earning[]
+
+  @@index([userId])
+  @@map("packages")
+}
+
+model Earning {
+  id          String      @id @default(uuid()) @db.Uuid
+  recipientId String      @map("recipient_id") @db.Uuid
+  sourceId    String      @map("source_id") @db.Uuid
+  packageId   String      @map("package_id") @db.Uuid
+  type        EarningType
+  level       Int?
+  percentage  Decimal?    @db.Decimal(5, 2)
+  amountUsd   Decimal     @map("amount_usd") @db.Decimal(18, 2)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  recipient   User        @relation("EarningRecipient", fields: [recipientId], references: [id])
+  source      User        @relation("EarningSource", fields: [sourceId], references: [id])
+  package     Package     @relation(fields: [packageId], references: [id])
+
+  @@index([recipientId, createdAt])
+  @@index([packageId])
+  @@map("earnings")
+}
+
+model Withdrawal {
+  id                String           @id @default(uuid()) @db.Uuid
+  userId            String           @map("user_id") @db.Uuid
+  grossAmount       Decimal          @map("gross_amount") @db.Decimal(18, 2)
+  feeAmount         Decimal          @map("fee_amount") @db.Decimal(18, 2)
+  netAmount         Decimal          @map("net_amount") @db.Decimal(18, 2)
+  destinationWallet String           @map("destination_wallet") @db.VarChar(42)
+  status            WithdrawalStatus @default(PENDING)
+  payoutTxHash      String?          @unique @map("payout_tx_hash") @db.VarChar(66)
+  reviewedBy        String?          @map("reviewed_by") @db.VarChar(42)
+  reviewedAt        DateTime?        @map("reviewed_at")
+  rejectReason      String?          @map("reject_reason") @db.VarChar(280)
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at")
+  user              User             @relation(fields: [userId], references: [id])
+
+  @@index([userId, status])
+  @@map("withdrawals")
+}
+
+/// One-time sign-in challenge per wallet (wallet signature login)
+model AuthNonce {
+  walletAddress String   @id @map("wallet_address") @db.VarChar(42)
+  message       String
+  expiresAt     DateTime @map("expires_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("auth_nonces")
+}

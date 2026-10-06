@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DAOVAULT — Where Communities Build Wealth Together</title>
+  <meta name="description" content="The traditional financial system was built for institutions. DAOVAULT is built for communities: a transparent, community-driven DeFi ecosystem on BNB Smart Chain. Your assets. Your community. Your decisions." />
+  <meta name="theme-color" content="#050505" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/favicon.png" />
+  <!-- link previews (WhatsApp, Telegram, X) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="DAOVAULT" />
+  <meta property="og:title" content="DAOVAULT — Where Communities Build Wealth Together" />
+  <meta property="og:description" content="Unlock the power of decentralized finance. Your assets. Your community. Your decisions." />
+  <meta name="twitter:card" content="summary" />
+  
+  <!-- Lossless Referral Catcher: Executes immediately before anything else -->
+  <script>
+    (function () {
+      try {
+        var ref = new URLSearchParams(window.location.search).get("ref");
+        if (ref && ref.trim()) {
+          localStorage.setItem("daovault_pending_ref", ref.trim().toUpperCase());
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- Google Fonts: Outfit, Plus Jakarta Sans, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="/src/styles/main.css" />
+</head>
+<body>
+  <!-- 3D Celestial WebGL Canvas, Ambient Wash & Cursor Spotlight (Zero Eye Strain) -->
+  <canvas class="scene-canvas" id="sceneCanvas" aria-hidden="true"></canvas>
+  <div class="bg-wash" aria-hidden="true"></div>
+  <div class="cursor-spotlight" id="cursorSpotlight" aria-hidden="true"></div>
+
+  <!-- Smart Preloader -->
+  <div class="preloader" id="preloader">
+    <div class="loader-logo loader-logo--brand">
+      <img src="/assets/DAOlogo.jpg" alt="DAOVAULT" width="240" height="160" />
+    </div>
+    <div class="loader-bar-wrap">
+      <div class="loader-bar" id="loaderBar"></div>
+    </div>
+    <div class="loader-num mono" id="loaderNum">0%</div>
+  </div>
+
+  <!-- Fixed Top Header -->
+  <header class="top-header">
+    <div class="wrap top-bar">
+      <a href="index.html" class="brand">
+        <div class="brand-icon brand-icon--logo"><img src="/favicon.png" alt="" width="40" height="40" /></div>
+        <span>DAOvault<span class="grad-text">.AI</span></span>
+      </a>
+
+      <nav class="nav-pill" aria-label="Main Navigation">
+        <ul class="nav-links">
+          <li><a href="#vision">Vision</a></li>
+          <li><a href="#about">Ecosystem</a></li>
+          <li><a href="#ranks">Rank Rewards</a></li>
+          <li><a href="#compare">Comparison</a></li>
+          <li><a href="#how">How to Join</a></li>
+          <li class="nav-dash"><a href="dashboard.html">Dashboard</a></li>
+        </ul>
+      </nav>
+
+      <div>
+        <button class="btn btn-grad" data-connect-trigger type="button">
+          <span>Connect Wallet</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Hero Section with 2-Column Responsive Web3 Architecture -->
+    <section class="hero neural-glow" id="hero" data-scene="hero">
+      <div class="wrap hero-grid">
+        <!-- Left Column: Content & Actions -->
+        <div class="hero-left" data-reveal>
+          <div class="kicker mono">
+            <i class="kicker-dot"></i>
+            <span>BNB SMART CHAIN (BEP-20) &middot; 100% PERFORMANCE &middot; ZERO ROI</span>
+          </div>
+
+          <!-- Animated Section Path Laser Beam -->
+          <div class="section-path-beam" aria-hidden="true">
+            <svg viewBox="0 0 500 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M 0,8 L 470,8" stroke="url(#heroBeamGrad)" stroke-width="2" class="beam-line" />
+              <circle cx="470" cy="8" r="4" fill="#ffb800" class="beam-dot" />
+              <defs>
+                <linearGradient id="heroBeamGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#d4af37" stop-opacity="0" />
+                  <stop offset="50%" stop-color="#ffffff" />
+                  <stop offset="100%" stop-color="#d4af37" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+
+          <h1 class="hero-title">
+            <span class="wm-line"><span>Where Communities</span></span>
+            <span class="wm-line"><span><span class="grad-text">Build Wealth</span> Together.</span></span>
+          </h1>
+
+          <p class="hero-lead">
+            The traditional financial system was built for institutions. <b>DAOVAULT is built for communities</b>:
+            one transparent, community-driven DeFi ecosystem on BNB Smart Chain. A single fixed entry of <b>$300</b>,
+            <b>20 generational levels</b>, rank rewards up to <b>$100,000</b> and a <b>10&times; earnings cap</b>.
+          </p>
+
+          <!-- The wallet plays inside a round badge, then the badge opens into the Connect
+               button (coinWalletLottie.ts initHeroWalletSequence + .is-ready in main.css) -->
+          <div class="hero-connect-showcase" id="heroConnectShowcase">
+            <div class="hero-actions">
+              <button class="btn btn-grad btn-lg btn-wallet" data-connect-trigger type="button">
+                <span class="btn-wallet-icon" aria-hidden="true"><span id="heroCoinWalletLottie" class="coin-wallet-lottie"></span></span>
+                <span class="btn-label">Connect Wallet &amp; Join</span>
+              </button>
+              <a class="btn btn-line btn-lg hero-explore" href="#ranks">
+                <span>Explore Rank Pool</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Live Countdown Timer wrapped in glowing glass -->
+          <div class="countdown-box">
+            <div class="cd-unit">
+              <span class="cd-num" id="cdDays">14</span>
+              <span class="cd-label">Days</span>
+            </div>
+            <span class="cd-divider">:</span>
+            <div class="cd-unit">
+              <span class="cd-num" id="cdHours">08</span>
+              <span class="cd-label">Hours</span>
+            </div>
+            <span class="cd-divider">:</span>
+            <div class="cd-unit">
+              <span class="cd-num" id="cdMins">42</span>
+              <span class="cd-label">Mins</span>
+            </div>
+            <span class="cd-divider">:</span>
+            <div class="cd-unit">
+              <span class="cd-num" id="cdSecs">19</span>
+              <span class="cd-label">Secs</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Interactive 3D Holographic Vault & Orbiting Crypto Exchange Cards -->
+        <div class="hero-right" data-reveal>
+          <div class="hero-visual-card glass border-beam-card" id="heroVisualCard">
+            <div class="hero-core-canvas-wrap" aria-label="3D Holographic Cyber Vault">
+              <canvas id="heroCoreCanvas"></canvas>
+              <div class="hero-brand-lockup" aria-label="DAOvault logo">
+                <div class="hero-brand-ring"></div>
+                <img src="/assets/DAOvault.jpg" alt="DAOvault" />
+                <span class="hero-brand-caption mono">YOUR ASSETS &middot; YOUR COMMUNITY &middot; YOUR DECISIONS</span>
+              </div>
+            </div>
+
+            <!-- Alex Bender Inspired 3D Crypto Exchange Live Cards -->
+            <div class="crypto-exchange-card ex-card-1 glass-v2">
+              <div class="ex-card-top">
+                <span class="ex-pair mono"><i class="ex-dot gold"></i> USDT / BSC POOL</span>
+                <span class="ex-badge-green mono">&uarr; +24.8% 24H</span>
+              </div>
+              <div class="ex-card-val-row">
+                <span class="ex-val">$100,000</span>
+                <span class="ex-sub mono">FIFO APEX</span>
+              </div>
+              <div class="ex-sparkline">
+                <svg viewBox="0 0 120 28" fill="none">
+                  <path d="M0,22 Q20,8 40,16 T80,10 T100,4 T120,2" stroke="#ffb800" stroke-width="2.2" stroke-linecap="round"/>
+                  <path d="M0,22 Q20,8 40,16 T80,10 T100,4 T120,2 L120,28 L0,28 Z" fill="url(#exGoldGrad)" opacity="0.25"/>
+                  <defs>
+                    <linearGradient id="exGoldGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#ffb800" stop-opacity="0.8"/>
+                      <stop offset="100%" stop-color="#ffb800" stop-opacity="0"/>
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+
+            <div class="crypto-exchange-card ex-card-2 glass-v2">
+              <div class="ex-card-top">
+                <span class="ex-pair mono"><i class="ex-dot cyan"></i> INSTANT PAYOUT</span>
+                <span class="ex-badge-cyan mono">&check; 0.8s BSC</span>
+              </div>
+              <div class="ex-card-val-row">
+                <span class="ex-val text-cyan">+$30.00</span>
+                <span class="ex-sub mono">USDT / DIR</span>
+              </div>
+              <div class="ex-footer-meta mono">
+                <span>Non-Custodial</span> &bull; <span>Gas: 3 Gwei</span>
+              </div>
+            </div>
+
+            <div class="crypto-exchange-card ex-card-3 glass-v2">
+              <div class="ex-card-top">
+                <span class="ex-pair mono"><i class="ex-dot violet"></i> MATRIX VELOCITY</span>
+                <span class="ex-badge-violet mono">20 LEVELS</span>
+              </div>
+              <div class="ex-card-val-row">
+                <span class="ex-val text-violet">10&times; CAP</span>
+                <span class="ex-sub mono">MAX PAYOUT</span>
+              </div>
+              <div class="ex-progress-bar">
+                <div class="ex-progress-fill"></div>
+              </div>
+            </div>
+
+            <div class="crypto-exchange-card ex-card-4 glass-v2">
+              <div class="ex-card-top">
+                <span class="ex-pair mono"><i class="ex-dot green"></i> SOLVENCY SHIELD</span>
+                <span class="ex-badge-green mono">100% ACTIVITY</span>
+              </div>
+              <div class="ex-card-val-row">
+                <span class="ex-val text-green">0% ROI</span>
+                <span class="ex-sub mono">NO PONZI</span>
+              </div>
+              <div class="ex-footer-meta mono">
+                <span>50:50 Balance Rule</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Dedicated protocol signal cards below the hero -->
+    <section class="hero-metrics-section" id="heroMetrics" data-scene="metrics" aria-labelledby="heroMetricsTitle">
+      <div class="wrap">
+        <header class="section-head hero-metrics-head" data-reveal>
+          <div class="scene-slot scene-slot--right" aria-hidden="true"></div>
+          <span class="section-tag mono">LIVE PROTOCOL SIGNALS</span>
+          <h2 class="section-title" id="heroMetricsTitle">Built for transparent <span class="grad-text">performance.</span></h2>
+          <p class="section-sub">The core DAOVAULT rules stay visible, measurable, and easy to verify.</p>
+        </header>
+        <div class="hero-metrics-grid" id="heroMetricsGrid"></div>
+      </div>
+    </section>
+
+    <!-- Marquee Ticker -->
+    <div class="ticker-strip" aria-hidden="true">
+      <div class="ticker-track">
+        <span class="ticker-item"><i class="ticker-dot"></i> Blockchain: <b>BSC (BEP-20)</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Entry: <b>$300 Fixed</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Passive ROI: <b>STRICTLY 0%</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Level Income: <b>40% Distribution (20 Levels)</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Earning Limit: <b>10&times; Max Cap ($3,000)</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Withdrawal Fee: <b>5% Flat</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Rank Pool: <b>Up to $100,000 Cash</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Blockchain: <b>BSC (BEP-20)</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Entry: <b>$300 Fixed</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Passive ROI: <b>STRICTLY 0%</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Level Income: <b>40% Distribution (20 Levels)</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Earning Limit: <b>10&times; Max Cap ($3,000)</b></span>
+      </div>
+    </div>
+
+    <!-- Vision / about the project -->
+    <section class="chapter vision" id="vision" data-scene="vision">
+      <div class="wrap">
+        <header class="section-head" data-reveal>
+          <div class="scene-slot scene-slot--left" aria-hidden="true"></div>
+          <p class="section-tag mono">OUR VISION</p>
+          <h2 class="section-title">
+            <span class="wm-line"><span>Your assets. Your community.</span></span>
+            <span class="wm-line"><span><span class="grad-text">Your decisions.</span></span></span>
+          </h2>
+          <p class="section-sub">
+            In a world where decentralized finance is changing how people save, trade, invest, and participate in the
+            global economy, DAOVAULT brings everything together inside one transparent, community-driven ecosystem.
+          </p>
+        </header>
+
+        <!-- DAO + VAULT = DAOVAULT: cards drop in from above, then open (landingFx.ts initDropCards) -->
+        <div class="vision-pillars" data-drop-group>
+          <article class="glass vision-card" data-drop>
+            <div class="vision-icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                <circle cx="24" cy="12" r="5" /><circle cx="10" cy="34" r="5" /><circle cx="38" cy="34" r="5" />
+                <path d="M21 16.5 13 29.5M27 16.5l8 13M15 34h18" stroke-dasharray="3 3" />
+              </svg>
+            </div>
+            <span class="vision-word mono">DAO</span>
+            <h3>The power of collective decision-making.</h3>
+            <div class="drop-body"><div>
+              <p>Communities, not institutions, have a voice in how value is created and managed.</p>
+            </div></div>
+          </article>
+
+          <span class="vision-op" aria-hidden="true">+</span>
+
+          <article class="glass vision-card" data-drop>
+            <div class="vision-icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+                <circle cx="24" cy="24" r="17" /><circle cx="24" cy="24" r="9" stroke-dasharray="4 3" /><circle cx="24" cy="24" r="3" />
+                <path d="M24 3v6M24 39v6M3 24h6M39 24h6" />
+              </svg>
+            </div>
+            <span class="vision-word mono">VAULT</span>
+            <h3>Security, opportunity, and digital assets working together.</h3>
+            <div class="drop-body"><div>
+              <p>Your funds stay in your own non-custodial wallet, on-chain and verifiable.</p>
+            </div></div>
+          </article>
+
+          <span class="vision-op" aria-hidden="true">=</span>
+
+          <article class="glass vision-card vision-card--brand" data-drop>
+            <div class="vision-icon vision-icon--logo" aria-hidden="true">
+              <img src="/favicon.png" alt="" width="48" height="48" />
+            </div>
+            <span class="vision-word mono">DAOVAULT</span>
+            <h3>Transparency, ownership, and control.</h3>
+            <div class="drop-body"><div>
+              <p>
+                DAOVAULT combines these ideas into a DeFi platform where users can participate in decentralized
+                financial products while maintaining transparency, ownership, and control.
+              </p>
+            </div></div>
+          </article>
+        </div>
+
+        <blockquote class="glass vision-quote" data-drop>
+          <p>
+            DAOVAULT is not just another DeFi platform. It is a movement toward a financial ecosystem where technology
+            reduces unnecessary intermediaries and communities have a greater voice in how value is created and managed.
+          </p>
+          <div class="drop-body"><div>
+            <footer class="mono">
+              From decentralized governance to on-chain opportunities: finance that is more accessible, transparent, and
+              community-driven.
+            </footer>
+          </div></div>
+        </blockquote>
+      </div>
+    </section>
+
+    <!-- 11-Tier Rank & Reward Showcase with Rotating Border Beam -->
+    <section class="chapter neural-glow" id="ranks" data-scene="ranks">
+      <div class="wrap">
+        <header class="section-head" data-reveal>
+          <div class="scene-slot scene-slot--right" aria-hidden="true"></div>
+          <div class="section-path-beam" aria-hidden="true">
+            <svg viewBox="0 0 500 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M 0,8 L 470,8" stroke="url(#heroBeamGrad)" stroke-width="2" class="beam-line" />
+              <circle cx="470" cy="8" r="4" fill="#ffb800" class="beam-dot" />
+            </svg>
+          </div>
+          <p class="section-tag mono">LEADERSHIP INCENTIVE POOL</p>
+          <h2 class="section-title">
+            <span class="wm-line"><span>11-Tier <span class="grad-text">Rank &amp; Reward Pool</span></span></span>
+          </h2>
+          <p class="section-sub">
+            Achieve milestone volume across your organization and unlock instant cash rewards. 
+            Regulated by our transparent <b>50:50 Leg Ratio Rule</b> for fair, decentralized balancing.
+          </p>
+        </header>
+
+        <!-- 01 Apex Leadership Vault Feature Card with Cinematic Boom Reveal -->
+        <div class="feature glass trophy-boom-card" id="trophyCard">
+          <div class="feature-copy">
+            <p class="num-label mono">
+              <span>01</span> APEX LEADERSHIP VAULT
+            </p>
+            <h3>
+              First to Balance.<br /><span class="grad-text">First to Claim.</span>
+            </h3>
+            <p>
+              DAOvault AI reserves an exclusive <b>$100,000 Leadership Reward Pool</b> across 11 milestone tiers. Operating on a decentralized FIFO protocol: the moment your organization achieves the target volume under the strict <b>50:50 Leg Ratio Rule</b>, your position is permanently secured — from the foundational reward of <b>$100 (Starter)</b> through the ultimate apex reward of <b>$100,000 (Crown President)</b>.
+            </p>
+            <p class="rule mono">
+              <span class="rule-step"><b>01</b>QUALIFY 50:50 VOLUME</span>
+              <span class="rule-link"><i></i><em>&rarr;</em></span>
+              <span class="rule-step is-win"><b>02</b>CLAIM APEX POOL REWARD</span>
+            </p>
+          </div>
+          <div class="bz1-visual trophy-stage" id="trophyVisual" aria-label="DAOvault Apex Championship Trophy">
+            <div class="trophy-ambient-halo"></div>
+            <div class="trophy-sparkle-layer">
+              <span class="sparkle s1"></span>
+              <span class="sparkle s2"></span>
+              <span class="sparkle s3"></span>
+              <span class="sparkle s4"></span>
+            </div>
+            <div id="trophyLottie" class="trophy-lottie-player"></div>
+            <div class="trophy-badge-tag mono">
+              <span class="trophy-tag-dot"></span> APEX TROPHY
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Tabs -->
+        <div class="rank-tabs-wrap">
+          <div class="rank-tabs" id="rankTabs">
+            <!-- Populated dynamically via rankGameCard.ts -->
+          </div>
+
+          <!-- Rank Slider Navigation Track with Left & Right Arrows (City of Mist Style) -->
+          <div class="rank-slider-nav" id="rankSliderNav">
+            <button class="rank-nav-arrow prev" id="rankPrevBtn" aria-label="Previous Rank" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+            </button>
+            <div class="rank-slider-track">
+              <div class="rank-slider-fill" id="rankSliderFill"></div>
+              <div class="rank-slider-thumb" id="rankSliderThumb"></div>
+            </div>
+            <button class="rank-nav-arrow next" id="rankNextBtn" aria-label="Next Rank" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- City of Mist 3D Game Card with Holographic Sheen & Conic Laser Beam -->
+        <div class="border-beam-card active rank-game-card" id="rankDisplayCard" data-reveal>
+          <div class="card-ambient-aura rank-aura" id="rankCardAura"></div>
+          <div class="card-holographic-sheen" id="rankHoloSheen"></div>
+          <div class="card-interactive-glare" id="rankInteractiveGlare"></div>
+
+          <div class="border-beam-inner rank-card-display" id="rankCardInner">
+            <div class="rank-info-col">
+              <div class="rank-qualified-tag mono">
+                <span class="rank-tag-dot"></span> QUALIFIED REWARD
+              </div>
+              <div class="rank-big-reward" id="rankDisplayReward">$100</div>
+              <h3 id="rankDisplayTitle">1. Starter</h3>
+              <p id="rankDisplayDesc">
+                The gateway milestone for active team initiators.
+              </p>
+              <div class="rank-btn-wrap">
+                <button class="btn btn-rank-qualify" data-connect-trigger type="button">
+                  <span>Start Qualifying Now &rarr;</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="rank-leg-meter">
+              <div class="leg-head">
+                <span class="leg-head-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M7 21h10M5 7h14"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></svg>
+                </span>
+                <div>
+                  <h4>50:50 Leg Rule</h4>
+                  <span class="leg-head-kicker mono">How volume is counted</span>
+                </div>
+              </div>
+              <p class="leg-rule-sub">
+                At most <b>50%</b> of the volume can come from your strongest leg (Power Leg). The other <b>50%</b> must come from all your other legs combined.
+              </p>
+
+              <div class="leg-split-bar" aria-hidden="true">
+                <div class="leg-power" title="Max 50% from Power Leg"></div>
+                <div class="leg-other" title="Min 50% from Other Legs"></div>
+              </div>
+
+              <div class="leg-labels">
+                <div class="leg-stat leg-stat--power">
+                  <span class="leg-stat-lbl mono"><i></i>Power Leg &middot; max 50%</span>
+                  <strong id="rankPowerLegVal">12.5 DAO</strong>
+                </div>
+                <div class="leg-stat leg-stat--other">
+                  <span class="leg-stat-lbl mono"><i></i>Other Legs &middot; min 50%</span>
+                  <strong id="rankOtherLegVal">12.5 DAO</strong>
+                </div>
+              </div>
+
+              <div class="leg-total-row">
+                <span class="lbl-dim">Total team volume needed</span>
+                <span class="val-bold" id="rankDisplayDao">25 DAO</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 20-Level Matrix Plan -->
+    <section class="chapter" id="matrix" data-scene="matrix" style="background: rgba(0,0,0,0.2);">
+      <div class="wrap">
+        <header class="section-head" data-reveal>
+          <div class="scene-slot scene-slot--left" aria-hidden="true"></div>
+          <div class="section-path-beam" aria-hidden="true">
+            <svg viewBox="0 0 500 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M 0,8 L 470,8" stroke="url(#heroBeamGrad)" stroke-width="2" class="beam-line" />
+              <circle cx="470" cy="8" r="4" fill="#ffb800" class="beam-dot" />
+            </svg>
+          </div>
+          <p class="section-tag mono">40% AFFILIATE REVENUE SHARING</p>
+          <h2 class="section-title">
+            <span class="wm-line"><span>20-Level <span class="grad-text">Income Matrix</span></span></span>
+          </h2>
+          <p class="section-sub">
+            From every $300 package, exactly <b>40% ($120.00)</b> is paid instantly across 20 generational uplines. 
+            15 active direct referrals unlock the full depth of all 20 levels.
+          </p>
+        </header>
+
+        <!-- Animated Matrix Distribution Pipeline Flow -->
+        <div class="matrix-pipeline-flow" aria-hidden="true">
+          <div class="pipeline-track">
+            <span class="pipeline-flow-bead"></span>
+          </div>
+          <div class="pipeline-labels mono">
+            <span class="step-active">DIRECT APEX</span>
+            <span>COMMUNITY SPREAD</span>
+            <span>MID EXPANSION</span>
+            <span>CLUSTER DEPTH</span>
+            <span class="step-gold">13-LEVEL GALAXY</span>
+          </div>
+        </div>
+
+        <!-- Mobile Swipe Indicator Hint -->
+        <!-- Mobile Interactive Tier Switcher / Indicator Tabs -->
+        <div class="matrix-mobile-tabs" id="matrixMobileTabs">
+          <button class="matrix-tab-pill active" data-tier-tab="1" type="button">
+            <span class="tab-dot gold"></span> L1 Direct
+          </button>
+          <button class="matrix-tab-pill" data-tier-tab="2" type="button">
+            <span class="tab-dot cyan"></span> L2 Expansion
+          </button>
+          <button class="matrix-tab-pill" data-tier-tab="3" type="button">
+            <span class="tab-dot violet"></span> L3–4 Mid
+          </button>
+          <button class="matrix-tab-pill" data-tier-tab="4" type="button">
+            <span class="tab-dot blue"></span> L5–7 Cluster
+          </button>
+          <button class="matrix-tab-pill" data-tier-tab="5" type="button">
+            <span class="tab-dot crown"></span> L8–20 Crown
+          </button>
+        </div>
+
+        <div class="level-matrix-grid matrix-card-stack" id="levelMatrixGrid" data-package-price="300">
+          <!-- Card 1: Level 1 (Direct Apex) -->
+          <div class="matrix-stack-card matrix-card glass-v2 tier-gold active" data-matrix-tier="1" tabindex="0">
+            <div class="cypheir-border-sweep gold-sweep"></div>
+            <div class="card-shimmer-sweep"></div>
+            <div class="card-ambient-aura gold-aura"></div>
+            <div class="card-beam-glow"></div>
+            <div class="cypheir-corner-radar"></div>
+            
+            <div class="cypheir-card-body">
+              <!-- Left Column: High-Tech Pod & Metric Emblem -->
+              <div class="cypheir-col-pod">
+                <div class="cypheir-badge gold-badge mono">
+                  <span class="cypheir-pulse-dot gold"></span> L1 &middot; DIRECT APEX
+                </div>
+                
+                <div class="cypheir-emblem-wrap">
+                  <div class="cyber-icon-pod gold-pod">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                    </svg>
+                  </div>
+                  <div class="cypheir-metric">
+                    <div class="cypheir-pct grad-text">10%</div>
+                    <div class="cypheir-pill mono">
+                      <strong>$30.00</strong> <span>USDT</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cypheir-live-status mono">
+                  <span class="status-pulse-dot"></span> 0 DIRECTS REQUIRED &bull; INSTANT
+                </div>
+              </div>
+
+              <!-- Center Column: Architecture, Rules, and Cyber Meter -->
+              <div class="cypheir-col-info">
+                <div class="cypheir-info-header">
+                  <h3 class="cypheir-title">Direct Referral Apex</h3>
+                  <span class="cypheir-req-tag mono text-green">&check; UNLOCKED ON ACTIVATION</span>
+                </div>
+                <p class="cypheir-desc">
+                  Instant direct affiliate earnings. Every direct partner sponsored pays out $30.00 USDT automatically routed to your non-custodial Web3 wallet on BNB Smart Chain.
+                </p>
+
+                <div class="matrix-cyber-meter cypheir-meter">
+                  <div class="meter-info mono">
+                    <span class="meter-lbl">INSTANT COMMISSION STREAM</span>
+                    <span class="meter-val text-green">&check; 100% UNLOCKED</span>
+                  </div>
+                  <div class="meter-track">
+                    <div class="meter-fill fill-100 green"></div>
+                  </div>
+                  <div class="meter-footnote mono">Instant Payout Active &bull; Zero Lockup Period</div>
+                </div>
+              </div>
+
+              <!-- Right Column: Meta Metrics & Simulator Trigger -->
+              <div class="cypheir-col-action">
+                <div class="cypheir-meta-cluster mono">
+                  <div class="meta-row">
+                    <span class="meta-k">VELOCITY</span>
+                    <span class="meta-v text-gold">INSTANT BSC</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-k">GENERATION</span>
+                    <span class="meta-v">GEN 1</span>
+                  </div>
+                </div>
+                <button class="btn-tier-inspect cypheir-btn mono" type="button" data-sim-target="1">
+                  <span>Simulate Level 1</span> &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Level 2 (Expansion) -->
+          <div class="matrix-stack-card matrix-card glass-v2 tier-cyan" data-matrix-tier="2" tabindex="0">
+            <div class="cypheir-border-sweep cyan-sweep"></div>
+            <div class="card-shimmer-sweep"></div>
+            <div class="card-ambient-aura cyan-aura"></div>
+            <div class="card-beam-glow"></div>
+            <div class="cypheir-corner-radar"></div>
+
+            <div class="cypheir-card-body">
+              <div class="cypheir-col-pod">
+                <div class="cypheir-badge cyan-badge mono">
+                  <span class="cypheir-pulse-dot cyan"></span> L2 &middot; EXPANSION
+                </div>
+                
+                <div class="cypheir-emblem-wrap">
+                  <div class="cyber-icon-pod cyan-pod">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <circle cx="18" cy="5" r="3"></circle>
+                      <circle cx="6" cy="12" r="3"></circle>
+                      <circle cx="18" cy="19" r="3"></circle>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                    </svg>
+                  </div>
+                  <div class="cypheir-metric">
+                    <div class="cypheir-pct cyan-text">5%</div>
+                    <div class="cypheir-pill mono">
+                      <strong>$15.00</strong> <span>USDT</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cypheir-live-status mono">
+                  <span class="status-pulse-dot cyan-pulse"></span> 2 DIRECTS REQUIRED
+                </div>
+              </div>
+
+              <div class="cypheir-col-info">
+                <div class="cypheir-info-header">
+                  <h3 class="cypheir-title">Secondary Team Expansion</h3>
+                  <span class="cypheir-req-tag mono text-cyan">2 DIRECTS UNLOCKS</span>
+                </div>
+                <p class="cypheir-desc">
+                  Secondary generation earnings from partners sponsored by your direct team members. Creates continuous compounding cash flow as your organization duplicates.
+                </p>
+
+                <div class="matrix-cyber-meter cypheir-meter">
+                  <div class="meter-info mono">
+                    <span class="meter-lbl">EXPANSION QUALIFICATION</span>
+                    <span class="meter-val text-cyan">2 Direct Partners</span>
+                  </div>
+                  <div class="meter-track">
+                    <div class="meter-fill fill-25 cyan"></div>
+                  </div>
+                  <div class="meter-footnote mono">2 Directs Unlocks Generation 2 &bull; 9 Max Team Spots</div>
+                </div>
+              </div>
+
+              <div class="cypheir-col-action">
+                <div class="cypheir-meta-cluster mono">
+                  <div class="meta-row">
+                    <span class="meta-k">POTENTIAL</span>
+                    <span class="meta-v text-cyan">$135 USDT</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-k">GENERATION</span>
+                    <span class="meta-v">GEN 2</span>
+                  </div>
+                </div>
+                <button class="btn-tier-inspect cypheir-btn mono" type="button" data-sim-target="2">
+                  <span>Simulate Level 2</span> &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Levels 3 & 4 (Mid Multiplier) -->
+          <div class="matrix-stack-card matrix-card glass-v2 tier-violet" data-matrix-tier="3" tabindex="0">
+            <div class="cypheir-border-sweep violet-sweep"></div>
+            <div class="card-shimmer-sweep"></div>
+            <div class="card-ambient-aura violet-aura"></div>
+            <div class="card-beam-glow"></div>
+            <div class="cypheir-corner-radar"></div>
+
+            <div class="cypheir-card-body">
+              <div class="cypheir-col-pod">
+                <div class="cypheir-badge violet-badge mono">
+                  <span class="cypheir-pulse-dot violet"></span> L3–4 &middot; MID TIER
+                </div>
+                
+                <div class="cypheir-emblem-wrap">
+                  <div class="cyber-icon-pod violet-pod">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                      <polyline points="2 17 12 22 22 17"></polyline>
+                      <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                  </div>
+                  <div class="cypheir-metric">
+                    <div class="cypheir-pct violet-text">3%</div>
+                    <div class="cypheir-pill mono">
+                      <strong>$9.00</strong> <span>EACH</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cypheir-live-status mono">
+                  <span class="status-pulse-dot violet-pulse"></span> 3 &amp; 5 DIRECTS REQUIRED
+                </div>
+              </div>
+
+              <div class="cypheir-col-info">
+                <div class="cypheir-info-header">
+                  <h3 class="cypheir-title">Mid Generation Multiplier</h3>
+                  <span class="cypheir-req-tag mono text-violet">3 &amp; 5 DIRECTS UNLOCKS</span>
+                </div>
+                <p class="cypheir-desc">
+                  Combined 6% ($18.00 total) distributed across generational tiers 3 and 4 network spread. Drives deep leader momentum with 108 theoretical member nodes.
+                </p>
+
+                <div class="matrix-cyber-meter cypheir-meter">
+                  <div class="meter-info mono">
+                    <span class="meter-lbl">MID SPREAD QUALIFICATION</span>
+                    <span class="meter-val text-violet">3 &amp; 5 Directs</span>
+                  </div>
+                  <div class="meter-track">
+                    <div class="meter-fill fill-50 violet"></div>
+                  </div>
+                  <div class="meter-footnote mono">Unlocks L3 ($9) &amp; L4 ($9) Generational Volume</div>
+                </div>
+              </div>
+
+              <div class="cypheir-col-action">
+                <div class="cypheir-meta-cluster mono">
+                  <div class="meta-row">
+                    <span class="meta-k">COMBINED</span>
+                    <span class="meta-v text-violet">$972 USDT</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-k">GENERATION</span>
+                    <span class="meta-v">GEN 3 &ndash; 4</span>
+                  </div>
+                </div>
+                <button class="btn-tier-inspect cypheir-btn mono" type="button" data-sim-target="3">
+                  <span>Simulate Level 3–4</span> &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: Levels 5, 6, 7 (Cluster Depth) -->
+          <div class="matrix-stack-card matrix-card glass-v2 tier-blue" data-matrix-tier="4" tabindex="0">
+            <div class="cypheir-border-sweep blue-sweep"></div>
+            <div class="card-shimmer-sweep"></div>
+            <div class="card-ambient-aura blue-aura"></div>
+            <div class="card-beam-glow"></div>
+            <div class="cypheir-corner-radar"></div>
+
+            <div class="cypheir-card-body">
+              <div class="cypheir-col-pod">
+                <div class="cypheir-badge blue-badge mono">
+                  <span class="cypheir-pulse-dot blue"></span> L5–7 &middot; CLUSTER
+                </div>
+                
+                <div class="cypheir-emblem-wrap">
+                  <div class="cyber-icon-pod blue-pod">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                      <path d="M2 17l10 5 10-5"></path>
+                      <path d="M2 12l10 5 10-5"></path>
+                    </svg>
+                  </div>
+                  <div class="cypheir-metric">
+                    <div class="cypheir-pct blue-text">2%</div>
+                    <div class="cypheir-pill mono">
+                      <strong>$6.00</strong> <span>EACH</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cypheir-live-status mono">
+                  <span class="status-pulse-dot blue-pulse"></span> 7, 9 &amp; 10 DIRECTS
+                </div>
+              </div>
+
+              <div class="cypheir-col-info">
+                <div class="cypheir-info-header">
+                  <h3 class="cypheir-title">Geometric Cluster Depth</h3>
+                  <span class="cypheir-req-tag mono text-blue">7 &ndash; 10 DIRECTS</span>
+                </div>
+                <p class="cypheir-desc">
+                  Triple-depth geometric volume yielding 6% total across deep active generation lines. Scales revenue massively across up to 3,159 organization members.
+                </p>
+
+                <div class="matrix-cyber-meter cypheir-meter">
+                  <div class="meter-info mono">
+                    <span class="meter-lbl">CLUSTER QUALIFICATION</span>
+                    <span class="meter-val text-blue">7, 9 &amp; 10 Directs</span>
+                  </div>
+                  <div class="meter-track">
+                    <div class="meter-fill fill-75 blue"></div>
+                  </div>
+                  <div class="meter-footnote mono">Unlocks L5 ($6), L6 ($6) &amp; L7 ($6) Exponential Depth</div>
+                </div>
+              </div>
+
+              <div class="cypheir-col-action">
+                <div class="cypheir-meta-cluster mono">
+                  <div class="meta-row">
+                    <span class="meta-k">POTENTIAL</span>
+                    <span class="meta-v text-blue">$18,954 USDT</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-k">GENERATION</span>
+                    <span class="meta-v">GEN 5 &ndash; 7</span>
+                  </div>
+                </div>
+                <button class="btn-tier-inspect cypheir-btn mono" type="button" data-sim-target="5">
+                  <span>Simulate Level 5–7</span> &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 5: Levels 8 to 20 (13-Level Galaxy) -->
+          <div class="matrix-stack-card matrix-card glass-v2 tier-crown" data-matrix-tier="5" tabindex="0">
+            <div class="cypheir-border-sweep gold-sweep"></div>
+            <div class="card-shimmer-sweep"></div>
+            <div class="card-ambient-aura crown-aura"></div>
+            <div class="card-beam-glow"></div>
+            <div class="cypheir-corner-radar"></div>
+
+            <div class="cypheir-card-body">
+              <div class="cypheir-col-pod">
+                <div class="cypheir-badge crown-badge mono">
+                  <span class="cypheir-pulse-dot gold"></span> L8–20 &middot; 13 LEVELS
+                </div>
+                
+                <div class="cypheir-emblem-wrap">
+                  <div class="cyber-icon-pod crown-pod">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"></path>
+                      <circle cx="12" cy="18" r="2"></circle>
+                    </svg>
+                  </div>
+                  <div class="cypheir-metric">
+                    <div class="cypheir-pct gold-text">1%</div>
+                    <div class="cypheir-pill mono">
+                      <strong>$3.00</strong> <span>&times; 13 LVL</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cypheir-live-status mono">
+                  <span class="status-pulse-dot gold-pulse"></span> 15 DIRECTS REQUIRED
+                </div>
+              </div>
+
+              <div class="cypheir-col-info">
+                <div class="cypheir-info-header">
+                  <h3 class="cypheir-title">13-Level Crown Galaxy</h3>
+                  <span class="cypheir-req-tag mono text-gold">&star; 15 DIRECTS UNLOCKS ALL</span>
+                </div>
+                <p class="cypheir-desc">
+                  Massive exponential depth: 13% total affiliate distribution across thousands of generational members. 15 direct partners unlocks all 20 levels forever.
+                </p>
+
+                <div class="matrix-cyber-meter cypheir-meter">
+                  <div class="meter-info mono">
+                    <span class="meter-lbl">FULL MATRIX UNLOCK</span>
+                    <span class="meter-val text-gold">&star; 15 Direct Partners</span>
+                  </div>
+                  <div class="meter-track">
+                    <div class="meter-fill fill-100 gold"></div>
+                  </div>
+                  <div class="meter-footnote mono text-gold">15 Directs Unlocks ALL 20 Generational Levels</div>
+                </div>
+              </div>
+
+              <div class="cypheir-col-action">
+                <div class="cypheir-meta-cluster mono">
+                  <div class="meta-row">
+                    <span class="meta-k">GALAXY DEPTH</span>
+                    <span class="meta-v text-gold">MILLIONS+ USDT</span>
+                  </div>
+                  <div class="meta-row">
+                    <span class="meta-k">GENERATION</span>
+                    <span class="meta-v">GEN 8 &ndash; 20</span>
+                  </div>
+                </div>
+                <button class="btn-tier-inspect cypheir-btn mono" type="button" data-sim-target="8">
+                  <span>Simulate Level 8–20</span> &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mobile Carousel Dots Indicator -->
+        <div class="matrix-carousel-dots" id="matrixDots">
+          <span class="dot active" data-dot="1"></span>
+          <span class="dot" data-dot="2"></span>
+          <span class="dot" data-dot="3"></span>
+          <span class="dot" data-dot="4"></span>
+          <span class="dot" data-dot="5"></span>
+        </div>
+
+        <!-- Interactive 20-Level Matrix Simulator -->
+        <div class="matrix-calc-box glass border-beam-card" data-reveal>
+          <div class="calc-header">
+            <div class="calc-tag mono">INTERACTIVE SIMULATOR</div>
+            <h3>Explore Any Matrix Generation (Level 1 &ndash; 20)</h3>
+            <p>Select any level to inspect instant commission payout, required direct qualifications, and theoretical team revenue.</p>
+          </div>
+          <div class="level-slider-wrap mdial-pills-fallback" aria-hidden="true">
+            <div class="level-pills-row" id="levelPills">
+              <!-- Populated dynamically via app.ts -->
+            </div>
+          </div>
+          <!-- Vault dial: the 20 levels around a safe dial; it drives the pills above
+               (matrixDial.ts), so autoplay and the stats stay in one place -->
+          <div class="mdial-layout">
+            <div class="mdial-wrap" id="matrixDial"></div>
+            <div class="mdial-side">
+              <div class="calc-results-grid">
+                <div class="calc-stat">
+                  <span class="calc-stat-label mono">LEVEL COMMISSION</span>
+                  <span class="calc-stat-val grad-text" id="calcPct">10%</span>
+                  <span class="calc-stat-sub mono" id="calcDollar">$30.00 / Member</span>
+                </div>
+                <div class="calc-stat">
+                  <span class="calc-stat-label mono">UNLOCK REQUIREMENT</span>
+                  <span class="calc-stat-val" id="calcReq" style="color: var(--green);">0 Directs</span>
+                  <span class="calc-stat-sub mono" id="calcReqSub">Instant Active</span>
+                </div>
+                <div class="calc-stat">
+                  <span class="calc-stat-label mono">THEORETICAL TEAM (3&times;3)</span>
+                  <span class="calc-stat-val" id="calcMembers" style="color: var(--cyan);">3 Members</span>
+                  <span class="calc-stat-sub mono" id="calcTotal">$90.00 Max</span>
+                </div>
+              </div>
+              <div class="mdial-directs">
+                <div class="mdial-directs-head">
+                  <span class="mono">YOUR ACTIVE DIRECTS</span>
+                  <output class="mdial-directs-val" id="matrixDirectsVal" for="matrixDirects">0</output>
+                </div>
+                <input type="range" id="matrixDirects" min="0" max="15" step="1" value="0" aria-label="Your active directs" />
+                <div class="mdial-directs-out mono">
+                  <span>Levels unlocked <b id="matrixUnlocked">1 / 20</b></span>
+                  <span>Per member, all unlocked levels <b id="matrixPerMember">$30</b></span>
+                </div>
+                <p class="mdial-next mono" id="matrixNext">Next: L2 unlocks at 2 directs</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3D Dual-Sided Flip Cards (iorca.xyz Layer Box Model) -->
+    <section class="chapter" id="about" data-scene="about">
+      <div class="wrap">
+        <header class="section-head" data-reveal>
+          <div class="scene-slot scene-slot--right" aria-hidden="true"></div>
+          <div class="section-path-beam" aria-hidden="true">
+            <svg viewBox="0 0 500 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M 0,8 L 470,8" stroke="url(#heroBeamGrad)" stroke-width="2" class="beam-line" />
+              <circle cx="470" cy="8" r="4" fill="#ffb800" class="beam-dot" />
+            </svg>
+          </div>
+          <p class="section-tag mono">INTERACTIVE ARCHITECTURAL PILLARS</p>
+          <h2 class="section-title">
+            <span class="wm-line"><span>Engineered for <span class="grad-text">Mathematical Solvency</span></span></span>
+          </h2>
+          <p class="section-sub">
+            Hover over any pillar below to flip the 3D card and inspect the cryptographic proof and solvency rules.
+          </p>
+        </header>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1.8rem;">
+          <!-- Flip Card 1 -->
+          <div class="flip-card-wrap" data-reveal>
+            <div class="flip-card-inner">
+              <div class="flip-card-front">
+                <div>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">LAYER 01 &middot; SOLVENCY</span>
+                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">10&times; Sustainability Cap</h3>
+                  <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
+                    $300 entry can earn up to a maximum of $3,000 before mandatory re-entry.
+                  </p>
+                </div>
+                <div class="flip-hint mono">
+                  <span>Hover to flip card</span> &rarr;
+                </div>
+              </div>
+              <div class="flip-card-back">
+                <div>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">&check; PROOF MECHANISM</span>
+                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Anti-Drain Architecture</h4>
+                  <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
+                    Legacy crypto networks collapse when top whales drain liquidity. The 10&times; safety ceiling requires top earners to continuously re-seed the network with fresh $300 packages, providing permanent bottom-up liquidity.
+                  </p>
+                </div>
+                <div class="mono" style="font-size: 0.78rem; color: var(--gold); border-top: 1px solid rgba(255,196,0,0.25); padding-top: 0.6rem;">
+                  Cap: $3,000 Max Payout
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flip Card 2 -->
+          <div class="flip-card-wrap" data-reveal>
+            <div class="flip-card-inner">
+              <div class="flip-card-front">
+                <div>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--green);">LAYER 02 &middot; ETHICS</span>
+                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">Strictly 0% Passive ROI</h3>
+                  <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
+                    Zero fake daily returns or arbitrary staking ponzis. 100% activity backed.
+                  </p>
+                </div>
+                <div class="flip-hint mono" style="color: var(--green);">
+                  <span>Hover to flip card</span> &rarr;
+                </div>
+              </div>
+              <div class="flip-card-back">
+                <div>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--green);">&check; ZERO LIABILITY</span>
+                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">No Fractional Reserves</h4>
+                  <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
+                    Platforms that promise 1% daily interest inevitably crash when new deposits slow down. DAOvault AI owes zero daily liability to anyone; every single dollar distributed originates directly from verified package entries.
+                  </p>
+                </div>
+                <div class="mono" style="font-size: 0.78rem; color: var(--green); border-top: 1px solid rgba(16,185,129,0.3); padding-top: 0.6rem;">
+                  Daily ROI: 0.00% Always
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flip Card 3 -->
+          <div class="flip-card-wrap" data-reveal>
+            <div class="flip-card-inner">
+              <div class="flip-card-front">
+                <div>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--cyan);">LAYER 03 &middot; DISTRIBUTION</span>
+                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">40% 20-Level Matrix</h3>
+                  <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
+                    Automated programmatic commission split across 20 generational uplines.
+                  </p>
+                </div>
+                <div class="flip-hint mono" style="color: var(--cyan);">
+                  <span>Hover to flip card</span> &rarr;
+                </div>
+              </div>
+              <div class="flip-card-back">
+                <div>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--cyan);">&check; DIRECT INCENTIVE</span>
+                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Meritocratic Unlocks</h4>
+                  <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
+                    L1 gives 10% ($30) with 0 directs required. To tap into the deeper 19 levels, affiliates must introduce active direct members (up to 15 directs for L20), guaranteeing healthy horizontal community expansion.
+                  </p>
+                </div>
+                <div class="mono" style="font-size: 0.78rem; color: var(--cyan); border-top: 1px solid rgba(34,211,238,0.3); padding-top: 0.6rem;">
+                  Total Matrix: $120 / $300 Entry
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Flip Card 4 -->
+          <div class="flip-card-wrap" data-reveal>
+            <div class="flip-card-inner">
+              <div class="flip-card-front">
+                <div>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--violet);">LAYER 04 &middot; SECURITY</span>
+                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">Automated 5% Fee</h3>
+                  <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
+                    95% instant net payout to your connected Web3 address on BNB Smart Chain.
+                  </p>
+                </div>
+                <div class="flip-hint mono" style="color: var(--violet);">
+                  <span>Hover to flip card</span> &rarr;
+                </div>
+              </div>
+              <div class="flip-card-back">
+                <div>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--violet);">&check; LIQUIDITY RESERVE</span>
+                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Ecosystem Treasury</h4>
+                  <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
+                    The flat 5% deduction automatically replenishes the leadership bonus pool, covers gas reserves, and sustains continuous platform infrastructure without needing external seed capital.
+                  </p>
+                </div>
+                <div class="mono" style="font-size: 0.78rem; color: var(--violet); border-top: 1px solid rgba(168,85,247,0.3); padding-top: 0.6rem;">
+                  Net Transfer: 95% in USDT
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- iorca.xyz Inspired Comparison Matrix -->
+    <section class="chapter" id="compare" data-scene="compare" style="background: rgba(0,0,0,0.25);">
+      <div class="wrap">
+        <header class="section-head" data-reveal>
+          <div class="scene-slot scene-slot--left" aria-hidden="true"></div>
+          <div class="section-path-beam" aria-hidden="true">
+            <svg viewBox="0 0 500 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M 0,8 L 470,8" stroke="url(#heroBeamGrad)" stroke-width="2" class="beam-line" />
+              <circle cx="470" cy="8" r="4" fill="#ffb800" class="beam-dot" />
+            </svg>
+          </div>
+          <p class="section-tag mono">ARCHITECTURAL UPGRADE</p>
+          <h2 class="section-title">
+            <span class="wm-line"><span>Why DAOvault is a <span class="grad-text">Structural Upgrade</span></span></span>
+          </h2>
+          <p class="section-sub">
+            Traditional MLM &amp; ROI schemes rely on black-box manipulation. DAOvault operates entirely on verifiable Web3 math.
+          </p>
+        </header>
+
+        <div class="compare-matrix-wrap" data-reveal>
+          <table class="compare-matrix">
+            <thead>
+              <tr>
+                <th>Dimension</th>
+                <th>Traditional ROI / Ponzi Schemes</th>
+                <th>DAOvault AI Web3 Protocol</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Yield Source</strong></td>
+                <td><span class="badge-negative">&cross; Fake daily interest (unfunded debt)</span></td>
+                <td><span class="badge-positive">&rarr; 100% Real Community Growth (No Debt)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Asset Custody</strong></td>
+                <td><span class="badge-negative">&cross; Held by centralized admin wallet</span></td>
+                <td><span class="badge-positive">&rarr; Your Non-Custodial Web3 Wallet Always</span></td>
+              </tr>
+              <tr>
+                <td><strong>System Solvency</strong></td>
+                <td><span class="badge-negative">&cross; Unlimited whale draining &amp; sudden rug</span></td>
+                <td><span class="badge-positive">&rarr; 10&times; Max Earning Cap ($3,000 Safety Lock)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Leadership Balancing</strong></td>
+                <td><span class="badge-negative">&cross; Single-leg manipulation &amp; fake ranks</span></td>
+                <td><span class="badge-positive">&rarr; Strict 50:50 Power Leg Mathematical Rule</span></td>
+              </tr>
+              <tr>
+                <td><strong>Matrix Depth</strong></td>
+                <td><span class="badge-negative">&cross; Opaque 3–5 levels with hidden admin cut</span></td>
+                <td><span class="badge-positive">&rarr; Programmatic 20 Levels (40% Total Distribution)</span></td>
+              </tr>
+              <tr>
+                <td><strong>Auditability &amp; Proof</strong></td>
+                <td><span class="badge-negative">&cross; Closed black box server</span></td>
+                <td><span class="badge-positive">&rarr; 100% On-Chain Verifiable on BSC Mainnet</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- How to Join Steps -->
+    <section class="chapter" id="how" data-scene="how">
+      <div class="wrap">
+        <header class="section-head" data-reveal>
+          <div class="scene-slot scene-slot--right" aria-hidden="true"></div>
+          <div class="section-path-beam" aria-hidden="true">
+            <svg viewBox="0 0 500 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M 0,8 L 470,8" stroke="url(#heroBeamGrad)" stroke-width="2" class="beam-line" />
+              <circle cx="470" cy="8" r="4" fill="#ffb800" class="beam-dot" />
+            </svg>
+          </div>
+          <p class="section-tag mono">ONBOARDING TIMELINE</p>
+          <h2 class="section-title">
+            <span class="wm-line"><span>How to Join <span class="grad-text">DAOvault AI</span></span></span>
+          </h2>
+          <p class="section-sub">Zero KYC, zero passwords. Five simple steps to begin building your decentralized network.</p>
+        </header>
+
+        <!-- iorca-style expanding step cards: they drop in, then one opens at a time
+             (auto-advances while in view; a click takes over). landingFx.ts initJoinSteps -->
+        <div class="join-flow">
+          <ol class="join-steps" data-drop-group>
+            <li class="glass join-step" data-drop>
+              <button class="join-step-head" type="button" aria-expanded="false">
+                <span class="join-step-icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="24" height="18" rx="3" /><path d="M4 12h20a4 4 0 0 1 4 4v2h-6a3 3 0 0 1 0-6" /><path d="M8 8l12-4 2 4" /></svg>
+                </span>
+                <span class="join-step-num mono">01</span>
+                <span class="join-step-title">Connect Web3 Wallet</span>
+                <span class="join-step-chev" aria-hidden="true"></span>
+              </button>
+              <div class="join-step-body"><div>
+                <p>Use MetaMask, Trust Wallet, SafePal, or any BEP-20 compatible decentralized wallet.</p>
+                <ul class="join-step-tags mono"><li>MetaMask</li><li>Trust Wallet</li><li>SafePal</li><li>+ More</li></ul>
+              </div></div>
+            </li>
+            <li class="glass join-step" data-drop>
+              <button class="join-step-head" type="button" aria-expanded="false">
+                <span class="join-step-icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="16" cy="16" r="12" /><path d="M19.5 11.5c-.8-1-2-1.5-3.5-1.5-2 0-3.5 1-3.5 2.7 0 3.8 7.2 2 7.2 5.8 0 1.8-1.6 3-3.7 3-1.6 0-3-.6-3.8-1.7M16 7.5v2.5M16 22v2.5" /></svg>
+                </span>
+                <span class="join-step-num mono">02</span>
+                <span class="join-step-title">$300 Single Entry</span>
+                <span class="join-step-chev" aria-hidden="true"></span>
+              </button>
+              <div class="join-step-body"><div>
+                <p>Activate your ID with exactly $300 in USDT (BEP-20) to unlock full access to the ecosystem.</p>
+                <ul class="join-step-tags mono"><li>USDT</li><li>BEP-20</li><li>One time</li></ul>
+              </div></div>
+            </li>
+            <li class="glass join-step" data-drop>
+              <button class="join-step-head" type="button" aria-expanded="false">
+                <span class="join-step-icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M13.5 18.5l5-5" /><path d="M11 15l-3 3a4.2 4.2 0 0 0 6 6l3-3" /><path d="M21 17l3-3a4.2 4.2 0 0 0-6-6l-3 3" /></svg>
+                </span>
+                <span class="join-step-num mono">03</span>
+                <span class="join-step-title">Get Affiliate Link</span>
+                <span class="join-step-chev" aria-hidden="true"></span>
+              </button>
+              <div class="join-step-body"><div>
+                <p>Receive your permanent, unlimited-use referral URL with automatic sponsor attribution.</p>
+                <ul class="join-step-tags mono"><li>Permanent</li><li>Unlimited</li><li>Auto-bound</li></ul>
+              </div></div>
+            </li>
+            <li class="glass join-step" data-drop>
+              <button class="join-step-head" type="button" aria-expanded="false">
+                <span class="join-step-icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="16" cy="7" r="3" /><circle cx="7" cy="24" r="3" /><circle cx="16" cy="24" r="3" /><circle cx="25" cy="24" r="3" /><path d="M16 10v11M16 14l-8 7M16 14l8 7" /></svg>
+                </span>
+                <span class="join-step-num mono">04</span>
+                <span class="join-step-title">Build &amp; Unlock 20 Levels</span>
+                <span class="join-step-chev" aria-hidden="true"></span>
+              </button>
+              <div class="join-step-body"><div>
+                <p>Bring active direct members to unlock deeper generational matrix levels up to Level 20.</p>
+                <ul class="join-step-tags mono"><li>L1 open</li><li>15 directs</li><li>All 20 levels</li></ul>
+              </div></div>
+            </li>
+            <li class="glass join-step" data-drop>
+              <button class="join-step-head" type="button" aria-expanded="false">
+                <span class="join-step-icon" aria-hidden="true">
+                  <svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5h12v7a6 6 0 0 1-12 0z" /><path d="M10 8H6a4 4 0 0 0 4 5M22 8h4a4 4 0 0 1-4 5M16 18v4M11 27h10l-1-5h-8z" /></svg>
+                </span>
+                <span class="join-step-num mono">05</span>
+                <span class="join-step-title">Claim Leadership Rewards</span>
+                <span class="join-step-chev" aria-hidden="true"></span>
+              </button>
+              <div class="join-step-body"><div>
+                <p>Reach milestone volume and withdraw your earnings directly to your Web3 wallet.</p>
+                <ul class="join-step-tags mono"><li>11 ranks</li><li>Up to $100,000</li><li>Your wallet</li></ul>
+              </div></div>
+            </li>
+          </ol>
+
+          <div class="glass join-stage" aria-hidden="true">
+            <!-- electric arcs crackle out of the ring (landingFx.ts) -->
+            <canvas class="join-stage-bolts"></canvas>
+            <svg class="join-ring" viewBox="0 0 120 120">
+              <circle class="join-ring-orbit" cx="60" cy="60" r="58" />
+              <circle class="join-ring-track" cx="60" cy="60" r="52" />
+              <circle class="join-ring-fill" cx="60" cy="60" r="52" />
+              <circle class="join-ring-spark" cx="112" cy="60" r="3.2" />
+            </svg>
+            <div class="join-stage-core">
+              <span class="join-stage-num">01</span>
+              <span class="join-stage-label mono">STEP 01 / 05</span>
+            </div>
+            <p class="join-stage-title">Connect Web3 Wallet</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Final CTA Section (TPR World Inspired) -->
+    <section class="chapter cta" id="join" data-scene="join">
+      <div class="wrap cta-inner" data-reveal>
+        <!-- the particle scene forms the vault dial here, behind the heading -->
+        <div class="scene-slot scene-slot--cta" aria-hidden="true"></div>
+        <div class="section-path-beam cta-beam" aria-hidden="true">
+          <svg viewBox="0 0 500 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 0,8 L 470,8" stroke="url(#heroBeamGrad)" stroke-width="2" class="beam-line" />
+            <circle cx="470" cy="8" r="4" fill="#ffb800" class="beam-dot" />
+          </svg>
+        </div>
+        <p class="section-tag mono cta-tag">DAOVAULT</p>
+        <h2 class="cta-title">
+          <span class="wm-line"><span>Unlock the Power of</span></span>
+          <span class="wm-line"><span><span class="grad-text">Decentralized Finance.</span></span></span>
+        </h2>
+        <p class="section-sub cta-sub">
+          Your assets. Your community. Your decisions. One fixed $300 entry, a 10&times; solvency cap and payouts
+          straight to your own wallet on BNB Smart Chain.
+        </p>
+        <div class="cta-actions">
+          <button class="btn btn-grad btn-lg" data-connect-trigger type="button">
+            <span>Connect Wallet &amp; Activate ID &rarr;</span>
+          </button>
+          <a class="btn btn-line btn-lg" href="dashboard.html">
+            <span>Launch Dashboard</span>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Main Footer -->
+  <footer class="main-footer" data-scene="footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <div data-reveal>
+          <a href="index.html" class="brand" style="margin-bottom: 1rem; display: inline-flex;">
+            <div class="brand-icon brand-icon--logo"><img src="/favicon.png" alt="" width="40" height="40" /></div>
+            <span>DAOvault<span class="grad-text">.AI</span></span>
+          </a>
+          <p style="color: var(--text-dim); font-size: 0.88rem; max-width: 320px; line-height: 1.6;">
+            Where communities build wealth together. A transparent, community-driven DeFi ecosystem built natively on BNB Smart Chain (BEP-20).
+          </p>
+          <p class="footer-tagline mono">Your assets. Your community. Your decisions.</p>
+        </div>
+
+        <div class="footer-col" data-reveal>
+          <h4>Navigation</h4>
+          <ul>
+            <li><a href="#vision">Our Vision</a></li>
+            <li><a href="#about">Ecosystem</a></li>
+            <li><a href="#ranks">Rank Rewards</a></li>
+            <li><a href="#matrix">Level Matrix</a></li>
+            <li><a href="#compare">Comparison</a></li>
+            <li><a href="#how">How to Join</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col" data-reveal>
+          <h4>Platform</h4>
+          <ul>
+            <li><a href="dashboard.html">DApp Dashboard</a></li>
+            <li><a href="#" data-connect-trigger>Connect Wallet</a></li>
+            <li><a href="https://bscscan.com/" target="_blank" rel="noopener">BscScan Explorer</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col" data-reveal>
+          <h4>Community</h4>
+          <ul>
+            <li><a href="https://t.me/" target="_blank" rel="noopener">Telegram Channel</a></li>
+            <li><a href="https://x.com/" target="_blank" rel="noopener">Twitter / X</a></li>
+            <li><a href="https://youtube.com/" target="_blank" rel="noopener">YouTube Official</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom mono" data-reveal>
+        <span>&copy; 2026 DAOVAULT. All rights reserved.</span>
+        <span>Network: BNB Smart Chain (BEP-20)</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Dribbble 3D Crypto Exchange Wallet Stage (#walletModal) -->
+  <div class="modal-overlay wallet-3d-overlay" id="walletModal" role="dialog" aria-modal="true" aria-labelledby="walletModalTitle">
+    <!-- 1. Fullscreen WebGL Canvas for 3D Orbiting Realistic Crypto Coins -->
+    <canvas class="wallet-3d-canvas" id="wallet3DCanvas"></canvas>
+    
+    <!-- 2. Interactive 3D Perspective Stage Container -->
+    <div class="wallet-stage-wrap" id="walletStageWrap">
+      <!-- Ambient Rotating 3D Coin Lottie Backdrop (Glows Behind Dialog) -->
+      <div class="modal-backdrop-coin-orbit" aria-hidden="true">
+        <div id="modalBackdropCoinLottie" class="backdrop-coin-lottie"></div>
+      </div>
+
+      <!-- Central Web3 Connect Wallet Dialog Box -->
+      <div class="modal-box wallet-dialog-box glass border-beam-card" id="walletDialogBox">
+        <div class="card-beam-glow"></div>
+        <button class="modal-close" id="walletModalClose" type="button" aria-label="Close Modal">&times;</button>
+
+        <div class="wallet-box-badge mono">
+          <span class="badge-dot-pulse"></span> BNB SMART CHAIN (BEP-20)
+        </div>
+        <h3 id="walletModalTitle">Connect your <span class="grad-text">Wallet</span></h3>
+        <p class="wallet-box-sub">
+          Select your Web3 provider to instantly authenticate without passwords.
+        </p>
+
+        <div class="wallet-pick-list" id="walletOptionsList">
+          <!-- Populated dynamically via wallet discovery in app.ts -->
+        </div>
+
+        <div class="wallet-dialog-foot mono">
+          <span>&bull; Non-Custodial</span>
+          <span>&bull; Instant BEP-20 Payouts</span>
+          <span>&bull; Solvency Cap 10&times;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Master TypeScript Module -->
+  <script type="module" src="/src/scripts/app.ts"></script>
+</body>
+</html>

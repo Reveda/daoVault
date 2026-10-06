@@ -1,0 +1,244 @@
+/**
+ * DAOvault AI — Web3 Wallet Management Engine (TypeScript)
+ * EIP-6963 + Injected Provider + BSC Network Switching
+ */
+
+import { BSC_CHAIN_ID, BSC_CHAIN_HEX, formatAddress, showToast } from './core.ts';
+import type { EIP6963ProviderDetail, WalletOption } from './types.ts';
+
+// BSC Network Parameters for wallet_addEthereumChain
+export const BSC_PARAMS = {
+  chainId: BSC_CHAIN_HEX,
+  chainName: BSC_CHAIN_ID === 97 ? 'BNB Smart Chain Testnet' : 'BNB Smart Chain Mainnet',
+  nativeCurrency: { name: BSC_CHAIN_ID === 97 ? 'tBNB' : 'BNB', symbol: BSC_CHAIN_ID === 97 ? 'tBNB' : 'BNB', decimals: 18 },
+  rpcUrls: [import.meta.env.VITE_BSC_RPC_URL || (BSC_CHAIN_ID === 97 ? 'https://data-seed-prebsc-1-s1.bnbchain.org:8545' : 'https://bsc-dataseed.binance.org/')],
+  blockExplorerUrls: [BSC_CHAIN_ID === 97 ? 'https://testnet.bscscan.com/' : 'https://bscscan.com/'],
+};
+
+// Wallet discovery map (EIP-6963)
+const discoveredWallets = new Map<string, EIP6963ProviderDetail>();
+let activeProvider: any = null;
+let currentAccount: string | null = null;
+
+// Declare global ethereum
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
+// EIP-6963 Provider Announcement Listener
+if (typeof window !== 'undefined') {
+  window.addEventListener('eip6963:announceProvider', (event: any) => {
+    const { info, provider } = event.detail || {};
+    if (info && provider) {
+      discoveredWallets.set(info.uuid, { info, provider });
+      console.log(`[DAOvault Wallet TS] Discovered wallet: ${info.name}`);
+      window.dispatchEvent(new CustomEvent('daovault:walletsUpdated'));
+    }
+  });
+  window.dispatchEvent(new Event('eip6963:requestProvider'));
+}
+
+/**
+ * Detect all installed and announced EVM providers
+ */
+export function getInstalledWallets(): WalletOption[] {
+  const wallets: WalletOption[] = [];
+  const seenProviders = new Set<any>();
+
+  // 1. EIP-6963 Announced Wallets
+  discoveredWallets.forEach(({ info, provider }) => {
+    seenProviders.add(provider);
+    wallets.push({
+      id: info.rdns || info.uuid,
+      name: info.name,
+      icon: info.icon,
+      provider,
+    });
+  });
+
+  // 2. Fallback to window.ethereum
+  const eth = typeof window !== 'undefined' ? window.ethereum : null;
+  if (eth) {
+    const providers = eth.providers && eth.providers.length ? eth.providers : [eth];
+    providers.forEach((p: any) => {
+      if (!seenProviders.has(p)) {
+        seenProviders.add(p);
+        let name = 'Browser Wallet';
+        if (p.isMetaMask) name = 'MetaMask';
+        else if (p.isTrust || p.isTrustWallet) name = 'Trust Wallet';
+        else if (p.isSafePal) name = 'SafePal';
+        else if (p.isBinance || p.isBinanceChain) name = 'Binance Wallet';
+        else if (p.isCoinbaseWallet) name = 'Coinbase Wallet';
+
+        wallets.push({
+          id: name.toLowerCase().replace(/\s+/g, '-'),
+          name,
+          icon: null,
+          provider: p,
+        });
+      }
+    });
+  }
+
+  return wallets;
+}
+
+/**
+ * Check if user is on mobile
+ */
+export function isMobileDevice(): boolean {
+  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+
+/**
+ * Connect to a specific Web3 provider with BSC Network Verification
+ */
+export async function connectWithProvider(provider: any, walletName: string = 'Wallet'): Promise<string> {
+  try {
+    showToast(`Connecting to ${walletName}...`);
+
+    // 1. Request account access
+    const accounts = await provider.request({ method: 'eth_requestAccounts' });
+    if (!accounts || accounts.length === 0) {
+      throw new Error('No accounts returned from wallet.');
+    }
+
+    const account = accounts[0].toLowerCase();
+    activeProvider = provider;
+    currentAccount = account;
+
+    // 2. Validate BSC Network (Chain ID 56)
+    await ensureBSCNetwork(provider);
+
+    // 3. Persist session
+    localStorage.setItem('daovault_connected_account', account);
+    localStorage.setItem('daovault_connected_wallet', walletName);
+
+    // 4. Wire account & chain change listeners
+    wireProviderEvents(provider);
+
+    showToast(`Connected: ${formatAddress(account)}`);
+    window.dispatchEvent(new CustomEvent('daovault:accountConnected', { detail: { account, walletName } }));
+
+    return account;
+  } catch (err: any) {
+    console.error('[DAOvault] Connection error:', err);
+    if (err.code === 4001 || /rejected/i.test(err.message)) {
+      showToast('Connection request was rejected.', true);
+    } else {
+      showToast(err.message || 'Could not connect wallet.', true);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Ensure user is on the configured BSC network, prompt switch or add chain if necessary
+ */
+export async function ensureBSCNetwork(provider: any): Promise<void> {
+  try {
+    const chainIdHex = await provider.request({ method: 'eth_chainId' });
+    const chainId = parseInt(chainIdHex, 16);
+
+    if (chainId !== BSC_CHAIN_ID) {
+      console.log(`[DAOvault] Wrong chain (${chainId}), requesting switch to BSC (${BSC_CHAIN_ID})...`);
+      try {
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: BSC_CHAIN_HEX }],
+        });
+      } catch (switchError: any) {
+        if (switchError.code === 4902 || /unrecognized/i.test(switchError.message)) {
+          await provider.request({
+            method: 'wallet_addEthereumChain',
+            params: [BSC_PARAMS],
+          });
+        } else {
+          throw switchError;
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[DAOvault] Network switch warning:', err);
+    showToast(`Please switch your wallet to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BSC Mainnet'}.`, true);
+  }
+}
+
+/**
+ * Wire accountsChanged and chainChanged listeners
+ */
+function wireProviderEvents(provider: any): void {
+  if (!provider || !provider.on) return;
+
+  provider.on('accountsChanged', (accounts: string[]) => {
+    if (!accounts || accounts.length === 0) {
+      disconnectWallet();
+    } else {
+      currentAccount = accounts[0].toLowerCase();
+      localStorage.setItem('daovault_connected_account', currentAccount);
+      showToast(`Account changed: ${formatAddress(currentAccount)}`);
+      window.dispatchEvent(new CustomEvent('daovault:accountChanged', { detail: { account: currentAccount } }));
+    }
+  });
+
+  provider.on('chainChanged', () => {
+    window.location.reload();
+  });
+}
+
+/**
+ * Disconnect current wallet
+ */
+export function disconnectWallet(): void {
+  currentAccount = null;
+  activeProvider = null;
+  localStorage.removeItem('daovault_connected_account');
+  localStorage.removeItem('daovault_connected_wallet');
+  showToast('Wallet disconnected.');
+  window.dispatchEvent(new Event('daovault:disconnected'));
+}
+
+/**
+ * Check if a session is already cached
+ */
+export async function autoReconnect(): Promise<string | null> {
+  const cached = localStorage.getItem('daovault_connected_account');
+  if (!cached) return null;
+
+  // EIP-6963 wallets announce asynchronously: on a fresh page load (or refresh of the
+  // dashboard) none may be known yet, which used to bounce members back to the landing page.
+  for (let wait = 0; wait < 15 && getInstalledWallets().length === 0; wait++) {
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+    await new Promise((r) => setTimeout(r, 100));
+  }
+
+  // Try the wallet the member connected with first, then every other installed wallet.
+  const savedName = localStorage.getItem('daovault_connected_wallet');
+  const installed = getInstalledWallets().sort((a, b) => Number(b.name === savedName) - Number(a.name === savedName));
+  for (const wallet of installed) {
+    try {
+      const accounts: string[] = await wallet.provider.request({ method: 'eth_accounts' });
+      const match = accounts?.find((a) => a.toLowerCase() === cached.toLowerCase());
+      if (match) {
+        activeProvider = wallet.provider;
+        currentAccount = match.toLowerCase();
+        wireProviderEvents(wallet.provider);
+        return currentAccount;
+      }
+    } catch (e) {
+      console.warn(`[DAOvault] Auto-reconnect via ${wallet.name} failed:`, e);
+    }
+  }
+  return null;
+}
+
+export function getCurrentAccount(): string | null {
+  return currentAccount || localStorage.getItem('daovault_connected_account');
+}
+
+export function getActiveProvider(): any {
+  return activeProvider;
+}

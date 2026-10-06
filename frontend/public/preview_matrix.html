@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DAOvault AI — 20-Level Matrix Card Design Studio</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="stylesheet" href="/src/styles/main.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #06070d;
+      color: #f8fafc;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .preview-header {
+      background: radial-gradient(circle at 50% -20%, rgba(255, 184, 0, 0.15), transparent 70%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    /* Device frame simulation */
+    .device-viewport-mobile {
+      max-width: 420px;
+      margin: 0 auto;
+      border: 2px solid rgba(255, 184, 0, 0.3);
+      border-radius: 28px;
+      padding: 1.5rem 1rem;
+      background: rgba(0, 0, 0, 0.5);
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 184, 0, 0.1);
+    }
+  </style>
+</head>
+<body class="py-8 px-4 md:px-12">
+  <div class="max-w-7xl mx-auto">
+    <!-- Studio Header -->
+    <div class="preview-header rounded-2xl p-6 md:p-8 mb-10 border border-white/10 backdrop-blur-xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 font-mono text-xs font-semibold mb-3">
+            <span class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></span>
+            ORCA AI &times; TPR WORLD BENCHMARK
+          </div>
+          <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-2">
+            20-Level Matrix Card Design Studio
+          </h1>
+          <p class="text-slate-400 text-sm md:text-base max-w-2xl">
+            Equal-height obsidian glass (<code class="text-amber-300">.glass-v2</code>), glowing 3D cyber pods, high-contrast payout cash pills, recessed LED qualification bays, and baseline-stabilized autonomous energy wave.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="toggleViewBtn" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 border border-white/15 text-xs font-mono font-semibold transition-all">
+            Switch: Desktop 5-Col &harr; Mobile Touch
+          </button>
+          <a href="/#matrix" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs font-mono transition-all shadow-lg shadow-amber-500/20">
+            Open in Main Website &rarr;
+          </a>
+        </div>
+      </div>
+
+      <!-- Feature Checklist Badges -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-white/10 text-xs font-mono text-slate-300">
+        <div class="flex items-center gap-2 text-emerald-400">
+          <span>&check;</span> Equal Baseline Heights
+        </div>
+        <div class="flex items-center gap-2 text-cyan-400">
+          <span>&check;</span> 3D Gyroscopic Tilt on Hover
+        </div>
+        <div class="flex items-center gap-2 text-violet-400">
+          <span>&check;</span> Grounded Wave (No Misalignment)
+        </div>
+        <div class="flex items-center gap-2 text-amber-400">
+          <span>&check;</span> Touch Carousel on Mobile
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Cards Section -->
+    <div id="cardsContainer" class="transition-all duration-300">
+      <!-- Pipeline flow indicator -->
+      <div class="matrix-pipeline-flow mb-6" aria-hidden="true">
+        <div class="pipeline-track">
+          <span class="pipeline-flow-bead"></span>
+        </div>
+        <div class="pipeline-labels mono">
+          <span class="step-active">DIRECT APEX</span>
+          <span>COMMUNITY SPREAD</span>
+          <span>MID EXPANSION</span>
+          <span>CLUSTER DEPTH</span>
+          <span class="step-gold">13-LEVEL GALAXY</span>
+        </div>
+      </div>
+
+      <!-- Cards Grid -->
+      <div class="level-matrix-grid revealed" id="levelMatrixGrid">
+        <!-- Card 1: Level 1 (Direct Apex) -->
+        <div class="matrix-card glass-v2 tier-gold" data-matrix-tier="1">
+          <div class="card-ambient-aura gold-aura"></div>
+          <div class="card-beam-glow"></div>
+          
+          <div class="matrix-card-top">
+            <span class="cyber-badge gold-badge mono">
+              <i class="badge-dot gold"></i> L1 &middot; DIRECT APEX
+            </span>
+            <span class="active-live-tag mono">&check; ACTIVE</span>
+          </div>
+
+          <div class="matrix-emblem-section">
+            <div class="cyber-icon-pod gold-pod">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+            </div>
+            <div class="val-cluster">
+              <div class="matrix-pct grad-text">10%</div>
+              <div class="payout-pill mono">
+                <strong>$30.00</strong> <span>USDT</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="matrix-card-desc">
+            Instant direct referral earnings. Every direct partner pays out $30 straight to your wallet on BSC.
+          </p>
+
+          <div class="matrix-cyber-meter">
+            <div class="meter-info mono">
+              <span class="meter-lbl">QUALIFICATION</span>
+              <span class="meter-val text-green">&check; 0 DIRECTS</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill fill-100 green"></div>
+            </div>
+            <div class="meter-footnote mono">Instant Payout Active</div>
+          </div>
+
+          <button class="btn-tier-inspect mono" type="button" data-sim-target="1">
+            <span>Simulate Level 1</span> &rarr;
+          </button>
+        </div>
+
+        <!-- Card 2: Level 2 (Expansion) -->
+        <div class="matrix-card glass-v2 tier-cyan" data-matrix-tier="2">
+          <div class="card-ambient-aura cyan-aura"></div>
+          <div class="card-beam-glow"></div>
+
+          <div class="matrix-card-top">
+            <span class="cyber-badge cyan-badge mono">
+              <i class="badge-dot cyan"></i> L2 &middot; EXPANSION
+            </span>
+            <span class="tier-req-tag mono text-cyan">2 DIRECTS</span>
+          </div>
+
+          <div class="matrix-emblem-section">
+            <div class="cyber-icon-pod cyan-pod">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="18" cy="5" r="3"></circle>
+                <circle cx="6" cy="12" r="3"></circle>
+                <circle cx="18" cy="19" r="3"></circle>
+                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+              </svg>
+            </div>
+            <div class="val-cluster">
+              <div class="matrix-pct cyan-text">5%</div>
+              <div class="payout-pill mono">
+                <strong>$15.00</strong> <span>USDT</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="matrix-card-desc">
+            Secondary generation earnings from partners sponsored by your direct team members.
+          </p>
+
+          <div class="matrix-cyber-meter">
+            <div class="meter-info mono">
+              <span class="meter-lbl">REQUIREMENT</span>
+              <span class="meter-val text-cyan">2 Directs</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill fill-25 cyan"></div>
+            </div>
+            <div class="meter-footnote mono">2 Directs Unlocks Generation 2</div>
+          </div>
+
+          <button class="btn-tier-inspect mono" type="button" data-sim-target="2">
+            <span>Simulate Level 2</span> &rarr;
+          </button>
+        </div>
+
+        <!-- Card 3: Level 3 & 4 (Mid Multiplier) -->
+        <div class="matrix-card glass-v2 tier-violet" data-matrix-tier="3">
+          <div class="card-ambient-aura violet-aura"></div>
+          <div class="card-beam-glow"></div>
+
+          <div class="matrix-card-top">
+            <span class="cyber-badge violet-badge mono">
+              <i class="badge-dot violet"></i> L3–4 &middot; MID TIER
+            </span>
+            <span class="tier-req-tag mono text-violet">3 &amp; 5 DIR</span>
+          </div>
+
+          <div class="matrix-emblem-section">
+            <div class="cyber-icon-pod violet-pod">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+              </svg>
+            </div>
+            <div class="val-cluster">
+              <div class="matrix-pct violet-text">3%</div>
+              <div class="payout-pill mono">
+                <strong>$9.00</strong> <span>EACH</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="matrix-card-desc">
+            Combined 6% ($18.00 total) distributed across generational tiers 3 and 4 network spread.
+          </p>
+
+          <div class="matrix-cyber-meter">
+            <div class="meter-info mono">
+              <span class="meter-lbl">REQUIREMENT</span>
+              <span class="meter-val text-violet">3 &amp; 5 Directs</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill fill-50 violet"></div>
+            </div>
+            <div class="meter-footnote mono">3 &amp; 5 Directs Unlock L3 &amp; L4</div>
+          </div>
+
+          <button class="btn-tier-inspect mono" type="button" data-sim-target="3">
+            <span>Simulate Level 3–4</span> &rarr;
+          </button>
+        </div>
+
+        <!-- Card 4: Levels 5, 6, 7 (Cluster Depth) -->
+        <div class="matrix-card glass-v2 tier-blue" data-matrix-tier="4">
+          <div class="card-ambient-aura blue-aura"></div>
+          <div class="card-beam-glow"></div>
+
+          <div class="matrix-card-top">
+            <span class="cyber-badge blue-badge mono">
+              <i class="badge-dot blue"></i> L5–7 &middot; CLUSTER
+            </span>
+            <span class="tier-req-tag mono text-blue">7–10 DIR</span>
+          </div>
+
+          <div class="matrix-emblem-section">
+            <div class="cyber-icon-pod blue-pod">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M2 17l10 5 10-5"></path>
+                <path d="M2 12l10 5 10-5"></path>
+              </svg>
+            </div>
+            <div class="val-cluster">
+              <div class="matrix-pct blue-text">2%</div>
+              <div class="payout-pill mono">
+                <strong>$6.00</strong> <span>EACH</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="matrix-card-desc">
+            Triple-depth geometric volume yielding 6% total across deep active generation lines.
+          </p>
+
+          <div class="matrix-cyber-meter">
+            <div class="meter-info mono">
+              <span class="meter-lbl">REQUIREMENT</span>
+              <span class="meter-val text-blue">7, 9, 10 Directs</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill fill-75 blue"></div>
+            </div>
+            <div class="meter-footnote mono">7, 9 &amp; 10 Directs Unlock L5-7</div>
+          </div>
+
+          <button class="btn-tier-inspect mono" type="button" data-sim-target="5">
+            <span>Simulate Level 5–7</span> &rarr;
+          </button>
+        </div>
+
+        <!-- Card 5: Levels 8 to 20 (13-Level Galaxy) -->
+        <div class="matrix-card glass-v2 tier-crown" data-matrix-tier="5">
+          <div class="card-ambient-aura crown-aura"></div>
+          <div class="card-beam-glow"></div>
+
+          <div class="matrix-card-top">
+            <span class="cyber-badge crown-badge mono">
+              <i class="badge-dot gold"></i> L8–20 &middot; 13 LEVELS
+            </span>
+            <span class="tier-req-tag mono text-gold">&star; 15 DIR</span>
+          </div>
+
+          <div class="matrix-emblem-section">
+            <div class="cyber-icon-pod crown-pod">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7z"></path>
+                <circle cx="12" cy="18" r="2"></circle>
+              </svg>
+            </div>
+            <div class="val-cluster">
+              <div class="matrix-pct gold-text">1%</div>
+              <div class="payout-pill mono">
+                <strong>$3.00</strong> <span>&times; 13 LVL</span>
+              </div>
+            </div>
+          </div>
+
+          <p class="matrix-card-desc">
+            Massive exponential depth: 13% total affiliate distribution across thousands of generational members.
+          </p>
+
+          <div class="matrix-cyber-meter">
+            <div class="meter-info mono">
+              <span class="meter-lbl">REQUIREMENT</span>
+              <span class="meter-val text-gold">&star; 15 Directs</span>
+            </div>
+            <div class="meter-track">
+              <div class="meter-fill fill-100 gold"></div>
+            </div>
+            <div class="meter-footnote mono text-gold">15 Directs Unlocks ALL 20 Levels</div>
+          </div>
+
+          <button class="btn-tier-inspect mono" type="button" data-sim-target="8">
+            <span>Simulate Level 8–20</span> &rarr;
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Live 3D card tilt & spotlight tracker
+    const cards = document.querySelectorAll('.matrix-card');
+    cards.forEach((card) => {
+      card.addEventListener('mousemove', (e) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        card.style.setProperty('--mouse-x', `${x}px`);
+        card.style.setProperty('--mouse-y', `${y}px`);
+
+        const centerX = rect.width / 2;
+        const centerY = rect.height / 2;
+
+        const rotateX = ((y - centerY) / centerY) * -7.5;
+        const rotateY = ((x - centerX) / centerX) * 7.5;
+
+        card.style.transform = `perspective(900px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-8px) scale(1.025)`;
+      });
+
+      card.addEventListener('mouseleave', () => {
+        card.style.setProperty('--mouse-x', `-999px`);
+        card.style.setProperty('--mouse-y', `-999px`);
+        card.style.removeProperty('transform');
+      });
+    });
+
+    // View switcher (Desktop / Mobile preview simulator)
+    const toggleBtn = document.getElementById('toggleViewBtn');
+    const container = document.getElementById('cardsContainer');
+    let isMobile = false;
+
+    toggleBtn?.addEventListener('click', () => {
+      isMobile = !isMobile;
+      if (isMobile) {
+        container.classList.add('device-viewport-mobile');
+        toggleBtn.textContent = 'View Mode: Mobile Touch View (Click to switch Desktop)';
+      } else {
+        container.classList.remove('device-viewport-mobile');
+        toggleBtn.textContent = 'View Mode: Desktop 5-Column (Click to switch Mobile)';
+      }
+    });
+  </script>
+</body>
+</html>

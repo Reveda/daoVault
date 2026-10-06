@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DAOvault AI — 3D Crypto Exchange Hero Studio (Alex Bender Benchmark)</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="stylesheet" href="/src/styles/main.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #06070e;
+      color: #f8fafc;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    .preview-box {
+      max-width: 680px;
+      margin: 0 auto;
+      perspective: 1200px;
+    }
+  </style>
+</head>
+<body class="py-10 px-4 md:px-12">
+  <div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="rounded-2xl p-6 md:p-8 mb-10 border border-white/10 bg-slate-900/60 backdrop-blur-xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-xs font-semibold mb-3">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+            DRIBBLE SHOT 26114387 BENCHMARK
+          </div>
+          <h1 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-2">
+            3D Crypto Exchange Hero Animation Studio
+          </h1>
+          <p class="text-slate-400 text-sm md:text-base max-w-2xl">
+            Inspired by <b>Alex Bender &times; FANCY</b> (Shot #26114387). Features the central 3D Gold & Obsidian Vault Core, 3D Orbiting Crypto Tokens (USDT & BNB coins), and multi-plane glass exchange cards with live SVG sparklines and depth parallax.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <a href="/#hero" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs font-mono transition-all shadow-lg shadow-amber-500/20">
+            View Live in Hero Section &rarr;
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live 3D Hero Visual Card Preview -->
+    <div class="preview-box">
+      <div class="hero-visual-card glass border-beam-card" id="studioVisualCard" style="min-height: 520px;">
+        <div class="hero-core-canvas-wrap" style="height: 460px;">
+          <canvas id="studioCoreCanvas"></canvas>
+        </div>
+
+        <!-- 3D Floating Exchange Cards -->
+        <div class="crypto-exchange-card ex-card-1 glass-v2">
+          <div class="ex-card-top">
+            <span class="ex-pair mono"><i class="ex-dot gold"></i> USDT / BSC POOL</span>
+            <span class="ex-badge-green mono">&uarr; +24.8% 24H</span>
+          </div>
+          <div class="ex-card-val-row">
+            <span class="ex-val">$100,000</span>
+            <span class="ex-sub mono">FIFO APEX</span>
+          </div>
+          <div class="ex-sparkline">
+            <svg viewBox="0 0 120 28" fill="none">
+              <path d="M0,22 Q20,8 40,16 T80,10 T100,4 T120,2" stroke="#ffb800" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M0,22 Q20,8 40,16 T80,10 T100,4 T120,2 L120,28 L0,28 Z" fill="url(#studExGoldGrad)" opacity="0.3"/>
+              <defs>
+                <linearGradient id="studExGoldGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#ffb800" stop-opacity="0.8"/>
+                  <stop offset="100%" stop-color="#ffb800" stop-opacity="0"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+        </div>
+
+        <div class="crypto-exchange-card ex-card-2 glass-v2">
+          <div class="ex-card-top">
+            <span class="ex-pair mono"><i class="ex-dot cyan"></i> INSTANT PAYOUT</span>
+            <span class="ex-badge-cyan mono">&check; 0.8s BSC</span>
+          </div>
+          <div class="ex-card-val-row">
+            <span class="ex-val text-cyan">+$30.00</span>
+            <span class="ex-sub mono">USDT / DIR</span>
+          </div>
+          <div class="ex-footer-meta mono">
+            <span>Non-Custodial</span> &bull; <span>Gas: 3 Gwei</span>
+          </div>
+        </div>
+
+        <div class="crypto-exchange-card ex-card-3 glass-v2">
+          <div class="ex-card-top">
+            <span class="ex-pair mono"><i class="ex-dot violet"></i> MATRIX VELOCITY</span>
+            <span class="ex-badge-violet mono">20 LEVELS</span>
+          </div>
+          <div class="ex-card-val-row">
+            <span class="ex-val text-violet">10&times; CAP</span>
+            <span class="ex-sub mono">MAX PAYOUT</span>
+          </div>
+          <div class="ex-progress-bar">
+            <div class="ex-progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="crypto-exchange-card ex-card-4 glass-v2">
+          <div class="ex-card-top">
+            <span class="ex-pair mono"><i class="ex-dot green"></i> SOLVENCY SHIELD</span>
+            <span class="ex-badge-green mono">100% ACTIVITY</span>
+          </div>
+          <div class="ex-card-val-row">
+            <span class="ex-val text-green">0% ROI</span>
+            <span class="ex-sub mono">NO PONZI</span>
+          </div>
+          <div class="ex-footer-meta mono">
+            <span>50:50 Balance Rule</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import * as THREE from 'three';
+
+    const canvas = document.getElementById('studioCoreCanvas');
+    const container = document.getElementById('studioVisualCard');
+    if (canvas && container) {
+      const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      const width = container.clientWidth || 600;
+      const height = 460;
+      renderer.setSize(width, height);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
+      camera.position.set(0, 0, 7.5);
+
+      // Studio Lighting
+      const keyLight = new THREE.DirectionalLight(0xfffaea, 3.4);
+      keyLight.position.set(5, 7, 6);
+      scene.add(keyLight);
+
+      const cyanRim = new THREE.DirectionalLight(0x00f0ff, 2.6);
+      cyanRim.position.set(-6, 4, -4);
+      scene.add(cyanRim);
+
+      const violetRim = new THREE.DirectionalLight(0xa855f7, 2.0);
+      violetRim.position.set(4, -3, -3);
+      scene.add(violetRim);
+
+      scene.add(new THREE.AmbientLight(0xffffff, 0.85));
+
+      const goldMat = new THREE.MeshStandardMaterial({ color: 0xffb800, metalness: 0.94, roughness: 0.15 });
+      const trimMat = new THREE.MeshStandardMaterial({ color: 0xfff08a, metalness: 0.96, roughness: 0.08 });
+      const cyanMat = new THREE.MeshStandardMaterial({ color: 0x00f0ff, emissive: 0x00d4e6, emissiveIntensity: 0.65, metalness: 0.8 });
+
+      const logoGroup = new THREE.Group();
+      scene.add(logoGroup);
+
+      // Hex Gate
+      const hexShape = new THREE.Shape();
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3 - Math.PI / 6;
+        if (i === 0) hexShape.moveTo(Math.cos(a) * 2.05, Math.sin(a) * 2.05);
+        else hexShape.lineTo(Math.cos(a) * 2.05, Math.sin(a) * 2.05);
+      }
+      hexShape.closePath();
+      const hole = new THREE.Path();
+      for (let i = 0; i < 6; i++) {
+        const a = (i * Math.PI) / 3 - Math.PI / 6;
+        if (i === 0) hole.moveTo(Math.cos(a) * 1.72, Math.sin(a) * 1.72);
+        else hole.lineTo(Math.cos(a) * 1.72, Math.sin(a) * 1.72);
+      }
+      hole.closePath();
+      hexShape.holes.push(hole);
+
+      const hexGeo = new THREE.ExtrudeGeometry(hexShape, { depth: 0.32, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06 });
+      hexGeo.center();
+      logoGroup.add(new THREE.Mesh(hexGeo, goldMat));
+
+      // Orbiting 3D Crypto Coins
+      const orbitGroup = new THREE.Group();
+      logoGroup.add(orbitGroup);
+
+      const coinGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.08, 32);
+      const coinRimGeo = new THREE.TorusGeometry(0.38, 0.03, 16, 32);
+
+      // USDT Gold Coin
+      const c1 = new THREE.Group();
+      const m1 = new THREE.Mesh(coinGeo, goldMat);
+      m1.rotation.x = Math.PI / 2;
+      c1.add(m1);
+      c1.add(new THREE.Mesh(coinRimGeo, trimMat));
+      orbitGroup.add(c1);
+
+      // BNB Cyan Coin
+      const c2 = new THREE.Group();
+      const m2 = new THREE.Mesh(coinGeo, cyanMat);
+      m2.rotation.x = Math.PI / 2;
+      c2.add(m2);
+      c2.add(new THREE.Mesh(coinRimGeo, goldMat));
+      orbitGroup.add(c2);
+
+      // Diamond Core
+      const diamond = new THREE.Mesh(new THREE.OctahedronGeometry(0.35, 0), cyanMat);
+      logoGroup.add(diamond);
+
+      // Laser Orbit Tracks
+      const track1 = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.008, 16, 100), new THREE.MeshBasicMaterial({ color: 0xffb800, transparent: true, opacity: 0.35 }));
+      track1.rotation.x = Math.PI / 2.6;
+      logoGroup.add(track1);
+
+      const track2 = new THREE.Mesh(new THREE.TorusGeometry(3.5, 0.008, 16, 100), new THREE.MeshBasicMaterial({ color: 0x00f0ff, transparent: true, opacity: 0.30 }));
+      track2.rotation.x = -Math.PI / 2.8;
+      logoGroup.add(track2);
+
+      // Mouse Parallax
+      let mouseX = 0, mouseY = 0;
+      container.addEventListener('mousemove', (e) => {
+        const r = container.getBoundingClientRect();
+        const nx = (e.clientX - r.left) / r.width - 0.5;
+        const ny = (e.clientY - r.top) / r.height - 0.5;
+        mouseX = nx * 1.2;
+        mouseY = ny * 1.2;
+
+        const exCards = container.querySelectorAll('.crypto-exchange-card');
+        exCards.forEach((c, idx) => {
+          const depth = 35 + idx * 8;
+          c.style.transform = `translate3d(${nx * 30 * (idx+1)}px, ${ny * 30 * (idx+1)}px, ${depth}px)`;
+        });
+      });
+
+      container.addEventListener('mouseleave', () => {
+        mouseX = 0; mouseY = 0;
+        const exCards = container.querySelectorAll('.crypto-exchange-card');
+        exCards.forEach(c => c.style.removeProperty('transform'));
+      });
+
+      const clock = new THREE.Clock();
+      function render() {
+        requestAnimationFrame(render);
+        const t = clock.getElapsedTime();
+        const dt = clock.getDelta();
+
+        logoGroup.rotation.y = Math.sin(t * 0.75) * 0.32 + mouseX * 0.55;
+        logoGroup.rotation.x = Math.cos(t * 0.55) * 0.10 + mouseY * 0.35;
+        logoGroup.position.y = Math.sin(t * 1.6) * 0.08;
+
+        diamond.rotation.y += 0.02;
+        diamond.rotation.z += 0.015;
+
+        // Orbiting Coins
+        const a1 = t * 0.85;
+        c1.position.set(Math.cos(a1) * 3.1, Math.sin(a1) * 3.1 * Math.sin(Math.PI / 2.6), Math.sin(a1) * 3.1 * Math.cos(Math.PI / 2.6));
+        c1.rotation.y += 0.03;
+
+        const a2 = -t * 0.72 + 2.2;
+        c2.position.set(Math.cos(a2) * 3.5, Math.sin(a2) * 3.5 * Math.sin(-Math.PI / 2.8), Math.sin(a2) * 3.5 * Math.cos(-Math.PI / 2.8));
+        c2.rotation.y += 0.025;
+
+        renderer.render(scene, camera);
+      }
+      render();
+    }
+  </script>
+</body>
+</html>
