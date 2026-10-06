@@ -29,6 +29,9 @@ logs/
 *.sqlite3
 *.db
 
+# Markdown documentation
+*.md
+
 # IDE / OS files
 .vscode/
 .idea/
