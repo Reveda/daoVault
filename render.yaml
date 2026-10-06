@@ -3,7 +3,7 @@ services:
     name: daovault-backend
     runtime: node
     rootDir: backend
-    buildCommand: npm ci && npx prisma generate && npm run build
+    buildCommand: npm ci --include=dev && npx prisma generate && npm run build
     startCommand: npm start
     healthCheckPath: /api/v1/health
     autoDeployTrigger: checksPass
