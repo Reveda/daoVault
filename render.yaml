@@ -21,7 +21,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        sync: false
+        value: https://daovault-1.onrender.com
       - key: BSC_RPC_URL
         value: https://bsc-dataseed.binance.org/
       - key: BSC_CHAIN_ID
