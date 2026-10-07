@@ -12,6 +12,7 @@
  * SVG gradient ids, scales to its host box, and pauses its animations off-screen.
  */
 import '../styles/dvlogo.css';
+import { LITE } from './perf.ts';
 
 const W = 460;                 // design width of the original animation
 const H_FULL = 470;            // emblem + wordmark
@@ -21,22 +22,24 @@ const V = '262,120 306,120 340,205 385,95 430,95 352,290 322,290';
 
 let uid = 0;
 
-function emblemLayers(id: string): string {
+function emblemLayers(id: string, depth: number): string {
   const layer = (z: number, fill: string, extra = '') =>
     `<svg width="460" height="320" viewBox="0 0 460 320" style="transform:translateZ(${z}px)" aria-hidden="true">${extra}<path fill-rule="evenodd" d="${D}" fill="${fill}"/><polygon points="${V}" fill="${fill}"/></svg>`;
   let html = '';
-  for (let i = 14; i >= 1; i--) {
-    const t = i / 14;
-    html += layer(-i * 1.6, `rgb(${Math.round(150 - 60 * t)},${Math.round(100 - 50 * t)},6)`);
+  // extrusion: stacked copies behind the face (fewer, thicker steps in lite mode)
+  const step = 22.4 / depth;
+  for (let i = depth; i >= 1; i--) {
+    const t = i / depth;
+    html += layer(-i * step, `rgb(${Math.round(150 - 60 * t)},${Math.round(100 - 50 * t)},6)`);
   }
   html += layer(1, `url(#dvl-fg-${id})`, `<defs><linearGradient id="dvl-fg-${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset=".5" stop-color="#e8a820"/><stop offset="1" stop-color="#b97d08"/></linearGradient></defs>`);
   return html;
 }
 
-function markup(id: string, word: boolean): string {
+function markup(id: string, word: boolean, depth: number): string {
   return `
   <div class="dvl-scene"><div class="dvl-rig">
-    <div class="dvl-emblem">${emblemLayers(id)}</div>
+    <div class="dvl-emblem">${emblemLayers(id, depth)}</div>
     <div class="dvl-glow"></div>
     <div class="dvl-door"><svg width="104" height="104" viewBox="0 0 104 104" aria-hidden="true">
       <defs><radialGradient id="dvl-dg-${id}" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="#ffe27a"/><stop offset=".6" stop-color="#e0a21a"/><stop offset="1" stop-color="#9a6500"/></radialGradient></defs>
@@ -64,10 +67,13 @@ export function mountDvLogo(host: HTMLElement, opts: { word?: boolean } = {}): v
   const height = word ? H_FULL : H_MARK;
 
   host.classList.add('dvl', word ? 'dvl--full' : 'dvl--mark');
+  // small icons need little depth; on phones the small icons hold still (only big logos animate)
+  const depth = !word ? 5 : LITE ? 7 : 14;
+  if (LITE && !word) host.classList.add('dvl-static');
   host.style.setProperty('--dvl-ratio', `${W} / ${height}`);
   host.setAttribute('role', 'img');
   if (!host.getAttribute('aria-label')) host.setAttribute('aria-label', 'DAOVAULT');
-  host.innerHTML = markup(id, word);
+  host.innerHTML = markup(id, word, depth);
 
   const scene = host.querySelector<HTMLElement>('.dvl-scene')!;
   const fit = () => {

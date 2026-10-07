@@ -74,3 +74,8 @@
   .dvl-rig, .dvl-glow, .dvl-door, .dvl-spokes, .dvl-key, .dvl-emblem, .dvl-word { animation: none; }
   .dvl-key { opacity: 0; }
 }
+
+/* lite mode (phones): small logos hold a still pose, no 3D sway or key loop */
+.dvl-static .dvl-rig, .dvl-static .dvl-glow, .dvl-static .dvl-door, .dvl-static .dvl-spokes, .dvl-static .dvl-key { animation: none; }
+.dvl-static .dvl-rig { transform: rotateY(-12deg) rotateX(4deg); }
+.dvl-static .dvl-key { opacity: 0; }

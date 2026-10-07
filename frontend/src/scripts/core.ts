@@ -48,7 +48,7 @@ export function hasWebGL(): boolean {
  * Preloader Progress Easing
  */
 /** How long the splash counts 1% -> 100%; the splash logo's key-turn and door-open fit inside it. */
-export const SPLASH_MS = 4200;
+export const SPLASH_MS = 2800;
 
 export function bootPreloader(onComplete?: () => void): void {
   const loader = document.getElementById('preloader');
@@ -61,7 +61,7 @@ export function bootPreloader(onComplete?: () => void): void {
   // the page must also be loaded; never wait longer than 3s extra for slow assets
   let loaded = document.readyState === 'complete';
   if (!loaded) window.addEventListener('load', () => { loaded = true; }, { once: true });
-  window.setTimeout(() => { loaded = true; }, duration + 3000);
+  window.setTimeout(() => { loaded = true; }, duration + 1500);
 
   let shown = 0;
   const tick = (now: number) => {
@@ -142,6 +142,21 @@ export function initScrollReveal(): void {
  * - When entering the section: Card scales in with a glowing golden bloom shockwave
  * - When exiting the section: Card softly recedes so re-entering triggers the pop again
  */
+/**
+ * Pauses the looping CSS animations of sections that are off screen (.is-offscreen,
+ * see the Performance block in main.css). Saves battery and keeps scrolling smooth.
+ */
+export function initOffscreenPause(): void {
+  if (!('IntersectionObserver' in window)) return;
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((e) => {
+      const off = !e.isIntersecting;
+      if (e.target.classList.contains('is-offscreen') !== off) e.target.classList.toggle('is-offscreen', off);
+    });
+  }, { rootMargin: '250px 0px' });
+  document.querySelectorAll('main > section, main > div > section, .dash-shell section, .main-footer').forEach((el) => io.observe(el));
+}
+
 export function initTrophyBoom(): void {
   const card = document.getElementById('trophyCard');
   if (!card || !('IntersectionObserver' in window)) return;

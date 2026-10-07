@@ -65,6 +65,10 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   Brand copy: "DAOVAULT — Where Communities Build Wealth Together" (hero, #vision, CTA, footer, meta).
   Mobile: audited at 360/390/768/1024 with no horizontal overflow; see "Mobile hardening" block at end of main.css.
   GSAP cleanup must clear only animated props (ANIMATED_PROPS in scrollAnimations.ts), never clearProps 'all'.
+  Performance: html.lite (inline <head> script: <=900px / <=4 cores / <=4GB) read via perf.ts LITE: particles 1300 @1x 30fps,
+  no backdrop-filter / permanent will-change, static small logos, no dashboard 3D icons. core.ts initOffscreenPause pauses
+  CSS animations of off-screen sections. Revealed [data-reveal] content must end with transform:none (crisp text).
+  The hero has no WebGL any more (initHeroCore3D just mounts the dvLogo). Splash: SPLASH_MS 2800.
     dashboardFx.ts    card cascade, rollNumber(), pointer spotlight, 3D metric icons, celebrate() confetti
     matrixDial.ts     #matrix "Explore Any Generation" interactive SVG vault dial (drives the hidden level pills;
                       app.ts autoplay steps a level every 2s while .matrix-calc-box is on screen)

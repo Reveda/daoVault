@@ -9,6 +9,7 @@
 
 import * as THREE from 'three';
 import { hasWebGL } from './core.ts';
+import { LITE } from './perf.ts';
 
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -192,7 +193,8 @@ function buildIcon(kind: IconKind, root: THREE.Group): (t: number, speed: number
  * Each renders only while its card is on screen; hovering speeds it up and tilts it.
  */
 export function initMetricIcons3D(): void {
-  if (!hasWebGL() || reduceMotion()) return;
+  // phones keep the plain gold glyphs: four extra WebGL renderers are too heavy there
+  if (!hasWebGL() || reduceMotion() || LITE) return;
   const kinds: IconKind[] = ['network', 'coin', 'infinity', 'trophy'];
   document.querySelectorAll<HTMLElement>('.metrics-grid .metric-card').forEach((card, idx) => {
     const slot = card.querySelector<HTMLElement>('.metric-icon');

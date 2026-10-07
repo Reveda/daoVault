@@ -11,6 +11,7 @@
  */
 
 import * as THREE from 'three';
+import { LITE } from './perf.ts';
 
 /** views of the DAOvault logo, sampled from the logo image */
 type LogoShape = 'logo' | 'mark' | 'dial';
@@ -359,8 +360,10 @@ export function createParticleScene(
 
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const narrow = matchMedia(NARROW_QUERY);
-  const COUNT = window.innerWidth < 760 ? 2600 : 5200;
-  const px = () => Math.min(window.devicePixelRatio || 1, 1.75);
+  // lite (phones): far fewer particles, 1x pixels, 30fps (see frame())
+  const COUNT = LITE ? 1300 : window.innerWidth < 760 ? 2600 : 5200;
+  const px = () => (LITE ? 1 : Math.min(window.devicePixelRatio || 1, 1.75));
+  let skip = false;
 
   renderer.setPixelRatio(px());
   renderer.setSize(window.innerWidth, window.innerHeight, false);
@@ -627,6 +630,7 @@ export function createParticleScene(
   function frame(): void {
     requestAnimationFrame(frame);
     if (document.hidden) return;
+    if (LITE && (skip = !skip)) return; // 30fps on phones
     const t = clock.getElapsedTime();
     const dt = Math.min(0.05, t - last);
     last = t;

@@ -7,6 +7,7 @@
  * and the next steps (connect / dashboard, invite link). Options are shuffled each run.
  */
 import { gsap } from 'gsap';
+import { LITE } from './perf.ts';
 
 type Question = { q: string; options: string[]; answer: number; why: string };
 
@@ -245,7 +246,7 @@ function startQuizLightning(section: HTMLElement) {
   const bolts: Bolt[] = [];
   let w = 0, h = 0, dpr = 1, raf = 0, visible = false, nextAmbient = 0;
   const resize = () => {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    dpr = LITE ? 1 : Math.min(window.devicePixelRatio || 1, 2);
     w = section.clientWidth; h = section.clientHeight;
     canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
   };
@@ -272,7 +273,7 @@ function startQuizLightning(section: HTMLElement) {
   const draw = (now: number) => {
     raf = 0;
     if (!visible) return;
-    if (now > nextAmbient) { ambient(); nextAmbient = now + 1400 + Math.random() * 2600; }
+    if (now > nextAmbient) { ambient(); nextAmbient = now + (LITE ? 2600 : 1400) + Math.random() * 2600; }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
     ctx.lineCap = 'round';

@@ -6576,7 +6576,7 @@ main {
 .quiz-flash.is-on { animation: quizFlash 0.7s ease-out; }
 @keyframes quizFlash { 0% { opacity: 1; } 15% { opacity: 0.3; } 25% { opacity: 0.9; } 100% { opacity: 0; } }
 /* splash: a faster logo cycle so the key turns and the door opens while it counts to 100% (SPLASH_MS) */
-.loader-logo--anim { --dvl-cycle: 5s; }
+.loader-logo--anim { --dvl-cycle: 3.4s; }
 
 /* quiz: 3D pieces (question coin, letter coins, tilt, streak) */
 .quiz-card { transform: perspective(1100px) rotateX(var(--qx, 0deg)) rotateY(var(--qy, 0deg)); transition: transform .35s ease-out; transform-style: preserve-3d; }
@@ -6662,3 +6662,45 @@ main {
 /* the tag sits under the trophy base, not over it */
 .trophy-stage .trophy-badge-tag { bottom: -1.4rem; z-index: 3; }
 .trophy-stage { margin-bottom: 1.6rem; }
+
+/* ==========================================================================
+   Performance (phones especially)
+   ========================================================================== */
+/* revealed content drops its GPU layer: text stays crisp (no blurry buttons) and
+   phones don't run out of layer memory (blank areas while scrolling) */
+[data-reveal].revealed,
+.ready [data-reveal].hero-left,
+.ready [data-reveal].hero-right,
+.hero-left.revealed,
+.hero-right.revealed {
+  transform: none !important;
+  will-change: auto;
+}
+
+/* sections off screen pause their looping CSS animations (core.ts initOffscreenPause) */
+.is-offscreen,
+.is-offscreen *,
+.is-offscreen *::before,
+.is-offscreen *::after {
+  animation-play-state: paused !important;
+}
+
+/* lite mode (html.lite: phones / low-power devices) */
+html.lite *,
+html.lite *::before,
+html.lite *::after {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  will-change: auto !important;
+}
+html.lite .hero-dv-logo { filter: none; }
+html.lite .hero-connect-showcase:not(.is-ready) .btn.btn-wallet { animation: none; box-shadow: 0 0 22px rgba(212, 175, 55, 0.35); }
+html.lite .btn-wallet-icon .coin-wallet-lottie { filter: none; }
+html.lite .quiz-bolts { mix-blend-mode: normal; }
+html.lite .cursor-spotlight { display: none; }
+html.lite .top-header,
+html.lite .top-header.scrolled { background: rgba(5, 5, 12, 0.96); }
+/* phones: the countdown fits the screen (it ran past the right edge) */
+@media (max-width: 600px) {
+  .countdown-box { max-width: 100%; box-sizing: border-box; justify-content: space-between; padding-inline: 0.9rem; gap: 0.35rem; }
+}

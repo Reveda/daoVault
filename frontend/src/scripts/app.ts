@@ -14,6 +14,7 @@ import {
   initScrollReveal,
   initCircuitSpine,
   initTrophyBoom,
+  initOffscreenPause,
   countUp,
   formatAddress,
   showToast,
@@ -35,6 +36,7 @@ import { initScrollSpy, initNavIndicator, initJoinSteps, initDropCards, initSign
 
 document.addEventListener('DOMContentLoaded', async () => {
   initDvLogos(); // animated DAOVAULT logo: preloader, header, footer
+  initOffscreenPause(); // looping CSS animations pause off screen
   initReferralCapture();
   init3DScene();
   initHeroCore3D();
