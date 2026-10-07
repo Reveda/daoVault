@@ -4,7 +4,7 @@
  */
 
 import { init3DScene, initHeroCore3D } from './scene.ts';
-import { initTrophyLottie } from './trophy.ts';
+import { initApexTrophy } from './trophy3d.ts';
 import { initScrollAnimations } from './scrollAnimations.ts';
 import { initCoinWalletLottie } from './coinWalletLottie.ts';
 import { initMatrixAutoDeck } from './matrixAutoDeck.ts';
@@ -28,14 +28,17 @@ import {
 import type { WalletOption } from './types.ts';
 import { initRankGameCard } from './rankGameCard.ts';
 import { initMatrixDial } from './matrixDial.ts';
+import { initVaultQuiz } from './quiz.ts';
+import { initDvLogos } from './dvLogo.ts';
 import { initScrollSpy, initNavIndicator, initJoinSteps, initDropCards, initSignalCardFlips } from './landingFx.ts';
 
 
 document.addEventListener('DOMContentLoaded', async () => {
+  initDvLogos(); // animated DAOVAULT logo: preloader, header, footer
   initReferralCapture();
   init3DScene();
   initHeroCore3D();
-  initTrophyLottie();
+  initApexTrophy();
 
   // Ambient mouse spotlight tracker on whole document
   window.addEventListener('mousemove', (e: MouseEvent) => {
@@ -68,6 +71,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initRankGameCard();
   initHeroMetricsSection();
   initSignalCardFlips();
+  initVaultQuiz();
   initHeroMetricsInteraction();
   initCardTilt();
   initFlipCards();
@@ -325,7 +329,8 @@ function initMatrixCalculator(): void {
   const matrixSection = calcBox ?? document.getElementById('matrix');
   if (matrixSection && 'IntersectionObserver' in window) {
     const observer = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) startAutoLevels();
+      // every visit starts again from L1 and ticks round like a clock
+      if (entry.isIntersecting) { selectLevel(0); startAutoLevels(); }
       else stopAutoLevels();
     }, { threshold: 0.2 });
     observer.observe(matrixSection);

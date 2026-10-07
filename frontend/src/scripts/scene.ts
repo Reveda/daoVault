@@ -12,6 +12,7 @@
 
 import * as THREE from 'three';
 import { hasWebGL } from './core.ts';
+import { mountDvLogo } from './dvLogo.ts';
 import { createParticleScene, bindSectionScenes, type ParticleSceneController } from './particleScene.ts';
 
 /**
@@ -307,8 +308,7 @@ export function initHeroCore3D(): void {
   logoGroup.add(sparks);
 
   // -------------------------------------------------------------
-  // E. Official DAOvault logo video. It replaces this whole emblem; the emblem
-  //    only shows if the video cannot play (see mountLogoVideo).
+  // E. Animated DAOVAULT logo (dvLogo.ts). It replaces this whole emblem.
   // -------------------------------------------------------------
   const updateLogoVideo = mountLogoVideo(logoGroup, container);
 
@@ -382,66 +382,27 @@ export function initHeroCore3D(): void {
   console.log('[DAOvault] Official 3D Animated DAOvault Logo Emblem Initialized (PBR WebGL 60 FPS)');
 }
 
-const LOGO_VIDEO_SRC = '/assets/daoAnimation.MP4';
-
 /**
- * Hero logo: only the official video (/assets/daoAnimation.MP4) is shown, flat
- * and sharp in the brand lockup, with no other animation around it. It plays the
- * whole clip exactly as made, on an endless loop. The modelled 3D vault stays
- * hidden and only comes back (with the flat logo image) if the video cannot play.
- * Returns the per-frame hook (nothing to do while the video plays).
+ * Hero logo: the animated DAOVAULT logo (dvLogo.ts, a port of
+ * public/DAOVault logo animation.html) replaces the old video in the brand lockup:
+ * the gold DV emblem sways in 3D, the key turns and the vault door opens on a loop.
+ * It is pure CSS, so it can't fail to play; the modelled 3D vault stays hidden.
  */
 function mountLogoVideo(group: THREE.Group, container: HTMLElement): (time: number, dt: number) => void {
   const lockup = container.querySelector<HTMLElement>('.hero-brand-lockup');
   if (!lockup) return () => {};
 
   const stage = document.createElement('span');
-  stage.className = 'hero-logo-stage';
-  const video = document.createElement('video');
-  video.className = 'hero-logo-video';
-  video.src = LOGO_VIDEO_SRC;
-  video.muted = true;
-  video.loop = true;
-  video.playsInline = true;
-  video.preload = 'auto';
-  video.setAttribute('muted', '');
-  video.setAttribute('playsinline', '');
-  video.setAttribute('aria-label', 'DAOvault logo');
-  stage.appendChild(video);
+  stage.className = 'hero-logo-stage hero-logo-stage--anim';
+  const logo = document.createElement('span');
+  logo.className = 'hero-dv-logo';
+  logo.setAttribute('aria-label', 'DAOVAULT logo');
+  stage.appendChild(logo);
   lockup.prepend(stage);
+  mountDvLogo(logo, { word: true });
 
-  // the video alone has the stage: no vault, no sparks
+  // the logo alone has the stage: no vault, no sparks
   group.visible = false;
-  container.classList.add('has-video-logo');
-
-  let failed = false;
-  let onScreen = true;
-  const restoreVault = () => {
-    if (failed) return;
-    failed = true;
-    stage.remove();
-    container.classList.remove('has-video-logo', 'logo-playing');
-    group.visible = true;
-  };
-  const play = () => {
-    if (failed || !onScreen || document.hidden) return;
-    video.play().catch((err: unknown) => {
-      // a play() cut short by pause() (scrolled away, tab hidden) is not a failure
-      if (err instanceof DOMException && err.name === 'AbortError') return;
-      restoreVault();
-    });
-  };
-
-  video.addEventListener('playing', () => container.classList.add('logo-playing'), { once: true });
-  video.addEventListener('error', restoreVault);
-  if ('IntersectionObserver' in window) {
-    new IntersectionObserver(([entry]) => {
-      onScreen = entry.isIntersecting;
-      if (onScreen) play(); else video.pause();
-    }).observe(container);
-  }
-  document.addEventListener('visibilitychange', () => { if (document.hidden) video.pause(); else play(); });
-  play();
-
+  container.classList.add('has-video-logo', 'logo-playing');
   return () => {};
 }

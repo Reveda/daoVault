@@ -1,0 +1,35 @@
+/* DAOvault admin (withdrawal queue) — builds on main.css + dashboard.css */
+.admin-tag { font-size: 0.62rem; letter-spacing: 0.14em; color: var(--gold); border: 1px solid rgba(212, 175, 55, 0.45); border-radius: 999px; padding: 0.1rem 0.45rem; margin-left: 0.4rem; vertical-align: middle; }
+.admin-locked { padding: 2rem; max-width: 560px; }
+.admin-locked h3 { margin-bottom: 0.5rem; }
+.admin-locked p { color: var(--text-muted); line-height: 1.6; }
+.admin-locked code { color: var(--gold); }
+.admin-stats { margin-bottom: 2rem; }
+.admin-queue { padding: 2rem; }
+.admin-queue-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.admin-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+.admin-tabs button {
+  padding: 0.45rem 0.9rem; border-radius: 999px; border: 1px solid var(--border-line); background: transparent;
+  color: var(--text-muted); font: inherit; font-size: 0.78rem; cursor: pointer;
+}
+.admin-tabs button.is-active { color: #050410; background: var(--grad-gold); border-color: transparent; font-weight: 700; }
+.admin-help { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1.2rem; }
+.admin-list { display: grid; gap: 0.8rem; }
+.admin-empty { color: var(--text-muted); text-align: center; padding: 1.5rem 0; }
+.admin-item {
+  display: grid; grid-template-columns: 1fr minmax(0, 340px); gap: 1rem; align-items: center;
+  padding: 1rem 1.2rem; border-radius: 14px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.admin-item-main { min-width: 0; }
+.admin-amount b { font-family: var(--font-heading); font-size: 1.4rem; color: var(--gold); }
+.admin-amount span { font-size: 0.72rem; color: var(--text-muted); }
+.admin-sub { font-size: 0.74rem; color: var(--text-muted); margin-top: 0.25rem; overflow-wrap: anywhere; }
+.admin-sub a { color: #f3ecd6; }
+.admin-actions { display: grid; grid-template-columns: 1fr auto; gap: 0.5rem; }
+.admin-actions .ref-input { min-width: 0; font-size: 0.8rem; padding: 0.55rem 0.7rem; }
+.admin-actions [data-act="approve"] { grid-column: 1 / -1; }
+.admin-btn-danger { background: rgba(239, 68, 68, 0.12); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.45); }
+.admin-btn-danger:hover { background: rgba(239, 68, 68, 0.22); }
+@media (max-width: 760px) {
+  .admin-item { grid-template-columns: 1fr; }
+}

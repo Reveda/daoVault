@@ -1,7 +1,9 @@
 import { BrowserProvider, Contract, ZeroAddress, parseUnits } from 'ethers';
 import { BSC_CHAIN_ID, showToast } from './core.ts';
 import { getActiveProvider, getCurrentAccount } from './wallet.ts';
-import { verifyActivation } from './api.ts';
+import { ApiError, getSponsorByCode, verifyActivation } from './api.ts';
+
+const PENDING_TX_KEY = 'daovault_pending_activation_tx';
 
 const PAYMENT_ADDRESS = String(import.meta.env.VITE_PAYMENT_CONTRACT_ADDRESS || '').trim();
 const TOKEN_ADDRESS = String(import.meta.env.VITE_USDT_CONTRACT_ADDRESS || '').trim();
@@ -26,6 +28,35 @@ function isAddress(value: string): boolean {
 
 export function isPaymentConfigured(): boolean {
   return isAddress(PAYMENT_ADDRESS) && isAddress(TOKEN_ADDRESS);
+}
+
+/**
+ * Invite code -> sponsor wallet. Empty code = no sponsor. Throws a clear message when the
+ * code is unknown, so a member never pays without the sponsor they were invited by.
+ */
+export async function resolveSponsor(code: string, self: string): Promise<{ wallet: string; code: string | null }> {
+  const clean = code.trim().toUpperCase();
+  if (!clean) return { wallet: ZeroAddress, code: null };
+  try {
+    const sponsor = await getSponsorByCode(clean);
+    if (sponsor.walletAddress.toLowerCase() === self.toLowerCase()) return { wallet: ZeroAddress, code: null };
+    return { wallet: sponsor.walletAddress, code: sponsor.referralCode };
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      throw new Error(`Invite code ${clean} is not an active DAOvault member. Check your invite link.`);
+    }
+    throw new Error('Could not check your invite code right now. Please try again.');
+  }
+}
+
+/** A paid activation whose backend check failed (network etc.) is retried on the next visit. */
+export async function retryPendingActivation(walletAddress: string): Promise<boolean> {
+  let saved: { hash: string; wallet: string; sponsor: string } | null = null;
+  try { saved = JSON.parse(localStorage.getItem(PENDING_TX_KEY) || 'null'); } catch { /* ignore */ }
+  if (!saved || saved.wallet !== walletAddress.toLowerCase()) return false;
+  await verifyActivation({ walletAddress, transactionHash: saved.hash, sponsorAddress: saved.sponsor });
+  try { localStorage.removeItem(PENDING_TX_KEY); } catch { /* ignore */ }
+  return true;
 }
 
 export async function activateWallet(sponsorAddress = ZeroAddress): Promise<string> {
@@ -72,10 +103,9 @@ export async function activateWallet(sponsorAddress = ZeroAddress): Promise<stri
   const activation = await payment.activate(isAddress(sponsorAddress) ? sponsorAddress : ZeroAddress);
   await activation.wait();
 
-  await verifyActivation({
-    walletAddress,
-    transactionHash: activation.hash,
-    sponsorAddress: isAddress(sponsorAddress) ? sponsorAddress : ZeroAddress,
-  });
+  const sponsor = isAddress(sponsorAddress) ? sponsorAddress : ZeroAddress;
+  try { localStorage.setItem(PENDING_TX_KEY, JSON.stringify({ hash: activation.hash, wallet: walletAddress.toLowerCase(), sponsor })); } catch { /* ignore */ }
+  await verifyActivation({ walletAddress, transactionHash: activation.hash, sponsorAddress: sponsor });
+  try { localStorage.removeItem(PENDING_TX_KEY); } catch { /* ignore */ }
   return activation.hash;
 }

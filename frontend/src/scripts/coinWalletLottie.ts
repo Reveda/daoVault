@@ -93,7 +93,8 @@ export function playModalWalletLottie(): void {
 }
 
 /** frames of /assets/coin-wallet.json: the wallet appears, then coins circle it */
-const WALLET_INTRO: [number, number] = [0, 100];
+// frame 0 is empty: start where the wallet is already drawn, so the badge never shows a blank
+const WALLET_INTRO: [number, number] = [12, 100];
 const WALLET_SWIRL: [number, number] = [30, 130];
 const WALLET_REPEAT_MS = 5000;
 
@@ -114,7 +115,8 @@ function initHeroWalletSequence(): void {
   if (!showcase || !box) return;
   // the buttons appear after the wallet's intro, and never later than this
   const showButtons = () => showcase.classList.add('is-ready');
-  window.setTimeout(showButtons, 6500);
+  // safety: counted from the end of the splash, not from page load
+  whenPageReady(() => window.setTimeout(showButtons, 4000));
 
   let anim: AnimationItem;
   try {
@@ -126,6 +128,8 @@ function initHeroWalletSequence(): void {
     return;
   }
   anim.addEventListener('data_failed', showButtons);
+  // show the wallet at once (still) while the splash runs; it starts moving when the page is revealed
+  anim.addEventListener('DOMLoaded', () => anim.goToAndStop(WALLET_INTRO[0], true));
   anim.addEventListener('DOMLoaded', () => whenPageReady(() => {
     if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
       anim.goToAndStop(WALLET_SWIRL[1], true);

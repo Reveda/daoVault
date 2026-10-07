@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin | DAOVAULT</title>
+  <meta name="theme-color" content="#050505" />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/src/styles/main.css" />
+  <link rel="stylesheet" href="/src/styles/dashboard.css" />
+  <link rel="stylesheet" href="/src/styles/admin.css" />
+</head>
+<body class="dash-page admin-page">
+  <header class="top-header scrolled">
+    <div class="wrap top-bar">
+      <a href="index.html" class="brand">
+        <div class="brand-icon brand-icon--logo" data-dv-logo="mark"><img src="/favicon.png" alt="" width="40" height="40" /></div>
+        <span>DAOvault<span class="grad-text">.AI</span> <small class="admin-tag mono">ADMIN</small></span>
+      </a>
+      <div class="dash-head-actions">
+        <span class="dash-user-badge mono" id="adminWallet" hidden></span>
+        <button class="btn btn-grad" id="adminSignIn" type="button">Connect &amp; sign in</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash-shell">
+    <div class="wrap">
+      <div class="dash-header">
+        <div>
+          <div class="mono dash-member-tag" id="adminState">&bull; Sign in with an admin wallet</div>
+          <h1 style="font-size: clamp(1.8rem, 3.2vw, 2.6rem);">Payout <span class="grad-text">Control</span></h1>
+        </div>
+      </div>
+
+      <section class="admin-locked glass" id="adminLocked">
+        <h3>Admin wallets only</h3>
+        <p>Connect a wallet listed in <code>ADMIN_WALLETS</code> on the backend and sign the login message. Signing costs no gas.</p>
+      </section>
+
+      <div id="adminApp" hidden>
+        <div class="metrics-grid admin-stats" id="adminStats"></div>
+
+        <section class="glass admin-queue">
+          <div class="admin-queue-head">
+            <h3>Withdrawals</h3>
+            <div class="admin-tabs mono" role="tablist">
+              <button type="button" data-status="PENDING" class="is-active">Pending</button>
+              <button type="button" data-status="PROCESSING">Approved</button>
+              <button type="button" data-status="COMPLETED">Paid</button>
+              <button type="button" data-status="REJECTED">Rejected</button>
+            </div>
+          </div>
+          <p class="admin-help mono" id="adminHelp"></p>
+          <div class="admin-list" id="adminList"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script type="module" src="/src/scripts/admin.ts"></script>
+</body>
+</html>

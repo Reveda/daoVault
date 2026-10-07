@@ -52,6 +52,7 @@ export const SCENE_STATES: Record<string, SceneState> = {
   compare: { shape: 'logo', x: -0.56, y: 0,    s: 0.85, op: 0.8,  storm: 0.6, anchor: '#compare .scene-slot' },
   how:     { shape: 'dial', x: 0.6,   y: 0,    s: 0.95, op: 0.8,  storm: 0.6, anchor: '#how .scene-slot' },
   join:    { shape: 'dial', x: 0,     y: 0.25, s: 1.1,  op: 0.7,  storm: 1.6, mop: 0.6, anchor: '#join .scene-slot', fit: 0.95 },
+  quiz:    { shape: 'logo', x: -0.6,  y: -0.1, s: 0.95, op: 0.8,  storm: 1.4, mx: 0, my: -0.35, mop: 0.35, anchor: '#quiz .scene-slot' },
   footer:  { shape: 'dust', x: 0,     y: 0,    s: 1,    op: 0.35, storm: 0.2 },
   // dashboard: the logo forms while the wallet is checked, then calm dust
   vault:   { shape: 'logo', x: 0,     y: 0.05, s: 1.1,  op: 0.9,  storm: 1.0, mop: 0.7 },

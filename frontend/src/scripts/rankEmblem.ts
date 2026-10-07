@@ -7,6 +7,7 @@
  */
 
 import { gsap } from 'gsap';
+import { mountDvLogo } from './dvLogo.ts';
 
 const C = 120;        // centre of the 240x240 viewBox
 const RING_R = 100;   // tier segments
@@ -51,13 +52,15 @@ export function mountRankEmblem(host: HTMLElement, before: Element | null, total
         <g class="re-orbit"><circle cx="${C}" cy="${C - RING_R}" r="4" /></g>
       </svg>
       <div class="re-coin">
-        <div class="re-face re-front"><img src="/favicon.png" alt="" /></div>
+        <div class="re-face re-front"><span class="re-mark"></span></div>
         <div class="re-face re-back"><span class="re-num">01</span></div>
       </div>
       <div class="re-sparks"></div>
     </div>
     <div class="re-caption mono">TIER <b class="re-tier">01</b> / ${String(total).padStart(2, '0')}</div>`;
   host.insertBefore(root, before);
+  const mark = root.querySelector<HTMLElement>('.re-mark');
+  if (mark) mountDvLogo(mark, { word: false });
   segments = [...root.querySelectorAll<SVGPathElement>('.re-seg')];
 }
 

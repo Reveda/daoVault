@@ -47,26 +47,36 @@ export function hasWebGL(): boolean {
 /**
  * Preloader Progress Easing
  */
+/** How long the splash counts 1% -> 100%; the splash logo's key-turn and door-open fit inside it. */
+export const SPLASH_MS = 4200;
+
 export function bootPreloader(onComplete?: () => void): void {
   const loader = document.getElementById('preloader');
   const bar = document.getElementById('loaderBar') as HTMLElement | null;
   const num = document.getElementById('loaderNum') as HTMLElement | null;
+  const quick = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const duration = quick ? 900 : SPLASH_MS;
+  const t0 = performance.now();
 
-  let current = 0;
-  let target = 0.4;
-  let done = false;
+  // the page must also be loaded; never wait longer than 3s extra for slow assets
+  let loaded = document.readyState === 'complete';
+  if (!loaded) window.addEventListener('load', () => { loaded = true; }, { once: true });
+  window.setTimeout(() => { loaded = true; }, duration + 3000);
 
-  const tick = () => {
-    current += (target - current) * 0.085;
-    const pct = Math.min(100, Math.round(current * 100));
-
-    // counts naturally: 1%, 2%, 3% … 100% (no leading zeros)
-    if (num) num.textContent = `${pct}%`;
-    if (bar) bar.style.width = pct + '%';
-
-    if (done && pct >= 99) {
-      if (num) num.textContent = '100%';
-      if (bar) bar.style.width = '100%';
+  let shown = 0;
+  const tick = (now: number) => {
+    const t = Math.min(1, (now - t0) / duration);
+    const eased = 0.5 - Math.cos(Math.PI * t) / 2; // gentle ease in/out
+    // counts every number: 1%, 2%, 3% ... 99%, then 100% once the page is loaded
+    const target = Math.max(1, Math.min(loaded ? 100 : 99, Math.floor(1 + eased * 99)));
+    // one number per frame so none is skipped; a very slow device catches up 2 at a time
+    const pct = target > shown ? Math.min(target, shown + (target - shown > 20 ? 2 : 1)) : shown;
+    if (pct !== shown) {
+      shown = pct;
+      if (num) num.textContent = `${pct}%`;
+      if (bar) bar.style.width = pct + '%';
+    }
+    if (pct >= 100) {
       if (loader) loader.classList.add('ready');
       document.body.classList.add('ready');
       document.querySelectorAll('#hero .hero-left, #hero .hero-right').forEach((el) => el.classList.add('revealed'));
@@ -75,20 +85,8 @@ export function bootPreloader(onComplete?: () => void): void {
     }
     requestAnimationFrame(tick);
   };
+  if (num) num.textContent = '1%';
   requestAnimationFrame(tick);
-
-  // When fonts and DOM are ready, push to 85%
-  if (document.fonts) {
-    document.fonts.ready.then(() => {
-      target = Math.max(target, 0.85);
-    });
-  }
-
-  // Safety cap: Never hold the page more than 900ms
-  setTimeout(() => {
-    target = 1.0;
-    done = true;
-  }, 900);
 }
 
 /**

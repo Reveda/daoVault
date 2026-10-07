@@ -38,37 +38,25 @@
 
   <!-- Smart Preloader -->
   <div class="preloader" id="preloader">
-    <div class="loader-logo loader-logo--brand">
+    <div class="loader-logo loader-logo--anim" data-dv-logo="full">
       <img src="/assets/DAOlogo.jpg" alt="DAOVAULT" width="240" height="160" />
     </div>
     <div class="loader-bar-wrap">
       <div class="loader-bar" id="loaderBar"></div>
     </div>
-    <div class="loader-num mono" id="loaderNum">0%</div>
+    <div class="loader-num mono" id="loaderNum">1%</div>
   </div>
 
   <!-- Header -->
   <header class="top-header scrolled">
     <div class="wrap top-bar">
-      <a href="index.html" class="brand">
-        <div class="brand-icon brand-icon--logo"><img src="/favicon.png" alt="" width="40" height="40" /></div>
+      <a href="#overview" class="brand" aria-label="DAOVAULT dashboard">
+        <div class="brand-icon brand-icon--logo" data-dv-logo="mark"><img src="/favicon.png" alt="" width="40" height="40" /></div>
         <span>DAOvault<span class="grad-text">.AI</span></span>
       </a>
 
-      <nav class="nav-pill" aria-label="Dashboard Navigation">
-        <ul class="nav-links">
-          <li><a href="dashboard.html" class="active">Overview</a></li>
-          <li><a href="#rewardsSection">Rewards</a></li>
-          <li><a href="#levelsSection">Team Levels</a></li>
-          <li><a href="#withdrawSection">Withdraw</a></li>
-        </ul>
-      </nav>
 
       <div class="dash-head-actions">
-      <a href="index.html" class="dash-home-btn" title="Back to the main site">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M10 21v-6h4v6"/></svg>
-        <span>Main Site</span>
-      </a>
       <!-- wallet chip with a menu: copy address, BscScan, log out -->
       <div class="wallet-menu" id="walletMenu">
         <button class="dash-user-badge mono wallet-menu-btn" id="walletMenuBtn" type="button" aria-haspopup="menu" aria-expanded="false">
@@ -79,7 +67,6 @@
         <div class="wallet-menu-panel" role="menu" hidden>
           <button type="button" role="menuitem" id="walletCopyBtn">Copy address</button>
           <a role="menuitem" id="walletScanLink" href="https://bscscan.com" target="_blank" rel="noopener">View on BscScan &nearr;</a>
-          <a role="menuitem" href="index.html">Main site</a>
           <button type="button" role="menuitem" class="is-danger" id="dashLogoutBtn">Log out</button>
         </div>
       </div>
@@ -90,7 +77,7 @@
   <main class="dash-shell">
     <div class="wrap">
       <!-- Dashboard Top Header -->
-      <div class="dash-header">
+      <div class="dash-header" id="overview">
         <div>
           <div class="mono dash-member-tag" id="dashMemberTag">&bull; Checking membership&hellip;</div>
           <h1 style="font-size: clamp(1.8rem, 3.2vw, 2.6rem);">Welcome to your <span class="grad-text">Vault</span></h1>
@@ -178,7 +165,7 @@
                 10&times; Sustainability <span class="grad-text">Gauge Meter</span>
               </h3>
               <p style="color: var(--text-muted); font-size: 0.88rem;">
-                Maximum cumulative earnings are capped at 10&times; ($3,000) per $300 package. Top-up anytime to extend your capacity.
+                Level income is capped at 10&times; ($3,000) per $300 package. Rank rewards are paid on top of the cap.
               </p>
             </div>
             <div class="mono" id="capPctText" style="font-size: 1rem; font-weight: 700; color: var(--gold);">
@@ -241,7 +228,7 @@
                   Real-time status of all 20 generational matrix levels (40% distribution).
                 </p>
               </div>
-              <span class="mono" style="font-size: 0.8rem; color: var(--gold);">
+              <span class="mono" style="font-size: 0.8rem; color: var(--gold);" id="levelTableNote">
                 Live data required
               </span>
             </div>
@@ -254,6 +241,7 @@
                     <th>Share</th>
                     <th>Unlock Milestone</th>
                     <th>Status</th>
+                    <th>Members</th>
                     <th>Earned</th>
                   </tr>
                 </thead>
@@ -264,32 +252,45 @@
             </div>
           </div>
 
-          <!-- 50:50 Leg Ratio Balance Card -->
-          <div class="glass" style="padding: 2rem;">
+          <!-- 50:50 Leg Ratio Balance Card (live from the backend) -->
+          <div class="glass leg-card" id="legCard" style="padding: 2rem;">
             <h3 style="font-size: 1.25rem; margin-bottom: 0.4rem;">
               Leadership Rank <span class="grad-text">50:50 Leg Balance</span>
             </h3>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">
-              Next Target: <strong>Executive Rank ($2,500 Reward · 350 DAO Required)</strong>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;" id="legNextTarget">
+              Next target: <strong>Starter &middot; 25 DAO &middot; $100 reward</strong>
             </p>
 
-            <div style="background: rgba(0,0,0,0.3); border-radius: var(--radius-md); padding: 1.2rem; border: 1px solid var(--border-line);">
-              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.5rem;" class="mono">
-                <span style="color: var(--gold);">Leg 1 (Power Leg): —</span>
-                <span style="color: var(--text-muted);">Activation required</span>
+            <div class="leg-box">
+              <div class="leg-row mono">
+                <span style="color: var(--gold);">Power leg <small>(max 50% counted)</small></span>
+                <span id="legPowerVal">0 / 12.5 DAO</span>
               </div>
-              <div class="cap-bar-track" style="height: 8px; margin-bottom: 1.2rem;">
-                <div style="height: 100%; width: 0%; background: var(--gold);"></div>
-              </div>
+              <div class="cap-bar-track leg-track"><div class="leg-fill leg-fill--power" id="legPowerBar"></div></div>
 
-              <div style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.5rem;" class="mono">
-                <span style="color: var(--cyan);">Other Legs Combined: —</span>
-                <span style="color: var(--text-muted);">Activation required</span>
+              <div class="leg-row mono">
+                <span style="color: #f3ecd6;">Other legs combined <small>(min 50%)</small></span>
+                <span id="legOtherVal">0 / 12.5 DAO</span>
               </div>
-              <div class="cap-bar-track" style="height: 8px; margin-bottom: 0;">
-                <div style="height: 100%; width: 0%; background: var(--cyan);"></div>
+              <div class="cap-bar-track leg-track"><div class="leg-fill leg-fill--other" id="legOtherBar"></div></div>
+
+              <div class="leg-stats mono">
+                <span>Counted <b id="legCountedVal">0 / 25</b></span>
+                <span>Team volume <b id="legTeamVal">0 DAO</b></span>
+                <span>Legs <b id="legCountVal">0</b></span>
               </div>
             </div>
+          </div>
+
+          <!-- Recent income (level commissions + rank rewards) -->
+          <div class="glass income-card" id="incomeCard" style="padding: 2rem; margin-top: 2rem;">
+            <div class="income-head">
+              <h3 style="font-size: 1.25rem;">Recent <span class="grad-text">Income</span></h3>
+              <span class="mono income-split" id="incomeSplit">Level $0 &middot; Rank $0</span>
+            </div>
+            <ul class="income-list mono" id="incomeList">
+              <li class="income-empty">No income yet. Share your invite link to start earning.</li>
+            </ul>
           </div>
         </div>
 
@@ -297,10 +298,10 @@
         <div id="withdrawSection">
           <div class="glass withdraw-box">
             <h3 style="font-size: 1.3rem; margin-bottom: 0.4rem;">
-              Instant <span class="grad-text">USDT Withdrawal</span>
+              <span class="grad-text">USDT</span> Withdrawal
             </h3>
             <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">
-              Direct on-chain payout to your connected Web3 address on BNB Smart Chain.
+              Paid in USDT straight to your own connected wallet on BNB Smart Chain.
             </p>
 
             <div style="background: rgba(0,0,0,0.35); padding: 1.2rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; border: 1px solid var(--border-line);">
@@ -308,6 +309,7 @@
               <div class="mono" id="withAvailBalance" style="font-size: 1.8rem; font-weight: 800; color: #ffffff; margin-top: 0.35rem;">
                 $0.00 USDT
               </div>
+              <div class="mono with-meta" id="withMeta">Pending $0.00 &middot; Withdrawn $0.00</div>
             </div>
 
             <div style="margin-bottom: 1.5rem;">
@@ -324,7 +326,7 @@
                 <span id="withGrossVal" style="color: #ffffff;">$0.00</span>
               </div>
               <div class="calc-row">
-                <span style="color: var(--red);">Platform Fee (5%):</span>
+                <span style="color: var(--red);">Withdrawal charge (5%):</span>
                 <span id="withFeeVal" style="color: var(--red);">-$0.00</span>
               </div>
               <div class="calc-row total">
@@ -334,12 +336,16 @@
             </div>
 
             <button class="btn btn-grad" id="withSubmitBtn" type="button" style="width: 100%; padding: 1rem;">
-              <span>Confirm Instant Withdrawal &rarr;</span>
+              <span id="withSubmitLabel">Sign in &amp; request withdrawal &rarr;</span>
             </button>
 
-            <p style="text-align: center; font-size: 0.75rem; color: var(--text-dim); margin-top: 1rem;" class="mono">
-              &bull; 5% fee is allocated to liquidity reserve and reward pool.
+            <p style="text-align: center; font-size: 0.75rem; color: var(--text-dim); margin-top: 1rem;" class="mono" id="withPayoutNote">
+              &bull; Signing in only proves wallet ownership: no gas, no transaction. The 5% charge goes to the ecosystem treasury.
             </p>
+            <div class="with-history" id="withHistory" hidden>
+              <h4 class="mono">Your withdrawals</h4>
+              <ul id="withHistoryList"></ul>
+            </div>
           </div>
         </div>
       </div>

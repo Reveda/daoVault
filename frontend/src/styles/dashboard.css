@@ -193,27 +193,9 @@
   }
 }
 
-/* Dashboard navigation remains reachable on smaller screens instead of
-   disappearing with the landing-page navigation. */
+/* Dashboard header: logo + wallet menu only (no section nav), one row on every screen */
 @media (max-width: 960px) {
-  .dash-page .top-bar {
-    flex-wrap: wrap;
-    row-gap: 0.45rem;
-  }
-
-  .dash-page .nav-pill {
-    display: block !important;
-    order: 3;
-    flex: 1 0 100%;
-    width: 100%;
-    max-width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .dash-page .nav-pill::-webkit-scrollbar { display: none; }
-  .dash-page .nav-links { width: max-content; }
-  .dash-page .dash-shell { padding-top: 7.5rem; }
+  .dash-page .dash-shell { padding-top: 6rem; }
 }
 
 /* 20 Level Accordion / Table */
@@ -282,7 +264,7 @@
 }
 
 @media (max-width: 600px) {
-  .dash-shell { padding-top: 8.15rem; padding-bottom: 3rem; }
+  .dash-shell { padding-top: 5.6rem; padding-bottom: 3rem; }
   .dash-shell .wrap { padding-left: 1rem; padding-right: 1rem; }
   .dash-shell .dash-user-badge { max-width: 44vw; padding: 0.45rem 0.65rem; font-size: 0.68rem; overflow: hidden; }
   .dash-shell #dashWalletAddr { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -306,21 +288,6 @@
   .level-table th, .level-table td { padding: 0.7rem 0.65rem; font-size: 0.74rem; }
   .dash-content-grid { gap: 1rem; }
   .dash-shell .glass[style*="padding: 2rem"] { padding: 1rem !important; }
-
-  .dash-page .nav-pill {
-    padding: 0.22rem 0.28rem;
-    border-radius: 12px;
-  }
-
-  .dash-page .nav-links {
-    gap: 0.15rem;
-  }
-
-  .dash-page .nav-links a {
-    padding: 0.4rem 0.58rem;
-    font-size: 0.66rem;
-    white-space: nowrap;
-  }
 }
 
 /* ==========================================================================
@@ -1006,16 +973,7 @@ body.gift-open {
 
 /* ── Header: Main Site button + member strip ─────────────────────────── */
 .dash-head-actions { display: flex; align-items: center; gap: 0.6rem; min-width: 0; }
-.dash-home-btn {
-  display: inline-flex; align-items: center; gap: 0.45rem;
-  padding: 0.6rem 1rem; border-radius: var(--radius-pill);
-  border: 1px solid var(--border-line); background: var(--bg-card);
-  color: var(--text-muted); font-size: 0.85rem; font-weight: 600; text-decoration: none;
-  backdrop-filter: var(--glass-blur);
-  transition: color .25s, border-color .25s, box-shadow .25s, transform .25s;
-}
-.dash-home-btn:hover { color: var(--gold); border-color: rgba(212, 175, 55, .55); box-shadow: 0 0 18px rgba(212, 175, 55, .18); transform: translateY(-1px); }
-.dash-home-btn svg { flex: none; }
+
 
 .dash-member-tag { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 0.35rem; letter-spacing: .04em; }
 .dash-member-tag.is-active { color: var(--green); }
@@ -1027,7 +985,55 @@ body.gift-open {
 .dash-chip b { color: var(--gold); font-weight: 600; margin-left: 0.25rem; }
 
 @media (max-width: 600px) {
-  .dash-home-btn { padding: 0.5rem; }
-  .dash-home-btn span { display: none; }
   .dash-shell .wallet-menu-panel #dashLogoutBtn { padding: 0.6rem 0.8rem !important; font-size: 0.85rem; }
 }
+
+/* ── Live plan data: legs, income, withdrawals ───────────────────────── */
+.leg-box { background: rgba(0, 0, 0, 0.3); border-radius: var(--radius-md); padding: 1.2rem; border: 1px solid var(--border-line); }
+.leg-row { display: flex; justify-content: space-between; gap: 0.75rem; font-size: 0.85rem; margin-bottom: 0.5rem; flex-wrap: wrap; }
+.leg-row small { color: var(--text-dim); font-size: 0.72rem; }
+.leg-track { height: 8px; margin-bottom: 1.2rem; overflow: hidden; }
+.leg-fill { height: 100%; width: 0; border-radius: inherit; transition: width 1.1s cubic-bezier(.16, 1, .3, 1); }
+.leg-fill--power { background: linear-gradient(90deg, #8a6818, #d4af37 60%, #f5d76e); box-shadow: 0 0 10px rgba(212, 175, 55, .55); }
+.leg-fill--other { background: linear-gradient(90deg, #f3ecd6, #fff); box-shadow: 0 0 10px rgba(255, 244, 214, .4); }
+.leg-stats { display: flex; flex-wrap: wrap; gap: 0.5rem 1.2rem; font-size: 0.78rem; color: var(--text-muted); border-top: 1px solid var(--border-line); padding-top: 0.8rem; }
+.leg-stats b { color: var(--gold); }
+
+.income-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; }
+.income-split { font-size: 0.75rem; color: var(--text-muted); }
+.income-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; font-size: 0.8rem; }
+.income-list li {
+  display: grid; grid-template-columns: 1fr auto auto; gap: 0.8rem; align-items: center;
+  padding: 0.65rem 0.8rem; border-radius: 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.income-list li > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #d8d2c2; }
+.income-list li b { color: var(--green); }
+.income-list li.is-rank { border-color: rgba(212, 175, 55, 0.4); background: rgba(212, 175, 55, 0.07); }
+.income-list li.is-rank b { color: var(--gold); }
+.income-when { color: var(--text-dim); font-size: 0.72rem; }
+.income-list .income-empty { display: block; color: var(--text-muted); text-align: center; }
+
+.with-meta { margin-top: 0.4rem; font-size: 0.72rem; color: var(--text-muted); }
+.with-history { margin-top: 1.4rem; border-top: 1px solid var(--border-line); padding-top: 1rem; }
+.with-history h4 { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 0 0 0.6rem; }
+.with-history ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.45rem; font-size: 0.78rem; }
+.with-history li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.3rem 0.8rem; padding: 0.6rem 0.75rem; border-radius: 10px; background: rgba(255, 255, 255, 0.03); border-left: 3px solid var(--text-dim); }
+.with-history li small { flex-basis: 100%; color: var(--text-dim); }
+.with-history li.is-pending { border-left-color: var(--gold); }
+.with-history li.is-processing { border-left-color: #f5d76e; }
+.with-history li.is-completed { border-left-color: var(--green); }
+.with-history li.is-rejected { border-left-color: var(--red); }
+.with-status { color: var(--text-muted); }
+.with-history a { color: var(--gold); }
+#withSubmitBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media (max-width: 600px) {
+  .income-list li { grid-template-columns: 1fr auto; }
+  .income-when { display: none; }
+}
+.with-claim {
+  flex-basis: 100%; margin-top: 0.35rem; padding: 0.55rem 0.9rem; border: 0; border-radius: 999px; cursor: pointer;
+  background: var(--grad-gold); color: #050410; font: inherit; font-weight: 700; font-size: 0.8rem;
+  box-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
+}
+.with-claim:disabled { opacity: 0.6; cursor: wait; }

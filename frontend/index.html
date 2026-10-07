@@ -43,20 +43,20 @@
 
   <!-- Smart Preloader -->
   <div class="preloader" id="preloader">
-    <div class="loader-logo loader-logo--brand">
+    <div class="loader-logo loader-logo--anim" data-dv-logo="full">
       <img src="/assets/DAOlogo.jpg" alt="DAOVAULT" width="240" height="160" />
     </div>
     <div class="loader-bar-wrap">
       <div class="loader-bar" id="loaderBar"></div>
     </div>
-    <div class="loader-num mono" id="loaderNum">0%</div>
+    <div class="loader-num mono" id="loaderNum">1%</div>
   </div>
 
   <!-- Fixed Top Header -->
   <header class="top-header">
     <div class="wrap top-bar">
       <a href="index.html" class="brand">
-        <div class="brand-icon brand-icon--logo"><img src="/favicon.png" alt="" width="40" height="40" /></div>
+        <div class="brand-icon brand-icon--logo" data-dv-logo="mark"><img src="/favicon.png" alt="" width="40" height="40" /></div>
         <span>DAOvault<span class="grad-text">.AI</span></span>
       </a>
 
@@ -582,7 +582,7 @@
                   <span class="cypheir-req-tag mono text-green">&check; UNLOCKED ON ACTIVATION</span>
                 </div>
                 <p class="cypheir-desc">
-                  Instant direct affiliate earnings. Every direct partner sponsored pays out $30.00 USDT automatically routed to your non-custodial Web3 wallet on BNB Smart Chain.
+                  Direct affiliate earnings. Every direct partner you sponsor credits $30.00 to your DAOvault balance the moment their activation is verified on BNB Smart Chain.
                 </p>
 
                 <div class="matrix-cyber-meter cypheir-meter">
@@ -1094,7 +1094,7 @@
                   <span class="mono" style="font-size: 0.75rem; color: var(--violet);">LAYER 04 &middot; SECURITY</span>
                   <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">Automated 5% Fee</h3>
                   <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
-                    95% instant net payout to your connected Web3 address on BNB Smart Chain.
+                    Withdraw your balance in USDT to your own connected wallet on BNB Smart Chain; you receive 95%.
                   </p>
                 </div>
                 <div class="flip-hint mono" style="color: var(--violet);">
@@ -1106,7 +1106,7 @@
                   <span class="mono" style="font-size: 0.75rem; color: var(--violet);">&check; LIQUIDITY RESERVE</span>
                   <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Ecosystem Treasury</h4>
                   <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
-                    The flat 5% deduction automatically replenishes the leadership bonus pool, covers gas reserves, and sustains continuous platform infrastructure without needing external seed capital.
+                    The flat 5% withdrawal charge goes back to the ecosystem treasury: it funds the rank reward pool, network gas and platform upkeep.
                   </p>
                 </div>
                 <div class="mono" style="font-size: 0.78rem; color: var(--violet); border-top: 1px solid rgba(168,85,247,0.3); padding-top: 0.6rem;">
@@ -1328,6 +1328,56 @@
         </div>
       </div>
     </section>
+
+    <!-- Vault quiz: 5 questions, each correct answer locks a gold bolt; the door opens at the end (quiz.ts) -->
+    <section class="chapter quiz-section" id="quiz" data-scene="quiz" aria-labelledby="quizTitle">
+      <div class="wrap">
+        <header class="section-head" data-reveal>
+          <div class="scene-slot scene-slot--left" aria-hidden="true"></div>
+          <p class="section-tag mono">QUICK KNOWLEDGE QUIZ</p>
+          <h2 class="section-title" id="quizTitle">Crack the <span class="grad-text">DAOVAULT</span></h2>
+          <p class="section-sub">Five quick questions. Every right answer locks a gold bolt. Open the vault to unlock your dashboard and invite link.</p>
+        </header>
+
+        <div class="quiz-stage" id="vaultQuiz">
+          <div class="quiz-vault" aria-hidden="true">
+            <div class="qv-glow"></div>
+            <div class="qv-frame">
+              <div class="qv-inside">
+                <span class="qv-mark" data-dv-logo="mark"></span>
+                <span class="mono">UNLOCKED</span>
+              </div>
+              <div class="qv-door">
+                <svg viewBox="0 0 200 200" class="qv-svg">
+                  <defs>
+                    <radialGradient id="qvFace" cx="40%" cy="35%" r="75%">
+                      <stop offset="0" stop-color="#2c240f" /><stop offset="1" stop-color="#070605" />
+                    </radialGradient>
+                  </defs>
+                  <circle cx="100" cy="100" r="96" fill="url(#qvFace)" stroke="#8a6818" stroke-width="3" />
+                  <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(212,175,55,.25)" stroke-width="1.5" stroke-dasharray="3 6" />
+                  <g class="qv-bolts"></g>
+                  <g class="qv-wheel">
+                    <circle cx="100" cy="100" r="34" fill="#120f07" stroke="#d4af37" stroke-width="3" />
+                    <g stroke="#d4af37" stroke-width="6" stroke-linecap="round">
+                      <line x1="100" y1="50" x2="100" y2="72" /><line x1="100" y1="128" x2="100" y2="150" />
+                      <line x1="50" y1="100" x2="72" y2="100" /><line x1="128" y1="100" x2="150" y2="100" />
+                    </g>
+                    <circle cx="100" cy="100" r="12" fill="#d4af37" />
+                  </g>
+                </svg>
+              </div>
+            </div>
+            <div class="qv-score mono"><b id="quizScore">0</b> / 5 bolts locked</div>
+          </div>
+
+          <div class="quiz-card glass" aria-live="polite">
+            <div class="quiz-progress"><span id="quizBar"></span></div>
+            <div class="quiz-body" id="quizBody"></div>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
   <!-- Main Footer -->
@@ -1336,7 +1386,7 @@
       <div class="footer-grid">
         <div data-reveal>
           <a href="index.html" class="brand" style="margin-bottom: 1rem; display: inline-flex;">
-            <div class="brand-icon brand-icon--logo"><img src="/favicon.png" alt="" width="40" height="40" /></div>
+            <div class="brand-icon brand-icon--logo" data-dv-logo="mark"><img src="/favicon.png" alt="" width="40" height="40" /></div>
             <span>DAOvault<span class="grad-text">.AI</span></span>
           </a>
           <p style="color: var(--text-dim); font-size: 0.88rem; max-width: 320px; line-height: 1.6;">
