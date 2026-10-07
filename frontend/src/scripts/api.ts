@@ -56,7 +56,19 @@ export type WithdrawalSummary = {
 
 // Local Vite uses a same-origin /api proxy, so browser CORS cannot block it.
 // Production can provide VITE_API_BASE_URL for a separately hosted API.
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '');
+// The live backend on Render. Used when VITE_API_BASE_URL is missing or still a template
+// placeholder: a placeholder ("ACTUAL-BACKEND-URL") once sent every live request to a dead host.
+const RENDER_API = 'https://daovault-2.onrender.com/api/v1';
+
+function resolveApiBase(): string {
+  const configured = String(import.meta.env.VITE_API_BASE_URL || '').trim();
+  const placeholder = /ACTUAL-BACKEND-URL|example\.com|your[-_]/i.test(configured);
+  if (configured && !placeholder) return configured.replace(/\/$/, '');
+  if (window.location.hostname.endsWith('.onrender.com')) return RENDER_API;
+  return '/api/v1';
+}
+
+const API_BASE_URL = resolveApiBase();
 
 /** Error that keeps the HTTP status, so callers can tell "not found" from "server down". */
 export class ApiError extends Error {

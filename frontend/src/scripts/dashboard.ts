@@ -130,8 +130,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Render's free plan sleeps the API and the first request after that can fail or take
   // 30-50s, so network errors and 5xx are retried for about a minute before giving up.
   let dashboardData: DashboardData | null = null;
+  // true when the server could not be reached: then we do NOT know whether this wallet is
+  // activated, so no "Activate $300" card and no "activate to get your link" text
+  let serverDown = false;
   let leaving = false;
   window.addEventListener('pagehide', () => { leaving = true; });
+  const refInput = document.getElementById('dashRefLinkInput') as HTMLInputElement | null;
+  if (refInput) refInput.value = 'Loading your invite link…';
   for (let attempt = 0; ; attempt++) {
     try {
       dashboardData = await getDashboardData(account);
@@ -150,6 +155,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
       console.error('[DAOvault] Dashboard API unavailable:', error);
       showToast('Could not reach the DAOvault server. Please refresh in a minute.', true);
+      serverDown = true;
       break;
     }
   }
@@ -162,8 +168,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const hasLiveData = dashboardData !== null;
   scene?.setScene('dash');
 
-  initReferralLink(account, dashboardData);
-  initActivation(account, Boolean(pkg));
+  initReferralLink(account, dashboardData, serverDown);
+  initActivation(account, Boolean(pkg), serverDown);
   updateOverviewMetrics(activeDirects, totalEarned, capEarned, maxCap, dashboardData?.currentRank, pkg?.status);
   updateMemberDetails(dashboardData, Boolean(pkg), capEarned, maxCap);
 
@@ -190,11 +196,13 @@ function initDashboardNavigation(): void {
   });
 }
 
-function initActivation(account: string, activated: boolean): void {
+function initActivation(account: string, activated: boolean, serverDown = false): void {
   const card = document.getElementById('activationCard');
   const button = document.getElementById('dashActivateBtn') as HTMLButtonElement | null;
   const status = document.getElementById('activationStatus');
-  if (activated) { card?.setAttribute('hidden', ''); return; }
+  // without the server we cannot tell an activated member from a new one: never offer
+  // the $300 payment on a guess
+  if (activated || serverDown) { card?.setAttribute('hidden', ''); return; }
   if (!button) return;
   if (REAL_PAYMENTS_LOCKED) {
     button.disabled = true;
@@ -320,7 +328,7 @@ function renderIncome(data: DashboardData | null): void {
 /**
  * Referral Link Copier
  */
-function initReferralLink(account: string, data: DashboardData | null): void {
+function initReferralLink(account: string, data: DashboardData | null, serverDown = false): void {
   const inputEl = document.getElementById('dashRefLinkInput') as HTMLInputElement | null;
   const copyBtn = document.getElementById('dashCopyRefBtn');
   const sponsorTag = document.getElementById('dashSponsorTag');
@@ -330,7 +338,11 @@ function initReferralLink(account: string, data: DashboardData | null): void {
   const origin = window.location.origin;
   const fullLink = `${origin}/index.html?ref=${refCode}`;
 
-  if (inputEl) inputEl.value = data ? fullLink : 'Activate your ID to get your invite link';
+  if (inputEl) {
+    inputEl.value = data ? fullLink
+      : serverDown ? 'Server unavailable · refresh in a minute to see your link'
+      : 'Activate your ID to get your invite link';
+  }
   const idEl = document.getElementById('dashMemberId');
   if (idEl) idEl.textContent = data ? refCode : '–';
   if (sponsorTag) {
