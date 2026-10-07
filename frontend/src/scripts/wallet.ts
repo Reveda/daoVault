@@ -240,6 +240,10 @@ function wireProviderEvents(provider: any): void {
   wiredProviders.add(provider);
 
   provider.on('accountsChanged', (accounts: string[]) => {
+    // Logged out (or never connected on this page): the wallet's events no longer count.
+    // Trust re-emits the account right after Log out, which used to save it again and
+    // show the member as still connected on the landing page.
+    if (!currentAccount) return;
     if (!accounts || accounts.length === 0) {
       // Phone wallets (Trust) emit an empty list around page loads without the member
       // disconnecting; only desktop extensions mean it (lock / disconnect site).

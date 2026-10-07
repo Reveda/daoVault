@@ -83,7 +83,12 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   app.ts autoConnectFromWalletApp() connects inside the wallet app. api.ts wakeBackend() pings /health on landing
   load + every 10 min (Render free plan sleeps the API).
   wallet.ts autoReconnect() waits for EIP-6963 announcements and tries every wallet (else the dashboard bounced to
-  the landing page on refresh). Dashboard: header = logo + wallet menu only (owner removed the navbar); no link back to the landing page (only Log out); metric captions are data-driven.
+  the landing page on refresh). On phones it falls back to eth_requestAccounts (Trust returns [] from eth_accounts
+  after a load, which caused a landing<->dashboard reload loop). A connected wallet on the landing page is sent to
+  its dashboard (sessionStorage dv_dash_bounce + recordAutoRedirect() max 2 per 20s stop bounces). accountsChanged
+  is ignored when the account is unchanged (Trust re-emits it on every load: a reload loop once) and when empty on
+  phones; only a real switch reloads the dashboard. Dashboard data retries network/5xx ~1 min (Render waking).
+  App links carry ?ref (wallet browsers have their own storage); Binance/OKX links use their official formats. Dashboard: header = logo + wallet menu only (owner removed the navbar); no link back to the landing page (only Log out); metric captions are data-driven.
   Preloader/footer use --bg-dark (#050505) like the landing page. The wallet modal card never tilts.
   CSS for the motion layer is the last block of main.css and dashboard.css ("TPR motion layer").
   styles: src/styles/main.css (large, ~4.7k lines), dashboard.css
@@ -102,3 +107,7 @@ sponsor's activation never reached the backend. See document.md section 4.
 - Never put private keys or seed phrases in `.env`, code, or the DB. Never trust amounts or status sent by the browser; the chain is the source of truth.
   Only exception (owner-approved): PAYOUT_SIGNER_TESTNET_KEY, a fundless voucher signer, on BSC Testnet only.
 - Testnet = chain 97, Mainnet = 56. Don't mix token/contract addresses between them.
+- Still in development: no real-money payment may happen. payment.ts REAL_PAYMENTS_LOCKED refuses the activation and
+  payout claim on any chain but 97 unless VITE_ALLOW_MAINNET_PAYMENTS=true (render.yaml: "false"). Never flip it
+  without the owner saying it is launch time. The live site (daovault-1.onrender.com) is built for chain 56.
+- Transactions: requireBSCNetwork(provider) before new BrowserProvider; sign with getSignerFor(provider, account).
