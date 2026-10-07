@@ -468,7 +468,8 @@ function initWalletPicker(): void {
     window.location.href = 'dashboard.html';
   });
   triggers.forEach((trigger) => {
-    trigger.addEventListener('click', () => {
+    trigger.addEventListener('click', (e) => {
+      e.preventDefault(); // the footer trigger is an <a href="#">: no jump to the top
       const current = getCurrentAccount();
       if (current) {
         // already connected: the address button leads to the dashboard

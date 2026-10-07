@@ -8,7 +8,7 @@
  */
 
 import { openGiftBox } from './giftBox.ts';
-import { showToast } from './core.ts';
+import { BSC_CHAIN_ID, showToast } from './core.ts';
 
 export const RANK_TIERS = [
   { name: 'Starter', volume: 25, reward: 100 },
@@ -94,7 +94,7 @@ export function initWalletMenu(wallet: string): void {
   const panel = wrap?.querySelector<HTMLElement>('.wallet-menu-panel');
   if (!wrap || !btn || !panel) return;
   const scan = document.getElementById('walletScanLink') as HTMLAnchorElement | null;
-  if (scan) scan.href = `https://bscscan.com/address/${wallet}`;
+  if (scan) scan.href = `https://${BSC_CHAIN_ID === 97 ? 'testnet.' : ''}bscscan.com/address/${wallet}`;
 
   const setOpen = (open: boolean) => {
     panel.hidden = !open;
