@@ -140,3 +140,18 @@ export const approveWithdrawal = (token: string, id: string) => post<Withdrawal>
 export const rejectWithdrawal = (token: string, id: string, reason: string) => post<Withdrawal>(`/admin/withdrawals/${id}/reject`, { reason }, token);
 export const completeWithdrawal = (token: string, id: string, payoutTxHash: string) =>
   post<Withdrawal>(`/admin/withdrawals/${id}/complete`, { payoutTxHash }, token);
+
+/**
+ * Wakes the backend (Render's free plan sleeps it after ~15 idle minutes and the first
+ * request then waits 30-50s). Fired when the landing page opens, so the API is awake by
+ * the time the visitor reaches the dashboard; repeated every 10 minutes while the tab is
+ * visible. Fire-and-forget: failures are ignored.
+ */
+export function wakeBackend(): void {
+  const ping = () => {
+    if (document.hidden) return;
+    fetch(`${API_BASE_URL}/health`, { cache: 'no-store', keepalive: true }).catch(() => {});
+  };
+  ping();
+  window.setInterval(ping, 10 * 60_000);
+}

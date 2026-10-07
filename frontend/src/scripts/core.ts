@@ -79,8 +79,13 @@ export function bootPreloader(onComplete?: () => void): void {
     if (pct >= 100) {
       if (loader) loader.classList.add('ready');
       document.body.classList.add('ready');
-      document.querySelectorAll('#hero .hero-left, #hero .hero-right').forEach((el) => el.classList.add('revealed'));
-      if (onComplete) onComplete();
+      // heavy setup (scroll animations etc.) runs in its own task once the splash fade has
+      // started, not inside this frame (it stalled the splash exit for ~240ms). The hero
+      // reveal goes in the same task so its intro animation never flashes.
+      window.setTimeout(() => {
+        document.querySelectorAll('#hero .hero-left, #hero .hero-right').forEach((el) => el.classList.add('revealed'));
+        if (onComplete) onComplete();
+      }, 40);
       return;
     }
     requestAnimationFrame(tick);

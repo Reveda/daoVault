@@ -78,6 +78,10 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   Landing nav: no Matrix/Dashboard items; li.nav-dash shows only with body.wallet-connected; landingFx initNavIndicator
   glides a highlight. MutationObservers must never react to their own writes (classList.add re-sets the attribute even
   when unchanged); a self-triggering observer froze the page on the preloader once.
+  wallet.ts: chainChanged never reloads the page (Trust fired it mid-connect and lost the connection); brand flags are
+  checked before isMetaMask (Trust/SafePal/OKX/Binance/Coinbase also set it). Mobile app links add dv_connect=1 and
+  app.ts autoConnectFromWalletApp() connects inside the wallet app. api.ts wakeBackend() pings /health on landing
+  load + every 10 min (Render free plan sleeps the API).
   wallet.ts autoReconnect() waits for EIP-6963 announcements and tries every wallet (else the dashboard bounced to
   the landing page on refresh). Dashboard: header = logo + wallet menu only (owner removed the navbar); no link back to the landing page (only Log out); metric captions are data-driven.
   Preloader/footer use --bg-dark (#050505) like the landing page. The wallet modal card never tilts.

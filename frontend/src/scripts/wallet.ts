@@ -65,12 +65,15 @@ export function getInstalledWallets(): WalletOption[] {
     providers.forEach((p: any) => {
       if (!seenProviders.has(p)) {
         seenProviders.add(p);
+        // brand flags first: Trust, SafePal, Binance, OKX and Coinbase also set isMetaMask
+        // for compatibility, so checking MetaMask first mislabelled them
         let name = 'Browser Wallet';
-        if (p.isMetaMask) name = 'MetaMask';
-        else if (p.isTrust || p.isTrustWallet) name = 'Trust Wallet';
+        if (p.isTrust || p.isTrustWallet) name = 'Trust Wallet';
         else if (p.isSafePal) name = 'SafePal';
         else if (p.isBinance || p.isBinanceChain) name = 'Binance Wallet';
+        else if (p.isOkxWallet || p.isOKExWallet) name = 'OKX Wallet';
         else if (p.isCoinbaseWallet) name = 'Coinbase Wallet';
+        else if (p.isMetaMask) name = 'MetaMask';
 
         wallets.push({
           id: name.toLowerCase().replace(/\s+/g, '-'),
@@ -170,8 +173,11 @@ export async function ensureBSCNetwork(provider: any): Promise<void> {
 /**
  * Wire accountsChanged and chainChanged listeners
  */
+const wiredProviders = new WeakSet<object>();
+
 function wireProviderEvents(provider: any): void {
-  if (!provider || !provider.on) return;
+  if (!provider || !provider.on || wiredProviders.has(provider)) return;
+  wiredProviders.add(provider);
 
   provider.on('accountsChanged', (accounts: string[]) => {
     if (!accounts || accounts.length === 0) {
@@ -184,8 +190,14 @@ function wireProviderEvents(provider: any): void {
     }
   });
 
-  provider.on('chainChanged', () => {
-    window.location.reload();
+  // No page reload here: wallets (Trust especially) fire chainChanged while switching to BSC
+  // during connect, and the reload threw the connection away. Payments re-check the chain.
+  provider.on('chainChanged', (chainHex: string) => {
+    const chainId = parseInt(chainHex, 16);
+    window.dispatchEvent(new CustomEvent('daovault:chainChanged', { detail: { chainId } }));
+    if (currentAccount && chainId !== BSC_CHAIN_ID) {
+      showToast(`Switch your wallet back to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BNB Smart Chain'} to use DAOVAULT.`, true);
+    }
   });
 }
 

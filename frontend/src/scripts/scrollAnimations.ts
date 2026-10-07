@@ -137,13 +137,7 @@ export function initScrollAnimations(): void {
       { x: 0, opacity: 1, duration: 0.85, ease: 'power3.out' },
       '-=0.7'
     );
-
-    heroTl.fromTo(
-      heroRight.querySelectorAll('.crypto-exchange-card'),
-      { y: 25, opacity: 0, scale: 0.95 },
-      { y: 0, opacity: 1, scale: 1, duration: 0.5, stagger: 0.08, ease: 'back.out(1.3)' },
-      '-=0.4'
-    );
+    // (the signal cards moved out of the hero into #heroMetrics; they animate there)
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -320,11 +314,10 @@ export function initScrollAnimations(): void {
       // the same sequence backwards when it leaves so the section feels alive
       // in both scroll directions.
       calcReveal
-        .fromTo(calcBox, { y: -70, opacity: 0, scale: 0.96, filter: 'blur(7px)' }, {
+        .fromTo(calcBox, { y: -70, opacity: 0, scale: 0.96 }, {
           y: 0,
           opacity: 1,
           scale: 1,
-          filter: 'blur(0px)',
           duration: 0.72,
           ease: 'power3.out',
         })

@@ -66,7 +66,7 @@ function glowTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-export function initApexTrophy(): void {
+function buildApexTrophy(): void {
   const stage = document.getElementById('trophyVisual');
   const slot = document.getElementById('trophyLottie');
   if (!stage || !slot) return;
@@ -93,8 +93,16 @@ export function initApexTrophy(): void {
   renderer.toneMappingExposure = 1.15;
 
   const scene = new THREE.Scene();
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  if (lite) {
+    // phones: no reflection map (building it stalls the page); a studio light rig makes the gold read instead
+    scene.add(new THREE.HemisphereLight(0xfff4d6, 0x2a1d05, 1.6));
+    const fill = new THREE.DirectionalLight(0xffe9b0, 1.4);
+    fill.position.set(-4, 2, 3);
+    scene.add(fill);
+  } else {
+    const pmrem = new THREE.PMREMGenerator(renderer);
+    scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  }
 
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
   camera.position.set(0, 0.6, 8.0);
@@ -108,8 +116,9 @@ export function initApexTrophy(): void {
   const glint = new THREE.PointLight(0xffe7a0, 18, 9, 1.6);
   scene.add(glint);
 
-  const gold = new THREE.MeshStandardMaterial({ color: GOLD, metalness: 1, roughness: 0.2, envMapIntensity: 1.25 });
-  const goldLight = new THREE.MeshStandardMaterial({ color: GOLD_LIGHT, metalness: 1, roughness: 0.12, envMapIntensity: 1.4 });
+  // without a reflection map (phones) fully metallic gold looks dark, so it is less metallic there
+  const gold = new THREE.MeshStandardMaterial({ color: GOLD, metalness: lite ? 0.55 : 1, roughness: lite ? 0.32 : 0.2, envMapIntensity: 1.25 });
+  const goldLight = new THREE.MeshStandardMaterial({ color: GOLD_LIGHT, metalness: lite ? 0.5 : 1, roughness: lite ? 0.25 : 0.12, envMapIntensity: 1.4 });
   const goldInner = new THREE.MeshStandardMaterial({ color: 0xa8761b, metalness: 1, roughness: 0.35, side: THREE.BackSide });
   const obsidian = new THREE.MeshStandardMaterial({ color: 0x0b0a08, metalness: 0.6, roughness: 0.28, envMapIntensity: 0.9 });
 
@@ -388,12 +397,37 @@ export function initApexTrophy(): void {
   if (reduce) entered = 1;
   rig.position.y = reduce ? 0 : -2.4;
   rig.scale.setScalar(reduce ? 1 : 0.55);
+
+  // compile the materials off the main frame first (parallel shader compile where the
+  // GPU supports it); the first draw used to stall the page for ~0.9s
+  let compiled = false;
+  const start = () => {
+    if (!compiled || !visible) return;
+    if (entered < 0) entered = 0;
+    clock.getDelta();
+    if (!raf) raf = requestAnimationFrame(frame);
+  };
+  renderer.compileAsync(scene, camera).catch(() => {}).finally(() => { compiled = true; start(); });
+
   new IntersectionObserver(([entry]) => {
     visible = entry.isIntersecting;
-    if (visible) {
-      if (entered < 0) entered = 0;
-      clock.getDelta();
-      if (!raf) raf = requestAnimationFrame(frame);
-    }
+    start();
   }, { threshold: 0.2 }).observe(stage);
+}
+
+/**
+ * Builds the trophy only when its section comes near the screen, so none of the 3D
+ * setup (reflections, geometry, shaders) competes with the page load.
+ */
+export function initApexTrophy(): void {
+  const stage = document.getElementById('trophyVisual');
+  if (!stage) return;
+  if (!('IntersectionObserver' in window)) { buildApexTrophy(); return; }
+  const io = new IntersectionObserver(([entry]) => {
+    if (!entry.isIntersecting) return;
+    io.disconnect();
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
+    if (idle) idle(() => buildApexTrophy(), { timeout: 600 }); else window.setTimeout(buildApexTrophy, 0);
+  }, { rootMargin: '600px 0px' });
+  io.observe(stage);
 }

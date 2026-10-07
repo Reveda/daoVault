@@ -31,6 +31,10 @@ import { initRankGameCard } from './rankGameCard.ts';
 import { initMatrixDial } from './matrixDial.ts';
 import { initVaultQuiz } from './quiz.ts';
 import { initDvLogos } from './dvLogo.ts';
+import { wakeBackend } from './api.ts';
+
+// start waking the backend right away (Render free plan sleeps it); the dashboard needs it next
+wakeBackend();
 import { initScrollSpy, initNavIndicator, initJoinSteps, initDropCards, initSignalCardFlips } from './landingFx.ts';
 
 
@@ -81,6 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initMatrixDial();
   initMatrixAutoDeck();
   initWalletPicker();
+  autoConnectFromWalletApp(); // opened inside a wallet app from our Connect: connect right away
   initCoinWalletLottie();
 
   const existing = await autoReconnect();
@@ -360,13 +365,16 @@ function initCountdown(): void {
   const minsEl = document.getElementById('cdMins');
   const secsEl = document.getElementById('cdSecs');
 
-  // each changed value drops in (CSS .cd-tick)
+  // each changed value drops in. Web Animations API: no forced page re-layout every second
+  // (the old class toggle + offsetWidth read cost ~90ms per tick on phones)
   const setDigit = (el: HTMLElement | null, value: string) => {
     if (!el || el.textContent === value) return;
     el.textContent = value;
-    el.classList.remove('cd-tick');
-    void el.offsetWidth;
-    el.classList.add('cd-tick');
+    if (document.hidden || !el.animate) return;
+    el.animate(
+      [{ opacity: 0, transform: 'translateY(-55%)' }, { opacity: 1, transform: 'none' }],
+      { duration: 500, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+    );
   };
 
   const update = () => {
@@ -511,13 +519,17 @@ function renderWalletList(): void {
       try {
         if (inj) {
           await connectWithProvider(inj.provider, opt.name);
-        } else if (window.ethereum) {
-          // Works on desktop browser extensions and wallet in-app browsers.
+        } else if (mobile && window.ethereum) {
+          // inside a wallet app's own browser: its built-in wallet is the one to use
+          await connectWithProvider(window.ethereum, opt.name);
+        } else if (!mobile && window.ethereum && installed.length === 1 && installed[0].name === 'Browser Wallet') {
+          // a single unbranded extension: use it rather than refusing
           await connectWithProvider(window.ethereum, opt.name);
         } else if (mobile && opt.appLink) {
-          // App first. If the OS does not open it, fall back to that wallet's
-          // official web page instead of leaving the user on a dead screen.
-          openWalletAppWithWebFallback(opt, window.location.href);
+          // Opens this site inside the wallet app, which then connects by itself
+          // (dv_connect flag, see autoConnectFromWalletApp). Falls back to the wallet's
+          // web page if the app is not installed.
+          openWalletAppWithWebFallback(opt, withConnectFlag(window.location.href));
         } else {
           showToast(`Please install ${opt.name} or open inside wallet app browser.`, true);
         }
@@ -558,6 +570,37 @@ function renderWalletList(): void {
     }
   });
   listEl.appendChild(wcBtn);
+}
+
+/** Marks a link so the site connects by itself once it opens inside the wallet app. */
+function withConnectFlag(url: string): string {
+  const u = new URL(url);
+  u.searchParams.set('dv_connect', '1');
+  return u.toString();
+}
+
+/**
+ * The site was opened inside a wallet app from our "Connect" (dv_connect=1): connect to
+ * that app's built-in wallet straight away instead of making the member tap Connect again.
+ * Other parameters (e.g. ?ref=) are kept.
+ */
+async function autoConnectFromWalletApp(): Promise<void> {
+  const url = new URL(window.location.href);
+  if (url.searchParams.get('dv_connect') !== '1') return;
+  url.searchParams.delete('dv_connect');
+  history.replaceState(null, '', url.toString());
+  // in-app browsers inject their wallet a moment after load
+  for (let i = 0; i < 20 && !getInstalledWallets().length && !window.ethereum; i++) {
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  const wallet = getInstalledWallets()[0];
+  const provider = wallet?.provider ?? window.ethereum;
+  if (!provider) return;
+  try {
+    await connectWithProvider(provider, wallet?.name ?? 'Wallet');
+  } catch {
+    // connectWithProvider shows the error; the Connect button still works
+  }
 }
 
 function openWalletAppWithWebFallback(wallet: WalletOption, currentUrl: string): void {
