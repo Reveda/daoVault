@@ -84,9 +84,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const account = await autoReconnect();
   if (!account) {
     showToast('Connect your wallet to open the live dashboard.', true);
+    // tells the landing page not to send the member straight back here
+    try { sessionStorage.setItem('dv_dash_bounce', '1'); } catch { /* storage blocked */ }
     window.setTimeout(() => { window.location.href = 'index.html'; }, 900);
     return;
   }
+
+  // The dashboard always shows the wallet that is live right now: switching account in the
+  // wallet loads that account's dashboard, disconnecting it in the wallet logs out.
+  window.addEventListener('daovault:accountChanged', () => window.location.reload());
+  window.addEventListener('daovault:disconnected', () => { window.location.href = 'index.html'; });
 
   // 2. Populate Header Account
   const userAddrEl = document.getElementById('dashWalletAddr');

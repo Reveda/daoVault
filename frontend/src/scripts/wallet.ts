@@ -120,10 +120,21 @@ export function isMobileDevice(): boolean {
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 }
 
+let pendingConnect: Promise<string> | null = null;
+
 /**
  * Connect to a specific Web3 provider with BSC Network Verification
  */
-export async function connectWithProvider(provider: any, walletName: string = 'Wallet'): Promise<string> {
+export function connectWithProvider(provider: any, walletName: string = 'Wallet'): Promise<string> {
+  // A second tap while the wallet prompt is open would make the wallet reject it
+  // ("request already pending", -32002): share the running attempt instead.
+  if (!pendingConnect) {
+    pendingConnect = doConnect(provider, walletName).finally(() => { pendingConnect = null; });
+  }
+  return pendingConnect;
+}
+
+async function doConnect(provider: any, walletName: string): Promise<string> {
   try {
     showToast(`Connecting to ${walletName}...`);
 

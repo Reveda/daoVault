@@ -18,6 +18,7 @@ import {
   countUp,
   formatAddress,
   showToast,
+  getPendingReferral,
   BSC_CHAIN_ID,
 } from './core.ts';
 import {
@@ -91,9 +92,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   autoConnectFromWalletApp(); // opened inside a wallet app from our Connect: connect right away
   initCoinWalletLottie();
 
+  // A connected member belongs on their own dashboard (that is where activation lives too).
+  // Not when the dashboard itself just sent them here, or the two pages would bounce.
+  let bounced = false;
+  try {
+    bounced = sessionStorage.getItem('dv_dash_bounce') === '1';
+    sessionStorage.removeItem('dv_dash_bounce');
+  } catch { /* storage blocked */ }
   const existing = await autoReconnect();
   if (existing) {
     updateConnectButtonUI(existing);
+    if (!bounced) window.location.replace('dashboard.html');
   }
 });
 
@@ -421,6 +430,10 @@ function initWalletPicker(): void {
     modal.classList.add('active');
     document.body.classList.add('wallet-modal-open');
   };
+  // a wallet that announces itself after the modal opened gets its "Detected" row
+  window.addEventListener('daovault:walletsUpdated', () => {
+    if (modal.classList.contains('active')) renderWalletList();
+  });
 
   const hideModal = () => {
     modal.classList.remove('active');
@@ -528,7 +541,9 @@ function renderWalletList(): void {
       try {
         // On a phone the wallet app's browser may still be injecting its provider: wait for
         // it instead of firing the app link, which reopened (reloaded) the site in a loop.
-        if (mobile && !getInstalledWallets().length) await waitForWallet(isInWalletApp() ? 3000 : 1000);
+        // Only inside a wallet app: in Chrome/Safari a delay would cost the tap's user
+        // activation, and iOS then refuses to open the app link.
+        if (mobile && isInWalletApp() && !getInstalledWallets().length) await waitForWallet(3000);
         const inApp = mobile && getInstalledWallets()[0];
         if (inApp) {
           // inside a wallet app's own browser: its built-in wallet is the one to use
@@ -576,7 +591,7 @@ function renderWalletList(): void {
   // the link is copied so the member can paste it into their wallet app's browser.
   // (A real WalletConnect QR needs a Reown project id; not set up yet.)
   wcBtn.addEventListener('click', async () => {
-    if (mobile && !getInstalledWallets().length) await waitForWallet(1000);
+    if (mobile && isInWalletApp() && !getInstalledWallets().length) await waitForWallet(3000);
     const wallet = getInstalledWallets()[0];
     if (wallet) {
       try {
@@ -586,7 +601,8 @@ function renderWalletList(): void {
       }
       return;
     }
-    const link = window.location.href;
+    // with the referral and the auto-connect flag, so pasting it in the wallet app just works
+    const link = withConnectFlag(window.location.href);
     try { await navigator.clipboard.writeText(link); } catch { /* clipboard blocked */ }
     showToast(mobile
       ? 'Link copied. Open your wallet app, go to its Browser / DApps tab and paste the link.'
@@ -595,10 +611,15 @@ function renderWalletList(): void {
   listEl.appendChild(wcBtn);
 }
 
-/** Marks a link so the site connects by itself once it opens inside the wallet app. */
+/**
+ * Marks a link so the site connects by itself once it opens inside the wallet app. The
+ * pending referral rides along: the wallet app's browser has its own empty localStorage.
+ */
 function withConnectFlag(url: string): string {
   const u = new URL(url);
   u.searchParams.set('dv_connect', '1');
+  const ref = getPendingReferral();
+  if (ref && !u.searchParams.get('ref')) u.searchParams.set('ref', ref);
   return u.toString();
 }
 
