@@ -18,8 +18,10 @@ import {
   disconnectWallet,
   autoReconnect,
   getActiveProvider,
+  getSignerFor,
+  requireBSCNetwork,
 } from './wallet.ts';
-import { BrowserProvider, Contract } from 'ethers';
+import { Contract } from 'ethers';
 import type { LevelMatrixRow } from './types.ts';
 import {
   ApiError,
@@ -33,7 +35,7 @@ import {
   type WithdrawalSummary,
   type Withdrawal,
 } from './api.ts';
-import { activateWallet, isPaymentConfigured, resolveSponsor, retryPendingActivation } from './payment.ts';
+import { activateWallet, isPaymentConfigured, resolveSponsor, retryPendingActivation, REAL_PAYMENTS_LOCKED, REAL_PAYMENTS_LOCKED_MSG } from './payment.ts';
 import {
   prepareDashboardReveal,
   revealDashboard,
@@ -194,6 +196,11 @@ function initActivation(account: string, activated: boolean): void {
   const status = document.getElementById('activationStatus');
   if (activated) { card?.setAttribute('hidden', ''); return; }
   if (!button) return;
+  if (REAL_PAYMENTS_LOCKED) {
+    button.disabled = true;
+    if (status) status.textContent = REAL_PAYMENTS_LOCKED_MSG;
+    return;
+  }
   if (!isPaymentConfigured()) {
     button.disabled = true;
     if (status) status.textContent = 'Payment contract is not configured yet.';
@@ -421,7 +428,7 @@ async function signIn(wallet: string): Promise<string> {
   if (!provider) throw new Error('Reconnect your wallet to sign in.');
   const { message } = await getAuthChallenge(wallet);
   showToast('Sign the message in your wallet (no gas)...');
-  const signer = await new BrowserProvider(provider).getSigner();
+  const signer = await getSignerFor(provider, wallet);
   const signature = await signer.signMessage(message);
   const session = await verifyAuthSignature(wallet, signature);
   try { localStorage.setItem(SESSION_KEY(wallet), JSON.stringify({ token: session.token, expiresAt: session.expiresAt })); } catch { /* ignore */ }
@@ -444,13 +451,12 @@ const scanTx = (hash: string) => `https://${BSC_CHAIN_ID === 97 ? 'testnet.' : '
  */
 async function claimVoucher(token: string, w: Withdrawal): Promise<Withdrawal> {
   if (!w.voucher) throw new Error('This withdrawal has no open payout.');
+  if (REAL_PAYMENTS_LOCKED) throw new Error(REAL_PAYMENTS_LOCKED_MSG);
   const provider = getActiveProvider();
   if (!provider) throw new Error('Reconnect your wallet to receive the payout.');
-  const browser = new BrowserProvider(provider);
-  if (Number((await browser.getNetwork()).chainId) !== BSC_CHAIN_ID) {
-    throw new Error(`Switch your wallet to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BNB Smart Chain'} to receive the payout.`);
-  }
-  const payout = new Contract(w.voucher.contract, PAYOUT_ABI, await browser.getSigner());
+  await requireBSCNetwork(provider);
+  // the voucher pays msg.sender, so it must be the member's own account
+  const payout = new Contract(w.voucher.contract, PAYOUT_ABI, await getSignerFor(provider, w.destinationWallet));
   showToast('Confirm in your wallet to receive your USDT...');
   const tx = await payout.claim(w.voucher.id, w.voucher.amount, w.voucher.deadline, w.voucher.signature);
   showToast('Sending your USDT...');

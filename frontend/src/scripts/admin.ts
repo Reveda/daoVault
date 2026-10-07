@@ -3,9 +3,8 @@
  * backend + a fresh wallet signature. Payouts are sent by the admin from the treasury
  * wallet; the backend accepts "paid" only after it finds that USDT transfer on-chain.
  */
-import { BrowserProvider } from 'ethers';
 import { BSC_CHAIN_ID, formatAddress, showToast } from './core.ts';
-import { autoReconnect, connectWithProvider, getActiveProvider, getInstalledWallets } from './wallet.ts';
+import { autoReconnect, connectWithProvider, getActiveProvider, getInstalledWallets, getSignerFor } from './wallet.ts';
 import {
   ApiError,
   approveWithdrawal,
@@ -42,7 +41,7 @@ async function signIn(): Promise<void> {
     wallet = await connectWithProvider(first.provider, first.name);
   }
   const { message } = await getAuthChallenge(wallet);
-  const signer = await new BrowserProvider(getActiveProvider()).getSigner();
+  const signer = await getSignerFor(getActiveProvider(), wallet);
   const session = await verifyAuthSignature(wallet, await signer.signMessage(message));
   if (session.role !== 'admin') {
     showToast('This wallet is not an admin.', true);

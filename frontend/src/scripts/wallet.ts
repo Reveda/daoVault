@@ -5,6 +5,7 @@
 
 import { BSC_CHAIN_ID, BSC_CHAIN_HEX, formatAddress, showToast } from './core.ts';
 import type { EIP6963ProviderDetail, WalletOption } from './types.ts';
+import { BrowserProvider, type JsonRpcSigner } from 'ethers';
 
 // BSC Network Parameters for wallet_addEthereumChain
 export const BSC_PARAMS = {
@@ -202,6 +203,30 @@ export async function ensureBSCNetwork(provider: any): Promise<void> {
   } catch (err) {
     console.warn('[DAOvault] Network switch warning:', err);
     showToast(`Please switch your wallet to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BSC Mainnet'}.`, true);
+  }
+}
+
+/**
+ * Before a transaction: asks the wallet to switch to our BSC network if needed and
+ * throws a clear error if it is still elsewhere. Call it before creating a BrowserProvider
+ * (ethers rejects calls when the network changes under an existing one).
+ */
+export async function requireBSCNetwork(provider: any): Promise<void> {
+  await ensureBSCNetwork(provider);
+  const chainId = parseInt(await provider.request({ method: 'eth_chainId' }), 16);
+  if (chainId !== BSC_CHAIN_ID) {
+    throw new Error(`Switch your wallet to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BNB Smart Chain'} and try again.`);
+  }
+}
+
+/** Signer for exactly `address`, with a clear message when the wallet has another account selected. */
+export async function getSignerFor(provider: any, address: string): Promise<JsonRpcSigner> {
+  try {
+    return await new BrowserProvider(provider).getSigner(address);
+  } catch (err: any) {
+    if (err?.code === 4001) throw err;
+    console.warn('[DAOvault] getSigner failed:', err);
+    throw new Error(`Select account ${formatAddress(address)} in your wallet and try again.`);
   }
 }
 

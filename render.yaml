@@ -77,6 +77,9 @@ services:
         sync: false
       - key: VITE_ACTIVATION_AMOUNT_USDT
         value: 300
+      # development lock: real-money payments stay off until this is set to "true" at launch
+      - key: VITE_ALLOW_MAINNET_PAYMENTS
+        value: "false"
 
 databases:
   - name: daovault-db

@@ -1,6 +1,6 @@
-import { BrowserProvider, Contract, ZeroAddress, parseUnits } from 'ethers';
+import { Contract, ZeroAddress, parseUnits } from 'ethers';
 import { BSC_CHAIN_ID, showToast } from './core.ts';
-import { getActiveProvider, getCurrentAccount } from './wallet.ts';
+import { getActiveProvider, getCurrentAccount, getSignerFor, requireBSCNetwork } from './wallet.ts';
 import { ApiError, getSponsorByCode, verifyActivation } from './api.ts';
 
 const PENDING_TX_KEY = 'daovault_pending_activation_tx';
@@ -25,6 +25,14 @@ const PAYMENT_ABI = [
 function isAddress(value: string): boolean {
   return /^0x[a-fA-F0-9]{40}$/.test(value);
 }
+
+/**
+ * Development lock: real-money payments (any chain but BSC Testnet 97) stay switched off
+ * until the owner sets VITE_ALLOW_MAINNET_PAYMENTS=true for launch. Covers the $300
+ * activation and the instant payout claim. Testnet is never blocked.
+ */
+export const REAL_PAYMENTS_LOCKED = BSC_CHAIN_ID !== 97 && import.meta.env.VITE_ALLOW_MAINNET_PAYMENTS !== 'true';
+export const REAL_PAYMENTS_LOCKED_MSG = 'Payments are switched off while DAOVAULT is in development. No real USDT is charged.';
 
 export function isPaymentConfigured(): boolean {
   return isAddress(PAYMENT_ADDRESS) && isAddress(TOKEN_ADDRESS);
@@ -60,6 +68,7 @@ export async function retryPendingActivation(walletAddress: string): Promise<boo
 }
 
 export async function activateWallet(sponsorAddress = ZeroAddress): Promise<string> {
+  if (REAL_PAYMENTS_LOCKED) throw new Error(REAL_PAYMENTS_LOCKED_MSG);
   if (!isPaymentConfigured()) {
     throw new Error('Payment contract is not configured. Add VITE_PAYMENT_CONTRACT_ADDRESS and VITE_USDT_CONTRACT_ADDRESS.');
   }
@@ -68,13 +77,9 @@ export async function activateWallet(sponsorAddress = ZeroAddress): Promise<stri
   const walletAddress = getCurrentAccount();
   if (!providerObject || !walletAddress) throw new Error('Connect your wallet first.');
 
-  const provider = new BrowserProvider(providerObject);
-  const network = await provider.getNetwork();
-  if (Number(network.chainId) !== BSC_CHAIN_ID) {
-    throw new Error(`Switch MetaMask to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BSC Mainnet'}.`);
-  }
-
-  const signer = await provider.getSigner();
+  await requireBSCNetwork(providerObject);
+  // the dashboard's wallet signs, not whichever account happens to be selected in the wallet
+  const signer = await getSignerFor(providerObject, walletAddress);
   const token = new Contract(TOKEN_ADDRESS, ERC20_ABI, signer);
   const payment = new Contract(PAYMENT_ADDRESS, PAYMENT_ABI, signer);
   const configuredToken = String(await payment.usdt()).toLowerCase();
