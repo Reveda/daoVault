@@ -18,6 +18,7 @@ import {
   countUp,
   formatAddress,
   showToast,
+  BSC_CHAIN_ID,
 } from './core.ts';
 import {
   getInstalledWallets,
@@ -25,6 +26,8 @@ import {
   autoReconnect,
   getCurrentAccount,
   isMobileDevice,
+  isInWalletApp,
+  waitForWallet,
 } from './wallet.ts';
 import type { WalletOption } from './types.ts';
 import { initRankGameCard } from './rankGameCard.ts';
@@ -471,7 +474,13 @@ function renderWalletList(): void {
       id: 'binance',
       name: 'Binance Web3 Wallet',
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="#F0B90B"><path d="M12 2.5l3.2 3.2-3.2 3.2-3.2-3.2L12 2.5zm6.8 6.8l3.2 3.2-3.2 3.2-3.2-3.2 3.2-3.2zm-13.6 0l3.2 3.2-3.2 3.2-3.2-3.2 3.2-3.2zM12 9.5l3.2 3.2-3.2 3.2-3.2-3.2L12 9.5zm0 7l3.2 3.2-3.2 3.2-3.2-3.2L12 16.5z"/></svg>`,
-      appLink: (url) => `bnc://app.binance.com/dapp?url=${encodeURIComponent(url)}`,
+      // official format from @binance/w3w-utils getDeeplink(): opens the app's dapp browser
+      appLink: (url) => {
+        const bnc = `bnc://app.binance.com/mp/app?appId=yFK5FCqYprrXDiVFbhyRx7`
+          + `&startPagePath=${btoa('/pages/browser/index')}`
+          + `&startPageQuery=${btoa(`url=${url}&defaultChainId=${BSC_CHAIN_ID}`)}`;
+        return `https://app.binance.com/en/download?_dp=${btoa(bnc)}`;
+      },
       webLink: 'https://www.binance.com/en/web3wallet',
     },
     {
@@ -485,7 +494,7 @@ function renderWalletList(): void {
       id: 'okx',
       name: 'OKX Wallet',
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M4 4h5v5H4V4zm11 0h5v5h-5V4zm-5.5 5.5h5v5h-5v-5zm-5.5 5.5h5v5H4v-5zm11 0h5v5h-5v-5z"/></svg>`,
-      appLink: (url) => `okx://wallet/dapp/details?dappUrl=${encodeURIComponent(url)}`,
+      appLink: (url) => `okx://wallet/dapp/url?dappUrl=${encodeURIComponent(url)}`,
       webLink: 'https://www.okx.com/web3',
     },
     {
@@ -517,11 +526,17 @@ function renderWalletList(): void {
 
     btn.addEventListener('click', async () => {
       try {
-        if (inj) {
-          await connectWithProvider(inj.provider, opt.name);
-        } else if (mobile && window.ethereum) {
+        // On a phone the wallet app's browser may still be injecting its provider: wait for
+        // it instead of firing the app link, which reopened (reloaded) the site in a loop.
+        if (mobile && !getInstalledWallets().length) await waitForWallet(isInWalletApp() ? 3000 : 1000);
+        const inApp = mobile && getInstalledWallets()[0];
+        if (inApp) {
           // inside a wallet app's own browser: its built-in wallet is the one to use
-          await connectWithProvider(window.ethereum, opt.name);
+          await connectWithProvider(inApp.provider, inApp.name);
+        } else if (mobile && isInWalletApp()) {
+          showToast('Wallet not ready yet. Please wait a moment and tap again.', true);
+        } else if (inj) {
+          await connectWithProvider(inj.provider, opt.name);
         } else if (!mobile && window.ethereum && installed.length === 1 && installed[0].name === 'Browser Wallet') {
           // a single unbranded extension: use it rather than refusing
           await connectWithProvider(window.ethereum, opt.name);
@@ -550,24 +565,32 @@ function renderWalletList(): void {
       <span class="wallet-opt-icon">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="#3B99FC"><path d="M6.5 7.5a8 8 0 0111 0l.7.7a.5.5 0 010 .7l-1.3 1.3a.5.5 0 01-.7 0l-.8-.8a5.5 5.5 0 00-7.8 0l-.8.8a.5.5 0 01-.7 0L4.8 8.9a.5.5 0 010-.7l.7-.7zm14.2 3.6l1.8 1.8a.5.5 0 010 .7l-8.2 8.2a.5.5 0 01-.7 0L7.4 15.6a.5.5 0 010-.7l.7-.7a.5.5 0 01.7 0l5.5 5.5 7.4-7.4a.5.5 0 01.7 0l-1.7-1.7zm-17.4 0l1.7-1.7a.5.5 0 01.7 0l7.4 7.4 5.5-5.5a.5.5 0 01.7 0l.7.7a.5.5 0 010 .7L11.5 21.8a.5.5 0 01-.7 0L2.6 13.6a.5.5 0 010-.7l1.7-1.7z"/></svg>
       </span>
-      <strong>WalletConnect</strong>
+      <strong>Other Wallet</strong>
     </div>
     <div class="wallet-opt-right">
-      <span class="wallet-badge" style="background: rgba(34, 211, 238, 0.15); color: var(--cyan); border-color: rgba(34, 211, 238, 0.3);">300+ Wallets</span>
+      <span class="wallet-badge" style="background: rgba(34, 211, 238, 0.15); color: var(--cyan); border-color: rgba(34, 211, 238, 0.3);">Any EVM wallet</span>
       <span class="wallet-opt-arrow">&rarr;</span>
     </div>
   `;
+  // Any injected wallet (Rabby, SafePal, TokenPocket, Bitget, ...). Without one on a phone,
+  // the link is copied so the member can paste it into their wallet app's browser.
+  // (A real WalletConnect QR needs a Reown project id; not set up yet.)
   wcBtn.addEventListener('click', async () => {
-    showToast('Initializing WalletConnect QR session...');
-    if (window.ethereum) {
+    if (mobile && !getInstalledWallets().length) await waitForWallet(1000);
+    const wallet = getInstalledWallets()[0];
+    if (wallet) {
       try {
-        await connectWithProvider(window.ethereum, 'Web3 Wallet');
+        await connectWithProvider(wallet.provider, wallet.name);
       } catch {
         // connectWithProvider already shows the user-facing error toast.
       }
-    } else {
-      showToast('No Web3 provider found. Please install MetaMask or Trust Wallet.', true);
+      return;
     }
+    const link = window.location.href;
+    try { await navigator.clipboard.writeText(link); } catch { /* clipboard blocked */ }
+    showToast(mobile
+      ? 'Link copied. Open your wallet app, go to its Browser / DApps tab and paste the link.'
+      : 'No wallet extension found. Install MetaMask, Trust Wallet or another EVM wallet.', true);
   });
   listEl.appendChild(wcBtn);
 }
@@ -589,15 +612,14 @@ async function autoConnectFromWalletApp(): Promise<void> {
   if (url.searchParams.get('dv_connect') !== '1') return;
   url.searchParams.delete('dv_connect');
   history.replaceState(null, '', url.toString());
+  // remembered for this tab: from here on Connect never fires the app link again
+  try { sessionStorage.setItem('dv_in_wallet_app', '1'); } catch { /* storage blocked */ }
+  if (getCurrentAccount()) return; // the normal autoReconnect picks the session up
   // in-app browsers inject their wallet a moment after load
-  for (let i = 0; i < 20 && !getInstalledWallets().length && !window.ethereum; i++) {
-    await new Promise((r) => setTimeout(r, 100));
-  }
+  if (!(await waitForWallet(4000))) return;
   const wallet = getInstalledWallets()[0];
-  const provider = wallet?.provider ?? window.ethereum;
-  if (!provider) return;
   try {
-    await connectWithProvider(provider, wallet?.name ?? 'Wallet');
+    await connectWithProvider(wallet.provider, wallet.name);
   } catch {
     // connectWithProvider shows the error; the Connect button still works
   }

@@ -58,34 +58,58 @@ export function getInstalledWallets(): WalletOption[] {
     });
   });
 
-  // 2. Fallback to window.ethereum
-  const eth = typeof window !== 'undefined' ? window.ethereum : null;
-  if (eth) {
-    const providers = eth.providers && eth.providers.length ? eth.providers : [eth];
-    providers.forEach((p: any) => {
-      if (!seenProviders.has(p)) {
-        seenProviders.add(p);
-        // brand flags first: Trust, SafePal, Binance, OKX and Coinbase also set isMetaMask
-        // for compatibility, so checking MetaMask first mislabelled them
-        let name = 'Browser Wallet';
-        if (p.isTrust || p.isTrustWallet) name = 'Trust Wallet';
-        else if (p.isSafePal) name = 'SafePal';
-        else if (p.isBinance || p.isBinanceChain) name = 'Binance Wallet';
-        else if (p.isOkxWallet || p.isOKExWallet) name = 'OKX Wallet';
-        else if (p.isCoinbaseWallet) name = 'Coinbase Wallet';
-        else if (p.isMetaMask) name = 'MetaMask';
+  // 2. Fallback to injected globals: window.ethereum (and its .providers list) plus the
+  // wallet-specific objects some in-app browsers inject instead of or before window.ethereum
+  injectedProviders().forEach((p: any) => {
+    if (!seenProviders.has(p)) {
+      seenProviders.add(p);
+      // brand flags first: Trust, SafePal, Binance, OKX and Coinbase also set isMetaMask
+      // for compatibility, so checking MetaMask first mislabelled them
+      let name = 'Browser Wallet';
+      if (p.isTrust || p.isTrustWallet) name = 'Trust Wallet';
+      else if (p.isSafePal) name = 'SafePal';
+      else if (p.isBinance || p.isBinanceChain) name = 'Binance Wallet';
+      else if (p.isOkxWallet || p.isOKExWallet) name = 'OKX Wallet';
+      else if (p.isCoinbaseWallet) name = 'Coinbase Wallet';
+      else if (p.isMetaMask) name = 'MetaMask';
 
-        wallets.push({
-          id: name.toLowerCase().replace(/\s+/g, '-'),
-          name,
-          icon: null,
-          provider: p,
-        });
-      }
-    });
-  }
+      wallets.push({
+        id: name.toLowerCase().replace(/\s+/g, '-'),
+        name,
+        icon: null,
+        provider: p,
+      });
+    }
+  });
 
   return wallets;
+}
+
+function injectedProviders(): any[] {
+  if (typeof window === 'undefined') return [];
+  const w = window as any;
+  const eth = w.ethereum;
+  const asProvider = (x: any) => (x && typeof x.request === 'function' ? x : null);
+  return [
+    ...(eth?.providers?.length ? eth.providers : [eth]),
+    asProvider(w.trustwallet) || asProvider(w.trustwallet?.ethereum),
+    asProvider(w.binancew3w?.ethereum),
+    asProvider(w.okxwallet),
+  ].filter(asProvider);
+}
+
+/** In-app wallet browsers inject their provider a moment after load: wait for it (or give up after `ms`). */
+export async function waitForWallet(ms = 3000): Promise<boolean> {
+  for (let t = 0; t < ms && getInstalledWallets().length === 0; t += 100) {
+    window.dispatchEvent(new Event('eip6963:requestProvider'));
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  return getInstalledWallets().length > 0;
+}
+
+/** True once this tab was opened inside a wallet app by our Connect link (dv_connect). */
+export function isInWalletApp(): boolean {
+  try { return sessionStorage.getItem('dv_in_wallet_app') === '1'; } catch { return false; }
 }
 
 /**
@@ -222,10 +246,8 @@ export async function autoReconnect(): Promise<string | null> {
 
   // EIP-6963 wallets announce asynchronously: on a fresh page load (or refresh of the
   // dashboard) none may be known yet, which used to bounce members back to the landing page.
-  for (let wait = 0; wait < 15 && getInstalledWallets().length === 0; wait++) {
-    window.dispatchEvent(new Event('eip6963:requestProvider'));
-    await new Promise((r) => setTimeout(r, 100));
-  }
+  // Phones get longer: in-app browsers (Trust, Binance) inject late.
+  await waitForWallet(isMobileDevice() ? 3000 : 1500);
 
   // Try the wallet the member connected with first, then every other installed wallet.
   const savedName = localStorage.getItem('daovault_connected_wallet');
@@ -242,6 +264,25 @@ export async function autoReconnect(): Promise<string | null> {
       }
     } catch (e) {
       console.warn(`[DAOvault] Auto-reconnect via ${wallet.name} failed:`, e);
+    }
+  }
+
+  // Inside a phone wallet's own browser (Trust especially) eth_accounts often returns []
+  // after a page load until the site asks again. Asking there is silent for a site the
+  // member already approved, so do that instead of bouncing them to the landing page
+  // (which, with Connect redirecting back here, made the page reload in a loop).
+  if (isMobileDevice() && installed.length) {
+    try {
+      const accounts: string[] = await installed[0].provider.request({ method: 'eth_requestAccounts' });
+      if (accounts?.length) {
+        activeProvider = installed[0].provider;
+        currentAccount = accounts[0].toLowerCase();
+        localStorage.setItem('daovault_connected_account', currentAccount);
+        wireProviderEvents(activeProvider);
+        return currentAccount;
+      }
+    } catch (e) {
+      console.warn('[DAOvault] In-app reconnect failed:', e);
     }
   }
   return null;
