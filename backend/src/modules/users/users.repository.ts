@@ -18,4 +18,12 @@ export const usersRepository = {
       },
     });
   },
+
+  /** Sponsor lookup for invite links: only activated members can sponsor. */
+  findSponsorByCode(referralCode: string) {
+    return prisma.user.findFirst({
+      where: { referralCode, packages: { some: {} } },
+      select: { walletAddress: true, referralCode: true },
+    });
+  },
 };

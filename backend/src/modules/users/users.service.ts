@@ -10,6 +10,16 @@ export class UsersService {
     }
     return user;
   }
+
+  async getSponsorByCode(code: string) {
+    const sponsor = await usersRepository.findSponsorByCode(code.toUpperCase());
+    if (!sponsor) {
+      const error = new Error("Referral code not found or not activated") as Error & { statusCode?: number };
+      error.statusCode = 404;
+      throw error;
+    }
+    return sponsor;
+  }
 }
 
 export const usersService = new UsersService();

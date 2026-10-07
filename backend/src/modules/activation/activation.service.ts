@@ -1,6 +1,7 @@
 import { Contract, JsonRpcProvider, getAddress, Interface, ZeroAddress } from 'ethers';
 import { env } from '../../config/env.js';
-import { activationRepository } from './activation.repository.js';
+import { serializable } from '../../config/transaction.js';
+import { processActivation } from './activation.engine.js';
 
 const PAYMENT_ABI = [
   'function usdt() view returns (address)',
@@ -49,12 +50,19 @@ export class ActivationService {
       throw Object.assign(new Error('Activation event data failed verification.'), { statusCode: 400 });
     }
 
-    return activationRepository.saveActivation({
+    const activation = {
       walletAddress,
       sponsorAddress: eventSponsor,
-      transactionHash: input.transactionHash,
+      transactionHash: input.transactionHash.toLowerCase(),
       amountUsd: Number(env.ACTIVATION_AMOUNT_USDT),
-    });
+    };
+    try {
+      return await serializable((tx) => processActivation(tx, activation));
+    } catch (error) {
+      // two requests for the same tx raced on the unique tx hash: the second one just reports the stored result
+      if ((error as { code?: string })?.code === 'P2002') return serializable((tx) => processActivation(tx, activation));
+      throw error;
+    }
   }
 }
 

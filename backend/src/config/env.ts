@@ -22,7 +22,23 @@ const envSchema = z.object({
   FINANCIAL_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   FINANCIAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   LOG_REQUESTS: z.coerce.boolean().default(true),
+  // wallet-signature login
+  JWT_EXPIRES_HOURS: z.coerce.number().positive().max(72).default(12),
+  /** comma-separated wallets allowed to use /admin (they still have to sign in with that wallet) */
+  ADMIN_WALLETS: z.string().default("").transform((v) => v.split(",").map((w) => w.trim().toLowerCase()).filter((w) => /^0x[a-f0-9]{40}$/.test(w))),
+  // withdrawals
+  WITHDRAWAL_MIN_USD: z.coerce.number().positive().default(10),
+  WITHDRAWAL_FEE_PERCENT: z.coerce.number().min(0).max(50).default(5),
+  // instant withdrawals (contracts/DAOvaultPayout.sol). Without these, withdrawals go to admin review.
+  PAYOUT_CONTRACT_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+  /** TESTNET ONLY: throwaway key that signs payout vouchers (holds no funds). Mainnet must use a KMS signer. */
+  PAYOUT_SIGNER_TESTNET_KEY: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "PAYOUT_SIGNER_TESTNET_KEY must be a 0x-prefixed 32-byte hex key").optional(),
+  PAYOUT_VOUCHER_MINUTES: z.coerce.number().int().min(2).max(60).default(15),
 }).superRefine((value, ctx) => {
+  // project rule: no private keys in env on mainnet. The voucher signer key is a testnet-only exception.
+  if (value.PAYOUT_SIGNER_TESTNET_KEY && value.BSC_CHAIN_ID !== 97) {
+    ctx.addIssue({ code: "custom", path: ["PAYOUT_SIGNER_TESTNET_KEY"], message: "The env voucher key is allowed on BSC Testnet (97) only; use a KMS signer on mainnet" });
+  }
   if (value.NODE_ENV === "production") {
     if (value.JWT_SECRET.length < 32 || value.JWT_SECRET.includes("replace")) {
       ctx.addIssue({ code: "custom", path: ["JWT_SECRET"], message: "Use a long random JWT secret (at least 32 characters) in production" });

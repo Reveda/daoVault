@@ -339,3 +339,39 @@ Do not copy testnet contract addresses into production. Testnet and mainnet addr
 - BSC Testnet deployment: requires tBNB and a verified test ERC-20 token.
 - Frontend on-chain activation integration: still required after contract deployment.
 - Complete 20-level reward/withdrawal contract: not implemented in the current contract.
+
+## 13. Instant withdrawals: `DAOvaultPayout.sol`
+
+Members withdraw and receive USDT in seconds. The backend never sends money: it signs a one-time voucher
+(EIP-712), the member's wallet calls `claim()`, and the contract pays from a USDT float the treasury keeps in it.
+
+### Deploy (BSC Testnet first, with Remix like section 5)
+Constructor values:
+
+| Field | Value |
+|---|---|
+| `usdtAddress` | the USDT token on the same chain |
+| `owner_` | the treasury wallet (cold wallet or multisig). Only it can pause, change limits/signer, pull the float back |
+| `signer_` | the **address** of the voucher signer key (see below). It holds no funds |
+| `maxPerClaim_` | largest single instant payout, in token units (USDT has 18 decimals on BSC: $500 = `500000000000000000000`) |
+| `dailyLimit_` | most the contract may pay per day, in token units |
+
+Then:
+1. Send the float: transfer USDT from the treasury to the payout contract address (e.g. $2,000–$5,000). Refill when low; the admin page shows the float.
+2. Backend `.env`: `PAYOUT_CONTRACT_ADDRESS`, `USDT_CONTRACT_ADDRESS`, and on **testnet only** `PAYOUT_SIGNER_TESTNET_KEY` (a fresh throwaway key whose address you passed as `signer_`; never a wallet with funds). The server refuses this key unless `BSC_CHAIN_ID=97`. Mainnet needs a KMS signer (AWS/GCP) before going live.
+3. Restart the backend. Withdrawals now pay instantly; anything above `maxPerClaim`, over the daily limit, larger than the float, or while paused goes to admin review automatically.
+
+### Safety switches (owner wallet, in Remix or BscScan "Write contract")
+- `setPaused(true)`: stops all instant payouts at once.
+- `withdrawFloat(to, amount)`: pulls the float back to the treasury.
+- `setSigner(newAddress)`: rotate the signer if the key may have leaked.
+- `setLimits(maxPerClaim, dailyLimit)`.
+- `transferOwnership` + `acceptOwnership`: two-step owner change.
+
+A leaked signer key can at most take `dailyLimit` per day and never more than the float; pause or rotate it immediately.
+
+### Tests
+`contracts/test/` holds 13 Hardhat tests (valid claim, replay, wrong wallet, changed amount, wrong signer, other
+contract, expiry, per-claim and daily limits, pause/owner controls, empty float, ownership, activation sponsor rule).
+Run them from an empty folder: `npm i -D hardhat@2.22.17 @nomicfoundation/hardhat-ethers@3 @nomicfoundation/hardhat-chai-matchers@2 ethers@6 chai@4 --legacy-peer-deps`,
+copy `contracts/*.sol` + `contracts/test/MockUSDT.sol` into `contracts/`, the test file into `test/`, the config to the root, then `npx hardhat test --config hardhat.config.cjs`.

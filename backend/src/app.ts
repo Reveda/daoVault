@@ -12,6 +12,8 @@ import { requestId } from "./middlewares/requestId.js";
 import { requestLogger } from "./middlewares/requestLogger.js";
 import { apiRateLimiter } from "./middlewares/rateLimiter.js";
 import { activationRouter } from "./modules/activation/activation.routes.js";
+import { authRouter } from "./modules/auth/auth.routes.js";
+import { adminRouter, withdrawalsRouter } from "./modules/withdrawals/withdrawals.routes.js";
 
 export const app = express();
 
@@ -44,6 +46,9 @@ app.use(apiRateLimiter);
 app.use(`${env.API_PREFIX}/users`, usersRouter);
 app.use(`${env.API_PREFIX}/dashboard`, dashboardRouter);
 app.use(`${env.API_PREFIX}/activation`, activationRouter);
+app.use(`${env.API_PREFIX}/auth`, authRouter);
+app.use(`${env.API_PREFIX}/withdrawals`, withdrawalsRouter);
+app.use(`${env.API_PREFIX}/admin`, adminRouter);
 
 app.use(notFound);
 app.use(errorHandler);

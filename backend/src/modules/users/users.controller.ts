@@ -9,3 +9,12 @@ export const getUserProfile: RequestHandler = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getSponsorByCode: RequestHandler = async (req, res, next) => {
+  try {
+    const data = await usersService.getSponsorByCode(String(req.params.code));
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};

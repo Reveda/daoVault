@@ -58,6 +58,8 @@ contract DAOvaultActivation {
     function activate(address sponsor) external {
         if (activated[msg.sender]) revert AlreadyActivated();
         if (sponsor == msg.sender) revert InvalidSponsor();
+        // only an activated member can sponsor (zero address = joined without a sponsor)
+        if (sponsor != address(0) && !activated[sponsor]) revert InvalidSponsor();
 
         bool transferred = usdt.transferFrom(msg.sender, treasury, activationAmount);
         if (!transferred) revert PaymentFailed();

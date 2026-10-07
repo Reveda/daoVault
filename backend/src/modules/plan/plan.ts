@@ -25,7 +25,7 @@ export const RANKS = [
   { rank: 6, name: "Crown Executive", volume: 1_000, rewardUsd: 5_000 },
   { rank: 7, name: "Crown Director", volume: 3_000, rewardUsd: 10_000 },
   { rank: 8, name: "Ambassador", volume: 7_000, rewardUsd: 20_000 },
-  { rank: 9, name: "Crown Ambassador", volume: 10_000, rewardUsd: 30_000 },
+  { rank: 9, name: "Crown Ambassador", volume: 12_000, rewardUsd: 30_000 },
   { rank: 10, name: "President", volume: 20_000, rewardUsd: 50_000 },
   { rank: 11, name: "Crown President", volume: 50_000, rewardUsd: 100_000 },
 ] as const;
