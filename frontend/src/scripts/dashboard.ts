@@ -92,8 +92,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // The dashboard always shows the wallet that is live right now: switching account in the
   // wallet loads that account's dashboard, disconnecting it in the wallet logs out.
-  window.addEventListener('daovault:accountChanged', () => window.location.reload());
-  window.addEventListener('daovault:disconnected', () => { window.location.href = 'index.html'; });
+  window.addEventListener('daovault:accountChanged', (e: Event) => {
+    const next = (e as CustomEvent<{ account: string }>).detail?.account;
+    if (next && next.toLowerCase() !== account.toLowerCase()) window.location.reload();
+  });
+  window.addEventListener('daovault:disconnected', () => {
+    try { sessionStorage.setItem('dv_dash_bounce', '1'); } catch { /* storage blocked */ }
+    window.location.href = 'index.html';
+  });
 
   // 2. Populate Header Account
   const userAddrEl = document.getElementById('dashWalletAddr');
@@ -119,15 +125,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 6. Load live dashboard data from the backend. There is no demo fallback:
   // an unknown wallet must be activated before it can show account data.
+  // Render's free plan sleeps the API and the first request after that can fail or take
+  // 30-50s, so network errors and 5xx are retried for about a minute before giving up.
   let dashboardData: DashboardData | null = null;
-  try {
-    dashboardData = await getDashboardData(account);
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 404) {
-      showToast('Activate your wallet to unlock your dashboard.', true);
-    } else {
+  let leaving = false;
+  window.addEventListener('pagehide', () => { leaving = true; });
+  for (let attempt = 0; ; attempt++) {
+    try {
+      dashboardData = await getDashboardData(account);
+      break;
+    } catch (error) {
+      if (leaving) return; // a navigation cancelled the request: not a server problem
+      if (error instanceof ApiError && error.status === 404) {
+        showToast('Activate your wallet to unlock your dashboard.', true);
+        break;
+      }
+      const retryable = !(error instanceof ApiError) || error.status >= 500;
+      if (retryable && attempt < 12) {
+        if (attempt === 0) showToast('Waking up the DAOvault server, one moment...');
+        await new Promise((r) => setTimeout(r, 5000));
+        continue;
+      }
       console.error('[DAOvault] Dashboard API unavailable:', error);
-      showToast('Could not reach the DAOvault server. Showing an empty dashboard.', true);
+      showToast('Could not reach the DAOvault server. Please refresh in a minute.', true);
+      break;
     }
   }
 

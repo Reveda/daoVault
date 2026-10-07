@@ -216,7 +216,13 @@ function wireProviderEvents(provider: any): void {
 
   provider.on('accountsChanged', (accounts: string[]) => {
     if (!accounts || accounts.length === 0) {
-      disconnectWallet();
+      // Phone wallets (Trust) emit an empty list around page loads without the member
+      // disconnecting; only desktop extensions mean it (lock / disconnect site).
+      if (!isMobileDevice()) disconnectWallet();
+    } else if (accounts[0].toLowerCase() === currentAccount) {
+      // Trust and others re-emit the same account when a listener attaches or the page
+      // loads: not a change. Reacting to it reloaded the dashboard in a loop.
+      return;
     } else {
       currentAccount = accounts[0].toLowerCase();
       localStorage.setItem('daovault_connected_account', currentAccount);

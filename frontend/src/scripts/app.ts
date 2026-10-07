@@ -94,6 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // A connected member belongs on their own dashboard (that is where activation lives too).
   // Not when the dashboard itself just sent them here, or the two pages would bounce.
+  // recordAutoRedirect() is the safety net on top: whatever a wallet emits, no endless loop.
   let bounced = false;
   try {
     bounced = sessionStorage.getItem('dv_dash_bounce') === '1';
@@ -102,9 +103,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   const existing = await autoReconnect();
   if (existing) {
     updateConnectButtonUI(existing);
-    if (!bounced) window.location.replace('dashboard.html');
+    if (!bounced && recordAutoRedirect()) window.location.replace('dashboard.html');
   }
 });
+
+/** Allows an automatic landing -> dashboard redirect at most twice per 20s (loop breaker). */
+function recordAutoRedirect(): boolean {
+  try {
+    const now = Date.now();
+    const recent = (JSON.parse(sessionStorage.getItem('dv_auto_redirects') || '[]') as number[]).filter((t) => now - t < 20_000);
+    if (recent.length >= 2) return false;
+    sessionStorage.setItem('dv_auto_redirects', JSON.stringify([...recent, now]));
+  } catch { /* storage blocked: the dv_dash_bounce guard still applies */ }
+  return true;
+}
 
 /** Moves the four protocol cards into their dedicated section below the hero. */
 function initHeroMetricsSection(): void {
