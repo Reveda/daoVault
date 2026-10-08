@@ -473,6 +473,16 @@
   font: inherit;
 }
 
+/* connected wallet address + its dot in a real "connected" green (the theme's --green
+   token is near-white, so it cannot be used here) */
+.wallet-menu-btn #dashWalletAddr {
+  color: #22c55e;
+}
+.wallet-menu-btn .wallet-status-dot {
+  background: #22c55e;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);
+}
+
 .wallet-caret {
   width: 7px;
   height: 7px;
