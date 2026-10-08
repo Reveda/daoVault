@@ -31,6 +31,67 @@ export function initScrollSpy(): void {
 }
 
 /**
+ * In-page links (#vision, #ranks, ...). The browser's own smooth jump measures the target
+ * once; sections above it change height while the page scrolls (scroll animations, the
+ * lazily built trophy), so it stopped short or overshot. Scroll there, then re-aim once
+ * the scroll has settled until the section sits at the top. A wheel or touch by the
+ * visitor cancels the re-aiming.
+ */
+export function initAnchorScroll(): void {
+  const smooth: ScrollBehavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  let stopCurrent: (() => void) | null = null;
+
+  const scrollToSection = (target: Element) => {
+    stopCurrent?.();
+    const go = () => window.scrollTo({ top: Math.max(0, window.scrollY + target.getBoundingClientRect().top), behavior: smooth });
+    let last = window.scrollY;
+    let still = 0;
+    let tries = 0;
+    let started = false;
+    let aimedAt = performance.now();
+    const timer = window.setInterval(() => {
+      const moved = Math.abs(window.scrollY - last) >= 1;
+      last = window.scrollY;
+      if (moved) started = true;
+      still = moved ? 0 : still + 1;
+      // wait until the scroll has run and settled; a smooth scroll that never started
+      // (busy main thread) gets 1.5s before it is sent again
+      const settled = started && still >= 3;
+      if (!settled && performance.now() - aimedAt < 1500) return;
+      if (Math.abs(target.getBoundingClientRect().top) <= 4 || ++tries > 4) { stop(); return; }
+      still = 0;
+      started = false;
+      aimedAt = performance.now();
+      go();
+    }, 120);
+    const cancel = () => stop();
+    const stop = () => {
+      window.clearInterval(timer);
+      window.removeEventListener('wheel', cancel);
+      window.removeEventListener('touchstart', cancel);
+      if (stopCurrent === stop) stopCurrent = null;
+    };
+    window.addEventListener('wheel', cancel, { passive: true });
+    window.addEventListener('touchstart', cancel, { passive: true });
+    window.setTimeout(stop, 9000);
+    stopCurrent = stop;
+    go();
+  };
+
+  document.addEventListener('click', (e) => {
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey) return;
+    const link = (e.target as Element | null)?.closest?.('a[href^="#"]');
+    const href = link?.getAttribute('href');
+    if (!href || href.length < 2) return;
+    const target = document.querySelector(href);
+    if (!target) return;
+    e.preventDefault();
+    history.pushState(null, '', href);
+    scrollToSection(target);
+  });
+}
+
+/**
  * "How to Join" as iorca-style expanding cards: one step is open at a time and
  * the stage beside the list shows its number, title and progress ring. While the
  * section is in view the steps advance on their own (a bar on the open card shows

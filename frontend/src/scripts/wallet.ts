@@ -334,6 +334,15 @@ export async function autoReconnect(): Promise<string | null> {
   return null;
 }
 
+/**
+ * The account of a wallet that is connected right now (connect or autoReconnect
+ * verified it), unlike getCurrentAccount() which also returns a saved address left
+ * over from a locked or missing wallet.
+ */
+export function getLiveAccount(): string | null {
+  return activeProvider ? currentAccount : null;
+}
+
 export function getCurrentAccount(): string | null {
   return currentAccount || localStorage.getItem('daovault_connected_account');
 }

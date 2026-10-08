@@ -111,3 +111,6 @@ sponsor's activation never reached the backend. See document.md section 4.
   payout claim on any chain but 97 unless VITE_ALLOW_MAINNET_PAYMENTS=true (render.yaml: "false"). Never flip it
   without the owner saying it is launch time. The live site (daovault-1.onrender.com) is built for chain 56.
 - Transactions: requireBSCNetwork(provider) before new BrowserProvider; sign with getSignerFor(provider, account).
+- Render: frontend https://daovault-1.onrender.com, backend https://daovault-2.onrender.com (service daoVault-2).
+  api.ts falls back to the backend URL when VITE_API_BASE_URL is missing/placeholder. Backend `npm start` =
+  scripts/start.mjs: prisma migrate deploy, then dist/server.js (free plan: no shell / pre-deploy step).

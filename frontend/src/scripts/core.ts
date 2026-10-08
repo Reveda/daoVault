@@ -140,6 +140,18 @@ export function initScrollReveal(): void {
   }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
 
   elements.forEach((el) => observer.observe(el));
+
+  // The last lines of the page (footer copyright) can never rise above the -6% bottom
+  // margin, so they stayed invisible: at the end of the page reveal whatever is left.
+  const revealRest = () => {
+    if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight - 4) return;
+    elements.forEach((el) => {
+      if (el.classList.contains('revealed') || el.getBoundingClientRect().top > window.innerHeight) return;
+      el.classList.add('revealed');
+      observer.unobserve(el);
+    });
+  };
+  window.addEventListener('scroll', revealRest, { passive: true });
 }
 
 /**

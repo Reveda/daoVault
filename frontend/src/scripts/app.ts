@@ -26,6 +26,7 @@ import {
   connectWithProvider,
   autoReconnect,
   getCurrentAccount,
+  getLiveAccount,
   isMobileDevice,
   isInWalletApp,
   waitForWallet,
@@ -39,7 +40,7 @@ import { wakeBackend } from './api.ts';
 
 // start waking the backend right away (Render free plan sleeps it); the dashboard needs it next
 wakeBackend();
-import { initScrollSpy, initNavIndicator, initJoinSteps, initDropCards, initSignalCardFlips } from './landingFx.ts';
+import { initAnchorScroll, initScrollSpy, initNavIndicator, initJoinSteps, initDropCards, initSignalCardFlips } from './landingFx.ts';
 
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -75,6 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initCountdown();
   initScrollSpy();
+  initAnchorScroll(); // in-page links land on their section even when sections above change height
   initNavIndicator();
   initJoinSteps();
   initDropCards();
@@ -470,7 +472,10 @@ function initWalletPicker(): void {
   triggers.forEach((trigger) => {
     trigger.addEventListener('click', (e) => {
       e.preventDefault(); // the footer trigger is an <a href="#">: no jump to the top
-      const current = getCurrentAccount();
+      // only a wallet connected right now goes to the dashboard: a saved address from a
+      // locked or missing wallet used to send the click to the dashboard and straight
+      // back, so the wallet modal never opened
+      const current = getLiveAccount();
       if (current) {
         // already connected: the address button leads to the dashboard
         window.location.href = 'dashboard.html';
