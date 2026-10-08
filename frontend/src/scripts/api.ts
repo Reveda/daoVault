@@ -86,7 +86,10 @@ async function request<T>(path: string, init: RequestInit & { token?: string } =
       ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    credentials: 'include',
+    // No cookies: sign-in uses the Bearer token. 'include' made the browser reject every
+    // answer from the separately hosted API (it sends no Allow-Credentials header), so on
+    // the live site the dashboard, referral link and sign-in all failed.
+    credentials: 'omit',
   });
   const payload = (await response.json().catch(() => null)) as { success: boolean; data: T; error?: string } | null;
   if (!response.ok || !payload?.success) {
