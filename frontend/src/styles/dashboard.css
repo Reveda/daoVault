@@ -450,8 +450,9 @@
     color: var(--text-muted);
   }
 
+  /* 5th column is the member count (the earned amount is the 6th) */
   .level-table td:nth-child(5)::before {
-    content: 'Earned: ';
+    content: 'Members: ';
   }
 }
 
@@ -473,11 +474,8 @@
   font: inherit;
 }
 
-/* connected wallet address + its dot in a real "connected" green (the theme's --green
-   token is near-white, so it cannot be used here) */
-.wallet-menu-btn #dashWalletAddr {
-  color: #22c55e;
-}
+/* the "connected" dot in a real green (the theme's --green token is near-white);
+   the address itself stays white */
 .wallet-menu-btn .wallet-status-dot {
   background: #22c55e;
   box-shadow: 0 0 10px rgba(34, 197, 94, 0.8);

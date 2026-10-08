@@ -493,7 +493,7 @@ async function claimVoucher(token: string, w: Withdrawal): Promise<Withdrawal> {
 function renderWithdrawalSummary(summary: WithdrawalSummary): void {
   const availEl = document.getElementById('withAvailBalance');
   const meta = document.getElementById('withMeta');
-  rollNumber(availEl, summary.availableUsd, (n) => `$${n.toFixed(2)} USDT`);
+  rollNumber(availEl, summary.availableUsd, (n) => `${formatUsd(n)} USDT`);
   if (meta) meta.textContent = `Pending ${formatUsd(summary.pendingUsd)} · Withdrawn ${formatUsd(summary.withdrawnUsd)} · Min ${formatUsd(summary.minimumUsd)}`;
   const box = document.getElementById('withHistory');
   const list = document.getElementById('withHistoryList');
@@ -522,7 +522,7 @@ function initWithdrawals(wallet: string, availableBalance: number, data: Dashboa
   let feePercent = 5;
   let items: Withdrawal[] = [];
 
-  rollNumber(availEl, available, (n) => `$${n.toFixed(2)} USDT`);
+  rollNumber(availEl, available, (n) => `${formatUsd(n)} USDT`);
   const meta = document.getElementById('withMeta');
   if (meta && data) meta.textContent = `Pending ${formatUsd(data.pendingWithdrawalUsd)} · Withdrawn ${formatUsd(data.withdrawnUsd)}`;
 
