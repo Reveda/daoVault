@@ -18,6 +18,7 @@ import {
   countUp,
   formatAddress,
   showToast,
+  showLaunchNotice,
   getPendingReferral,
   BSC_CHAIN_ID,
 } from './core.ts';
@@ -56,6 +57,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.documentElement.style.setProperty('--cursor-x', `${e.clientX}px`);
     document.documentElement.style.setProperty('--cursor-y', `${e.clientY}px`);
   });
+
+  // pre-launch notice, once per browser
+  showLaunchNotice('landing', 'We’ll be live soon',
+    'DAOVAULT is getting ready to launch on BNB Smart Chain. Connect your wallet now to reserve your permanent referral link. Activations open at launch.');
 
   bootPreloader(() => {
     initScrollReveal(); // fallback IntersectionObserver for [data-reveal] without GSAP

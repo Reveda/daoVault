@@ -2955,6 +2955,60 @@ h1, h2, h3, h4, h5, h6 {
   opacity: 1;
 }
 
+/* one-time "We'll be live soon" popup (core.ts showLaunchNotice) */
+.launch-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 99990;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.72);
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.launch-notice.is-open { opacity: 1; }
+.launch-notice-card {
+  width: min(420px, 100%);
+  box-sizing: border-box;
+  padding: 2rem 1.6rem 1.6rem;
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  border-radius: var(--radius-lg);
+  background: radial-gradient(120% 80% at 50% 0%, rgba(212, 175, 55, 0.16), transparent 60%), #0b0b0b;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8), 0 0 40px rgba(212, 175, 55, 0.12);
+  text-align: center;
+  transform: translateY(18px) scale(0.96);
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.launch-notice.is-open .launch-notice-card { transform: none; }
+.launch-notice-logo {
+  display: block;
+  margin: 0 auto 0.9rem;
+  border-radius: 14px;
+  box-shadow: 0 0 24px rgba(212, 175, 55, 0.35);
+}
+.launch-notice-kicker {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 0.55rem;
+}
+.launch-notice-card h3 {
+  font-size: 1.6rem;
+  line-height: 1.2;
+  margin: 0 0 0.65rem;
+  color: #fff;
+}
+.launch-notice-card p {
+  margin: 0 0 1.4rem;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+.launch-notice-btn { min-width: 160px; justify-content: center; }
+
 /* Footer */
 .main-footer {
   border-top: 1px solid var(--border-line);

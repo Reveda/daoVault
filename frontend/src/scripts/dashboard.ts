@@ -9,6 +9,7 @@ import {
   bootPreloader,
   formatAddress,
   showToast,
+  showLaunchNotice,
   getPendingReferral,
   countUp,
   initOffscreenPause,
@@ -103,6 +104,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     try { sessionStorage.setItem('dv_dash_bounce', '1'); } catch { /* storage blocked */ }
     window.location.href = 'index.html';
   });
+
+  // pre-launch notice, once per browser (only for a real dashboard visit, not a bounce)
+  showLaunchNotice('dashboard', 'We’ll be live soon',
+    'Your vault and your permanent referral link are ready. The $300 activation and payouts open at launch. See you there!');
 
   // 2. Populate Header Account
   const userAddrEl = document.getElementById('dashWalletAddr');

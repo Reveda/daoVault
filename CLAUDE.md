@@ -2,6 +2,7 @@
 
 Web3 referral/affiliate reward dApp on **BNB Smart Chain (BEP-20)**. Users connect a wallet, pay a fixed **$300 USDT** activation via a smart contract, and earn from referrals. Full business spec: `project.md`. Contract deploy/test guide: `smartcontract-payment.md`. Read those only when the task needs plan details.
 **Build status, decisions, setup:** `document.md` (keep it updated when features land).
+**Deploy runbook (Render, contracts, every env value, testnet + mainnet):** `DEPLOYMENT.md` (update addresses there when contracts deploy).
 **Design/UX reference:** TPR World (tprworld.org). Its full code teardown (design tokens, sections, 3D scene, wallet flow, API, what not to copy) is in `tpr-reference.md`. Read it for UI, wallet or dashboard work instead of re-fetching the site.
 
 ## Business rules (summary)

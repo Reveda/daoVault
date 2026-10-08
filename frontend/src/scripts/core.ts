@@ -213,6 +213,54 @@ export function initCircuitSpine(): void {
  * Web3 Toast System
  */
 let toastTimeout: any;
+/**
+ * One-time "We'll be live soon" popup. Shown once per browser for each `key` (landing and
+ * dashboard have their own), a moment after the splash screen. Closes with the button, a
+ * click outside the card or Escape.
+ */
+export function showLaunchNotice(key: string, title: string, message: string): void {
+  const storageKey = `dv_launch_notice_${key}`;
+  try {
+    if (localStorage.getItem(storageKey)) return;
+  } catch { return; } // storage blocked: better no popup than one on every visit
+
+  const open = () => {
+    try { localStorage.setItem(storageKey, '1'); } catch { /* ignore */ }
+    const overlay = document.createElement('div');
+    overlay.className = 'launch-notice';
+    overlay.innerHTML = `
+      <div class="launch-notice-card" role="dialog" aria-modal="true" aria-labelledby="launchNoticeTitle">
+        <img class="launch-notice-logo" src="/favicon.png" alt="" width="56" height="56" />
+        <span class="launch-notice-kicker mono">DAOVAULT · Launching soon</span>
+        <h3 id="launchNoticeTitle">${title}</h3>
+        <p>${message}</p>
+        <button type="button" class="btn btn-grad launch-notice-btn">Got it</button>
+      </div>`;
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('is-open'));
+    const btn = overlay.querySelector<HTMLButtonElement>('.launch-notice-btn');
+    btn?.focus({ preventScroll: true });
+    const close = () => {
+      overlay.classList.remove('is-open');
+      document.removeEventListener('keydown', onKey);
+      window.setTimeout(() => overlay.remove(), 350);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    btn?.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    document.addEventListener('keydown', onKey);
+  };
+
+  // after the splash screen (body.ready), so it never hides behind the preloader
+  const started = Date.now();
+  const wait = () => {
+    if (document.body.classList.contains('ready')) window.setTimeout(open, 700);
+    else if (Date.now() - started < 15000) window.setTimeout(wait, 200);
+    else open();
+  };
+  wait();
+}
+
 export function showToast(message: string, isError: boolean = false): void {
   let toast = document.getElementById('web3Toast');
   if (!toast) {
