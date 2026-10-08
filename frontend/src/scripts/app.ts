@@ -575,9 +575,9 @@ function renderWalletList(): void {
           await connectWithProvider(window.ethereum, opt.name);
         } else if (mobile && opt.appLink) {
           // Opens this site inside the wallet app, which then connects by itself
-          // (dv_connect flag, see autoConnectFromWalletApp). Falls back to the wallet's
-          // web page if the app is not installed.
-          openWalletAppWithWebFallback(opt, withConnectFlag(window.location.href));
+          // (dv_connect flag, see autoConnectFromWalletApp). If the app does not open,
+          // the visitor gets a hint and stays on this page.
+          openWalletApp(opt, withConnectFlag(window.location.href));
         } else {
           showToast(`Please install ${opt.name} or open inside wallet app browser.`, true);
         }
@@ -664,25 +664,30 @@ async function autoConnectFromWalletApp(): Promise<void> {
   }
 }
 
-function openWalletAppWithWebFallback(wallet: WalletOption, currentUrl: string): void {
+function openWalletApp(wallet: WalletOption, currentUrl: string): void {
   if (!wallet.appLink) return;
 
   showToast(`Opening ${wallet.name} app...`);
   let pageLeft = false;
   const markPageLeft = () => { pageLeft = true; };
   window.addEventListener('pagehide', markPageLeft, { once: true });
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') pageLeft = true;
-  }, { once: true });
+  const onVisibility = () => {
+    if (document.visibilityState === 'hidden') { pageLeft = true; document.removeEventListener('visibilitychange', onVisibility); }
+  };
+  document.addEventListener('visibilitychange', onVisibility);
 
   window.location.href = wallet.appLink(currentUrl);
 
+  // Our page is never replaced by the wallet's own website any more: on many phones the
+  // app opens later than any timer here (or Chrome first asks "Open in app?"), and the
+  // old fallback then loaded trustwallet.com / metamask.io over our site. If the app
+  // really did not open, the visitor only gets a hint and stays here.
   window.setTimeout(() => {
-    if (!pageLeft && document.visibilityState === 'visible' && wallet.webLink) {
-      showToast(`${wallet.name} app not detected. Opening wallet web page...`);
-      window.location.href = wallet.webLink;
-    }
-  }, 1600);
+    document.removeEventListener('visibilitychange', onVisibility);
+    if (pageLeft || document.visibilityState !== 'visible') return;
+    const where = wallet.webLink ? ` If it is not installed, get it from ${new URL(wallet.webLink).hostname}.` : '';
+    showToast(`${wallet.name} did not open.${where} Then tap Connect again.`, true);
+  }, 4000);
 }
 
 function updateConnectButtonUI(account: string): void {
