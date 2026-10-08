@@ -6,10 +6,9 @@
 export interface RankTier {
   id: number;
   title: string;
+  /** DAO matching: needed on BOTH sides (power leg and other legs combined) */
   dao: number;
   reward: number;
-  powerLeg: number;
-  otherLegs: number;
   desc: string;
 }
 

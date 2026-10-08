@@ -15,7 +15,7 @@ export const LEVELS = [
   ...Array.from({ length: 13 }, (_, i) => ({ level: 8 + i, pct: 1, reqDirects: 15 })),
 ] as const;
 
-/** 11 rank tiers: required team volume in DAO (1 DAO = 1 activated package) and the one-time reward in USD. */
+/** 11 rank tiers: DAO matching needed on EACH side (power leg and other legs; 1 DAO = 1 activated package) and the one-time reward in USD. */
 export const RANKS = [
   { rank: 1, name: "Starter", volume: 25, rewardUsd: 100 },
   { rank: 2, name: "Builder", volume: 50, rewardUsd: 250 },
@@ -53,14 +53,24 @@ export function summarizeLegs(legs: number[]): LegSummary {
 }
 
 /**
- * 50:50 rule: for a tier needing V, at most V/2 may come from the power leg and the
- * rest from the other legs combined. Returns the highest tier reached (0 = none).
+ * DAO matching volume: the smaller of the two sides, the power leg (strongest direct
+ * leg) and all other legs combined. A tier's DAO must be matched on BOTH sides.
  */
-export function rankForLegs({ power, other }: LegSummary): number {
+export function matchedVolume({ power, other }: LegSummary): number {
+  return Math.min(power, other);
+}
+
+/**
+ * Rank rule (owner, 2026-10-08): the plan's "DAO matching" is per side. A tier needing V
+ * is reached when the power leg has at least V AND the other legs combined have at least
+ * V (Starter 25 DAO = 25 + 25). Replaces the earlier split rule (V/2 + V/2).
+ * Returns the highest tier reached (0 = none).
+ */
+export function rankForLegs(legs: LegSummary): number {
+  const matched = matchedVolume(legs);
   let reached = 0;
   for (const tier of RANKS) {
-    const counted = Math.min(power, tier.volume / 2) + other;
-    if (counted >= tier.volume) reached = tier.rank;
+    if (matched >= tier.volume) reached = tier.rank;
   }
   return reached;
 }

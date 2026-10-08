@@ -21,8 +21,6 @@ export const RANK_DATA: RankTier[] = [
     title: 'Starter',
     dao: 25,
     reward: 100,
-    powerLeg: 12.5,
-    otherLegs: 12.5,
     desc: 'The gateway milestone for active team initiators.',
   },
   {
@@ -30,8 +28,6 @@ export const RANK_DATA: RankTier[] = [
     title: 'Builder',
     dao: 50,
     reward: 250,
-    powerLeg: 25,
-    otherLegs: 25,
     desc: 'Structured growth across two strong foundational legs.',
   },
   {
@@ -39,17 +35,13 @@ export const RANK_DATA: RankTier[] = [
     title: 'Leader',
     dao: 100,
     reward: 500,
-    powerLeg: 50,
-    otherLegs: 50,
-    desc: 'Proven leadership driving 100 active community packages.',
+    desc: 'Proven leadership with 100 DAO matched on both sides.',
   },
   {
     id: 4,
     title: 'Elite Leader',
     dao: 200,
     reward: 1000,
-    powerLeg: 100,
-    otherLegs: 100,
     desc: 'Regional expansion with balanced multi-leg performance.',
   },
   {
@@ -57,8 +49,6 @@ export const RANK_DATA: RankTier[] = [
     title: 'Executive',
     dao: 350,
     reward: 2500,
-    powerLeg: 175,
-    otherLegs: 175,
     desc: 'High-impact team builder with substantial ecosystem volume.',
   },
   {
@@ -66,8 +56,6 @@ export const RANK_DATA: RankTier[] = [
     title: 'Crown Executive',
     dao: 1000,
     reward: 5000,
-    powerLeg: 500,
-    otherLegs: 500,
     desc: 'Elite network orchestrator surpassing 1,000 DAO volume.',
   },
   {
@@ -75,8 +63,6 @@ export const RANK_DATA: RankTier[] = [
     title: 'Crown Director',
     dao: 3000,
     reward: 10000,
-    powerLeg: 1500,
-    otherLegs: 1500,
     desc: 'International directorship milestone and five-figure reward.',
   },
   {
@@ -84,8 +70,6 @@ export const RANK_DATA: RankTier[] = [
     title: 'Ambassador',
     dao: 7000,
     reward: 20000,
-    powerLeg: 3500,
-    otherLegs: 3500,
     desc: 'Global ambassador leading multi-tier organizational growth.',
   },
   {
@@ -93,8 +77,6 @@ export const RANK_DATA: RankTier[] = [
     title: 'Crown Ambassador',
     dao: 12000,
     reward: 30000,
-    powerLeg: 6000,
-    otherLegs: 6000,
     desc: 'Top 1% ecosystem vanguard commanding 12,000 DAO volume.',
   },
   {
@@ -102,8 +84,6 @@ export const RANK_DATA: RankTier[] = [
     title: 'President',
     dao: 20000,
     reward: 50000,
-    powerLeg: 10000,
-    otherLegs: 10000,
     desc: 'Pinnacle institutional tier with half-century USDT bonus.',
   },
   {
@@ -111,8 +91,6 @@ export const RANK_DATA: RankTier[] = [
     title: 'Crown President',
     dao: 50000,
     reward: 100000,
-    powerLeg: 25000,
-    otherLegs: 25000,
     desc: 'The ultimate apex crown achievement with $100,000 pool reward.',
   },
 ];
@@ -366,14 +344,16 @@ function renderRankData(rank: RankTier): void {
 
   if (titleEl) titleEl.textContent = `${rank.id}. ${rank.title}`;
   if (descEl) descEl.textContent = rank.desc;
-  if (daoEl) daoEl.textContent = `${rank.dao.toLocaleString()} DAO`;
+  // DAO matching: the rank's DAO is needed on BOTH sides (power leg and other legs), so the
+  // total team volume is twice the rank's DAO (Starter: 25 + 25 = 50 DAO)
+  if (daoEl) daoEl.textContent = `${(rank.dao * 2).toLocaleString()} DAO`;
   const daoRoll = (el: HTMLElement | null, to: number) => {
     if (!el) return;
     const o = { v: 0 };
     gsap.to(o, { v: to, duration: 0.9, ease: 'power2.out', onUpdate: () => { el.textContent = `${(Math.round(o.v * 10) / 10).toLocaleString()} DAO`; } });
   };
-  daoRoll(legPowerEl, rank.powerLeg);
-  daoRoll(legOtherEl, rank.otherLegs);
+  daoRoll(legPowerEl, rank.dao);
+  daoRoll(legOtherEl, rank.dao);
 
   if (rewardEl) {
     animateCountUp(rewardEl, rank.reward);

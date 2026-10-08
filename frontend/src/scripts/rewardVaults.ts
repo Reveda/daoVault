@@ -61,11 +61,11 @@ export function renderRewardVaults(wallet: string, currentRank: number): void {
         <span class="rb-rank mono">RANK ${String(rank).padStart(2, '0')}</span>
         <span class="rb-name">${tier.name}</span>
         <span class="rb-reward">${state === 'opened' ? money(tier.reward) : '???'}</span>
-        <span class="rb-state mono">${state === 'locked' ? `${tier.volume.toLocaleString()} DAO volume` : state === 'ready' ? 'Ready to open' : 'Opened'}</span>`;
+        <span class="rb-state mono">${state === 'locked' ? `${tier.volume.toLocaleString()} DAO matching` : state === 'ready' ? 'Ready to open' : 'Opened'}</span>`;
       btn.addEventListener('click', () => openGiftBox({
         rank: tier.name,
         reward: tier.reward,
-        requirement: `${tier.volume.toLocaleString()} DAO team volume (${tier.name} rank)`,
+        requirement: `${tier.volume.toLocaleString()} DAO matching on each side (${tier.name} rank)`,
         mode: state,
         onOpened: () => {
           markOpened(wallet, rank);
@@ -80,7 +80,7 @@ export function renderRewardVaults(wallet: string, currentRank: number): void {
     const next = RANK_TIERS[currentRank];
     set('rankNow', reachedTier ? reachedTier.name : 'Unranked');
     set('rankBoxesOpen', `${opened} / ${RANK_TIERS.length} opened`);
-    set('rankNext', next ? `Next: ${next.name} at ${next.volume.toLocaleString()} DAO team volume` : 'Top rank reached: Crown President');
+    set('rankNext', next ? `Next: ${next.name} at ${next.volume.toLocaleString()} DAO matching (each side)` : 'Top rank reached: Crown President');
     const bar = document.getElementById('rankBar');
     if (bar) window.setTimeout(() => { bar.style.width = `${(Math.min(currentRank, RANK_TIERS.length) / RANK_TIERS.length) * 100}%`; }, 400);
   };

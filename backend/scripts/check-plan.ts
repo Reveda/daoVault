@@ -21,13 +21,16 @@ const check = (name: string, ok: boolean, detail = "") => {
 };
 
 // ── pure rules ──
-check("50:50: 13 + 12 legs is not Starter", rankForLegs(summarizeLegs([13, 12])) === 0);
-check("50:50: 13 + 13 legs is Starter", rankForLegs(summarizeLegs([13, 13])) === 1);
-check("50:50: one 1000 leg alone ranks nothing", rankForLegs(summarizeLegs([1000])) === 0);
-check("50:50: 100 + 100 legs is Elite Leader (200)", rankForLegs(summarizeLegs([100, 100])) === 4);
-check("50:50: max 50% from the power leg (30 + 12 is not Starter: other legs give only 12 of 12.5)", rankForLegs(summarizeLegs([30, 12])) === 0);
-check("50:50: other legs combine (13 + 6 + 7 is Starter)", rankForLegs(summarizeLegs([13, 6, 7])) === 1);
-check("Crown Ambassador needs 12,000", rankForLegs(summarizeLegs([6000, 5999])) === 8 && rankForLegs(summarizeLegs([6000, 6000])) === 9);
+// rank rule (owner, 2026-10-08): the DAO matching is needed on EACH side
+check("matching: 25 + 24 legs is not Starter", rankForLegs(summarizeLegs([25, 24])) === 0);
+check("matching: 25 + 25 legs is Starter (25 DAO on each side)", rankForLegs(summarizeLegs([25, 25])) === 1);
+check("matching: 13 + 13 legs is NOT Starter any more (old split rule)", rankForLegs(summarizeLegs([13, 13])) === 0);
+check("matching: one 1000 leg alone ranks nothing", rankForLegs(summarizeLegs([1000])) === 0);
+check("matching: 100 + 100 legs is Leader, not Elite Leader", rankForLegs(summarizeLegs([100, 100])) === 3);
+check("matching: 200 + 200 legs is Elite Leader", rankForLegs(summarizeLegs([200, 200])) === 4);
+check("matching: the power leg needs the full DAO too (30 power vs 24 other is not Starter)", rankForLegs(summarizeLegs([30, 24])) === 0);
+check("matching: other legs combine (25 + 12 + 13 is Starter)", rankForLegs(summarizeLegs([25, 12, 13])) === 1);
+check("Crown Ambassador needs 12,000 on each side", rankForLegs(summarizeLegs([12000, 11999])) === 8 && rankForLegs(summarizeLegs([12000, 12000])) === 9);
 const split = withdrawalSplit(10_000, 5);
 check("5% fee on $100", split.feeCents === 500 && split.netCents === 9_500);
 
@@ -91,20 +94,20 @@ try {
     const c1 = await activate(same1); const c2 = await activate(same2);
     check("referral codes stay unique", c1.referralCode !== c2.referralCode, `${c1.referralCode} / ${c2.referralCode}`);
 
-    // rank: R with two legs of 13 -> Starter + $100 reward, once
+    // rank: R with two legs of 25 -> Starter + $100 reward, once
     const R = wallet();
     await activate(R);
     const buildLeg = async (size: number) => {
       let parent = R;
       for (let i = 0; i < size; i++) { const w = wallet(); await activate(w, parent); parent = w; }
     };
-    await buildLeg(13);
-    await buildLeg(12);
-    check("rank: 13 + 12 is not Starter yet", (await userOf(R)).currentRank === 0);
+    await buildLeg(25);
+    await buildLeg(24);
+    check("rank: 25 + 24 is not Starter yet", (await userOf(R)).currentRank === 0);
     const last = wallet();
     const lastLegHead = await tx.user.findMany({ where: { upline: { walletAddress: R } }, orderBy: { teamVolume: "asc" }, take: 1 });
     const rRank = await activate(last, lastLegHead[0].walletAddress);
-    check("rank: 13 + 13 makes R Starter", (await userOf(R)).currentRank === 1, JSON.stringify(rRank.rankUps.filter((u) => u.wallet === R)));
+    check("rank: 25 + 25 makes R Starter", (await userOf(R)).currentRank === 1, JSON.stringify(rRank.rankUps.filter((u) => u.wallet === R)));
     const rewards = await tx.earning.findMany({ where: { recipient: { walletAddress: R }, type: "RANK_REWARD" } });
     check("rank: Starter reward $100 paid once", rewards.length === 1 && Number(rewards[0].amountUsd) === 100);
 
@@ -125,7 +128,7 @@ try {
     await tx.package.update({ where: { id: pkgQ.id }, data: { totalEarned: 3000, status: "CAPPED" } });
     for (let leg = 0; leg < 2; leg++) {
       let parent = Q;
-      for (let i = 0; i < 13; i++) { const w = wallet(); await activate(w, parent); parent = w; }
+      for (let i = 0; i < 25; i++) { const w = wallet(); await activate(w, parent); parent = w; }
     }
     const qRewards = await tx.earning.findMany({ where: { recipient: { walletAddress: Q }, type: "RANK_REWARD" } });
     const qLevel = await tx.earning.count({ where: { recipient: { walletAddress: Q }, type: "LEVEL_COMMISSION" } });

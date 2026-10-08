@@ -1,5 +1,5 @@
 import { prisma } from "../../config/prisma.js";
-import { LEVELS, RANKS, fromCents, isLevelUnlocked, summarizeLegs, toCents, unlockedLevels } from "../plan/plan.js";
+import { LEVELS, RANKS, fromCents, isLevelUnlocked, matchedVolume, summarizeLegs, toCents, unlockedLevels } from "../plan/plan.js";
 import { balanceOf } from "../withdrawals/withdrawals.service.js";
 import { dashboardRepository } from "./dashboard.repository.js";
 
@@ -43,8 +43,8 @@ export class DashboardService {
           name: next.name,
           volume: next.volume,
           rewardUsd: next.rewardUsd,
-          // what currently counts toward it under the 50:50 rule
-          countedVolume: Math.min(legSummary.power, next.volume / 2) + legSummary.other,
+          // matched DAO so far: the smaller side (power leg vs other legs combined)
+          countedVolume: matchedVolume(legSummary),
         }
         : null,
       totalEarned: fromCents(toCents(levelIncomeUsd) + toCents(rankRewardsUsd)),

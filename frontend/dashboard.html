@@ -133,7 +133,7 @@
           </div>
           <div class="metric-val" id="metricRankVal">Not activated</div>
           <div class="metric-footer mono">
-            <span id="metricRankNote">Starter at 25 DAO team volume</span>
+            <span id="metricRankNote">Starter at 25 DAO matching (each side)</span>
           </div>
         </div>
       </div>
@@ -152,7 +152,7 @@
               <span id="rankBoxesOpen">0 / 11 opened</span>
             </div>
             <div class="rank-bar"><i id="rankBar"></i></div>
-            <p class="rank-next mono" id="rankNext">Next: Starter at 25 DAO team volume</p>
+            <p class="rank-next mono" id="rankNext">Next: Starter at 25 DAO matching (each side)</p>
           </div>
         </div>
         <div class="reward-boxes" id="rewardBoxes"></div>
@@ -257,27 +257,27 @@
           <!-- 50:50 Leg Ratio Balance Card (live from the backend) -->
           <div class="glass leg-card" id="legCard" style="padding: 2rem;">
             <h3 style="font-size: 1.25rem; margin-bottom: 0.4rem;">
-              Leadership Rank <span class="grad-text">50:50 Leg Balance</span>
+              Leadership Rank <span class="grad-text">DAO Matching</span>
             </h3>
             <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;" id="legNextTarget">
-              Next target: <strong>Starter &middot; 25 DAO &middot; $100 reward</strong>
+              Next target: <strong>Starter &middot; 25 DAO each side &middot; $100 reward</strong>
             </p>
 
             <div class="leg-box">
               <div class="leg-row mono">
-                <span style="color: var(--gold);">Power leg <small>(max 50% counted)</small></span>
-                <span id="legPowerVal">0 / 12.5 DAO</span>
+                <span style="color: var(--gold);">Power leg <small>(strongest leg)</small></span>
+                <span id="legPowerVal">0 / 25 DAO</span>
               </div>
               <div class="cap-bar-track leg-track"><div class="leg-fill leg-fill--power" id="legPowerBar"></div></div>
 
               <div class="leg-row mono">
-                <span style="color: #f3ecd6;">Other legs combined <small>(min 50%)</small></span>
-                <span id="legOtherVal">0 / 12.5 DAO</span>
+                <span style="color: #f3ecd6;">Other legs combined</span>
+                <span id="legOtherVal">0 / 25 DAO</span>
               </div>
               <div class="cap-bar-track leg-track"><div class="leg-fill leg-fill--other" id="legOtherBar"></div></div>
 
               <div class="leg-stats mono">
-                <span>Counted <b id="legCountedVal">0 / 25</b></span>
+                <span>Matched <b id="legCountedVal">0 / 25</b></span>
                 <span>Team volume <b id="legTeamVal">0 DAO</b></span>
                 <span>Legs <b id="legCountVal">0</b></span>
               </div>

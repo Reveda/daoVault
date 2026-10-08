@@ -7,7 +7,9 @@ Web3 referral/affiliate reward dApp on **BNB Smart Chain (BEP-20)**. Users conne
 
 ## Business rules (summary)
 - $300 fixed package, no passive ROI. 40% ($120) paid across 20 upline levels (L1 10%, L2 5%, L3-4 3%, L5-7 2%, L8-20 1%), levels unlock by direct-referral count (15 directs unlocks all 20).
-- 11 rank tiers (Starter 25 DAO/$100 ... Crown Ambassador 12,000/$30,000 ... Crown President 50,000 DAO/$100,000); 1 DAO = 1 activated package; max 50% of volume from one leg. Single source: backend/src/modules/plan/plan.ts.
+- 11 rank tiers (Starter 25 DAO/$100 ... Crown Ambassador 12,000/$30,000 ... Crown President 50,000 DAO/$100,000); 1 DAO = 1 activated package. Rank rule (owner, 2026-10-08): the DAO matching is needed on EACH side, power leg AND
+  other legs combined (Starter 25 = 25 + 25 = 50 total); matchedVolume = min(power, other). Replaced the old split rule
+  (V/2 + V/2). Single source: backend/src/modules/plan/plan.ts.
 - Earnings cap 10x ($3,000) per package; 5% withdrawal fee.
 - Referral: `?ref=CODE` saved to `localStorage['daovault_pending_ref']`. Codes are `DV` + first 6 hex chars of wallet (longer if taken; the server value wins).
 

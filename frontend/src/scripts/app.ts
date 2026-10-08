@@ -264,9 +264,10 @@ function initMatrixCalculator(): void {
     { lvl: 7, pct: 2, usd: 6, req: '10 Directs', reqSub: 'Qualified', members: 2187, total: 13122 },
   ];
 
-  // Fill levels 8 to 20 (1% each, $3.00, 15 Directs required)
+  // Fill levels 8 to 20 (1% each, $3.00, 15 Directs required). Theoretical team = 3^level
+  // (it used to stop at 3^12, so L12-L20 all showed the same 531,441 members).
   for (let l = 8; l <= 20; l++) {
-    const mem = Math.min(1000000, Math.pow(3, Math.min(l, 12)));
+    const mem = Math.pow(3, l);
     levelConfigs.push({
       lvl: l,
       pct: 1,
@@ -353,8 +354,15 @@ function initMatrixCalculator(): void {
     if (dollarEl) dollarEl.textContent = `$${cfg.usd.toFixed(2)} / Member`;
     if (reqEl) reqEl.textContent = cfg.req;
     if (reqSubEl) reqSubEl.textContent = cfg.reqSub;
-    if (memEl) memEl.textContent = `${cfg.members.toLocaleString()} Members`;
-    if (totalEl) countUp(totalEl, cfg.total, '$');
+    // millions and billions (L13+) in short form so they fit the card: 1.59M, $10.46B
+    const short = (n: number) => n >= 1_000_000
+      ? new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(n)
+      : n.toLocaleString();
+    if (memEl) memEl.textContent = `${short(cfg.members)} Members`;
+    if (totalEl) {
+      if (cfg.total >= 1_000_000) totalEl.textContent = `$${short(cfg.total)}`;
+      else countUp(totalEl, cfg.total, '$');
+    }
     calcBox?.classList.remove('level-changing');
     void calcBox?.offsetWidth;
     calcBox?.classList.add('level-changing');
@@ -387,9 +395,15 @@ function initMatrixCalculator(): void {
 
 
 
+/**
+ * Launch date the hero countdown runs to: one fixed moment, the same for every visitor.
+ * (It used to be "now + 14 days" on every page load, so it never actually counted down.)
+ * Override without a code change with VITE_LAUNCH_DATE (ISO 8601, e.g. 2026-10-22T00:00:00+05:30).
+ */
+const LAUNCH_DATE = new Date(import.meta.env.VITE_LAUNCH_DATE || '2026-10-22T00:00:00+05:30');
+
 function initCountdown(): void {
-  const targetDate = new Date();
-  targetDate.setDate(targetDate.getDate() + 14);
+  const targetDate = Number.isNaN(LAUNCH_DATE.getTime()) ? new Date('2026-10-22T00:00:00+05:30') : LAUNCH_DATE;
 
   const daysEl = document.getElementById('cdDays');
   const hoursEl = document.getElementById('cdHours');

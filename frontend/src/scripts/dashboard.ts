@@ -293,7 +293,7 @@ function updateMemberDetails(data: DashboardData | null, active: boolean, capEar
   set('metricRankNote', next ? `Next: ${next.name} at ${next.volume.toLocaleString()} DAO` : 'Top rank reached');
 }
 
-/** 50:50 leg card: what counts toward the next rank right now. */
+/** Leg card: DAO matching toward the next rank (power leg vs other legs, each needs the full DAO). */
 function renderLegs(data: DashboardData | null): void {
   const set = (id: string, html: string) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
   const legs = data?.legs ?? { total: 0, power: 0, other: 0, count: 0 };
@@ -308,17 +308,17 @@ function renderLegs(data: DashboardData | null): void {
     set('legCountedVal', `${fmt(legs.total)} DAO`);
     return;
   }
-  const half = next.volume / 2;
-  const powerCounted = Math.min(legs.power, half);
-  set('legNextTarget', `Next target: <strong>${next.name} &middot; ${next.volume.toLocaleString()} DAO &middot; $${next.rewardUsd.toLocaleString()} reward</strong>`);
-  set('legPowerVal', `${fmt(powerCounted)} / ${fmt(half)} DAO${legs.power > half ? ` <small>(${fmt(legs.power)} in leg)</small>` : ''}`);
-  set('legOtherVal', `${fmt(legs.other)} / ${fmt(half)} DAO`);
-  set('legCountedVal', `${fmt(next.countedVolume)} / ${fmt(next.volume)}`);
+  // DAO matching: the rank's DAO is needed on EACH side; matched = the smaller side
+  const need = next.volume;
+  set('legNextTarget', `Next target: <strong>${next.name} &middot; ${need.toLocaleString()} DAO each side &middot; $${next.rewardUsd.toLocaleString()} reward</strong>`);
+  set('legPowerVal', `${fmt(legs.power)} / ${fmt(need)} DAO`);
+  set('legOtherVal', `${fmt(legs.other)} / ${fmt(need)} DAO`);
+  set('legCountedVal', `${fmt(next.countedVolume)} / ${fmt(need)}`);
   window.setTimeout(() => {
     const p = document.getElementById('legPowerBar');
     const o = document.getElementById('legOtherBar');
-    if (p) p.style.width = `${Math.min(100, (powerCounted / half) * 100)}%`;
-    if (o) o.style.width = `${Math.min(100, (legs.other / half) * 100)}%`;
+    if (p) p.style.width = `${Math.min(100, (legs.power / need) * 100)}%`;
+    if (o) o.style.width = `${Math.min(100, (legs.other / need) * 100)}%`;
   }, 400);
 }
 
