@@ -262,7 +262,8 @@ export class WithdrawalsService {
 
   async stats() {
     const [members, packages, levelPaid, rankPaid, byStatus, payout] = await Promise.all([
-      prisma.user.count(),
+      // members = activated wallets; dashboard visitors without a package only hold a code
+      prisma.user.count({ where: { packages: { some: {} } } }),
       prisma.package.count(),
       prisma.earning.aggregate({ where: { type: "LEVEL_COMMISSION" }, _sum: { amountUsd: true } }),
       prisma.earning.aggregate({ where: { type: "RANK_REWARD" }, _sum: { amountUsd: true } }),

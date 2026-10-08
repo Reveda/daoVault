@@ -27,7 +27,7 @@ export type ActivationResult = {
 const httpError = (message: string, statusCode: number) => Object.assign(new Error(message), { statusCode });
 
 /** "DV" + first 6 hex chars; longer if that code is already taken (codes must stay unique). */
-async function uniqueReferralCode(tx: Tx, wallet: string): Promise<string> {
+export async function uniqueReferralCode(tx: Tx, wallet: string): Promise<string> {
   for (let len = 6; len <= 14; len += 2) {
     const code = `DV${wallet.slice(2, 2 + len).toUpperCase()}`;
     if (!(await tx.user.findUnique({ where: { referralCode: code }, select: { id: true } }))) return code;

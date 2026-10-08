@@ -27,6 +27,7 @@ import {
   ApiError,
   getAuthChallenge,
   getDashboardData,
+  registerWallet,
   getWithdrawals,
   requestWithdrawal,
   confirmWithdrawal,
@@ -133,6 +134,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // true when the server could not be reached: then we do NOT know whether this wallet is
   // activated, so no "Activate $300" card and no "activate to get your link" text
   let serverDown = false;
+  let registered = false;
   let leaving = false;
   window.addEventListener('pagehide', () => { leaving = true; });
   const refInput = document.getElementById('dashRefLinkInput') as HTMLInputElement | null;
@@ -144,6 +146,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (error) {
       if (leaving) return; // a navigation cancelled the request: not a server problem
       if (error instanceof ApiError && error.status === 404) {
+        // first visit: give this wallet its permanent referral code, then load its dashboard
+        if (!registered) {
+          registered = true;
+          if (await registerWallet(account).then(() => true, () => false)) continue;
+        }
         showToast('Activate your wallet to unlock your dashboard.', true);
         break;
       }
@@ -345,22 +352,29 @@ function initReferralLink(account: string, data: DashboardData | null, serverDow
   }
   const idEl = document.getElementById('dashMemberId');
   if (idEl) idEl.textContent = data ? refCode : '–';
+  // every wallet gets its permanent link on its first visit; invites through it only
+  // work once the wallet is activated (the contract accepts activated sponsors only)
+  const activated = Boolean(data?.packages?.length);
   if (sponsorTag) {
-    const sponsor = data ? data.sponsorCode : getPendingReferral();
+    // before activation the sponsor is still the invite code this visitor arrived with
+    const sponsor = data?.sponsorCode ?? (activated ? null : getPendingReferral());
     sponsorTag.innerHTML = sponsor ? `Sponsor <b>${sponsor.replace(/[^A-Za-z0-9]/g, '')}</b>` : 'Joined direct';
   }
   if (!data && copyBtn) (copyBtn as HTMLButtonElement).disabled = true;
+  const copiedMsg = activated
+    ? 'Referral link copied to clipboard!'
+    : 'Link copied. It starts working for your invites once you activate your $300 ID.';
 
   if (copyBtn && inputEl) {
     copyBtn.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(fullLink);
-        showToast('Referral link copied to clipboard!');
+        showToast(copiedMsg);
         celebrate(copyBtn, 28);
       } catch (err) {
         inputEl.select();
         document.execCommand('copy');
-        showToast('Referral link copied!');
+        showToast(copiedMsg);
       }
     });
   }

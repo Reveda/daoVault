@@ -24,6 +24,8 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
     activation  POST /activation/verify  (verifies tx + Activated event on-chain, then activation.engine.ts processActivation:
                 directs, 20-level commissions w/ unlock + 10x cap, team volume, 50:50 ranks + rank rewards; serializable tx)
     users       GET  /users/referral/:code  (invite code -> sponsor wallet)
+                POST /users/register  (first dashboard visit: reserves the wallet's permanent code, no package/upline;
+                processActivation keeps the record + code and links the sponsor; only activated codes can sponsor)
     auth        POST /auth/challenge, /auth/verify (wallet signature -> JWT; middlewares/auth.ts requireAuth/requireAdmin)
     withdrawals GET/POST /withdrawals (member) ; /admin/stats, /admin/withdrawals[/:id/approve|reject|complete]
                 (ADMIN_WALLETS; complete verifies the USDT payout on-chain; no private keys on the server)

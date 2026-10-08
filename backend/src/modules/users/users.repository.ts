@@ -5,6 +5,10 @@ export const usersRepository = {
     return prisma.user.findUnique({ where: { walletAddress } });
   },
 
+  findWithPackageCount(walletAddress: string) {
+    return prisma.user.findUnique({ where: { walletAddress }, include: { _count: { select: { packages: true } } } });
+  },
+
   findPublicByWallet(walletAddress: string) {
     return prisma.user.findUnique({
       where: { walletAddress },

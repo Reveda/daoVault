@@ -102,6 +102,11 @@ export function getDashboardData(walletAddress: string): Promise<DashboardData> 
   return request<DashboardData>(`/dashboard/${encodeURIComponent(walletAddress)}`);
 }
 
+/** First dashboard visit: reserves the wallet's permanent referral code (no payment needed; idempotent). */
+export function registerWallet(walletAddress: string): Promise<{ walletAddress: string; referralCode: string; activated: boolean }> {
+  return post('/users/register', { walletAddress });
+}
+
 /** Invite code -> sponsor wallet (404 when the code is unknown or not activated). */
 export function getSponsorByCode(code: string): Promise<{ walletAddress: string; referralCode: string }> {
   return request(`/users/referral/${encodeURIComponent(code.trim().toUpperCase())}`);
