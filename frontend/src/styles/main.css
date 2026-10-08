@@ -6268,6 +6268,39 @@ main {
   }
 }
 
+/* Matrix stats beside the dial as slim rows (label + sub left, value right): values stay on
+   one line ("2,187 Members" wrapped in three narrow cards), no empty card space, and the
+   column is about as tall as the dial so both sit level */
+.matrix-calc-box .mdial-side .calc-results-grid {
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+}
+.matrix-calc-box .mdial-side .calc-stat {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "label val" "sub val";
+  align-items: center;
+  column-gap: 1rem;
+  padding: 0.85rem 1.15rem;
+}
+.matrix-calc-box .mdial-side .calc-stat-label { grid-area: label; margin-bottom: 0.2rem; }
+.matrix-calc-box .mdial-side .calc-stat-sub { grid-area: sub; }
+.matrix-calc-box .mdial-side .calc-stat-val {
+  grid-area: val;
+  margin: 0;
+  white-space: nowrap;
+  text-align: right;
+  font-size: clamp(1.25rem, 1.9vw, 1.7rem);
+}
+.matrix-calc-box .mdial-side .mdial-directs { margin-top: 0.65rem; }
+@media (max-width: 600px) {
+  .matrix-calc-box .mdial-side .calc-stat { padding: 0.75rem 0.9rem; column-gap: 0.6rem; }
+  .matrix-calc-box .mdial-side .calc-stat-val { font-size: 1.15rem; }
+  .matrix-calc-box .mdial-side .calc-stat-label { font-size: 0.64rem; }
+  .matrix-calc-box .mdial-side .calc-stat-sub { font-size: 0.76rem; }
+}
+
 /* Nav: a gold highlight glides between items (landingFx.ts initNavIndicator);
    Dashboard only appears once a wallet is connected */
 .top-header .nav-links {

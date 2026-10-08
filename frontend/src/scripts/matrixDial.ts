@@ -197,6 +197,9 @@ export function initMatrixDial(): void {
   };
   range?.addEventListener('input', () => setDirects(Number(range.value)));
 
-  setDirects(Number(range?.value ?? 0));
+  // it is a simulator: always start at 0 (browsers restore a moved slider after a refresh,
+  // which showed e.g. "1" to a visitor as if it were their own data)
+  if (range) range.value = '0';
+  setDirects(0);
   show(Math.max(0, pills().findIndex((p) => p.classList.contains('active'))));
 }
