@@ -32,6 +32,11 @@ export function getPendingReferral(): string {
   }
 }
 
+/** Forget the captured invite code (e.g. it was the member's own code). */
+export function clearPendingReferral(): void {
+  try { localStorage.removeItem('daovault_pending_ref'); } catch { /* storage blocked */ }
+}
+
 /**
  * WebGL Capability Check
  */

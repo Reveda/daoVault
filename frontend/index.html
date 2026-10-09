@@ -7,7 +7,7 @@
   <meta name="description" content="The traditional financial system was built for institutions. DAOVAULT is built for communities: a transparent, community-driven DeFi ecosystem on BNB Smart Chain. Your assets. Your community. Your decisions." />
   <meta name="theme-color" content="#050505" />
   <!-- lite mode (phones / low-power devices): lighter effects, set before first paint -->
-  <script>try{var n=navigator;if(matchMedia("(max-width: 900px)").matches||(n.hardwareConcurrency||8)<=4||(n.deviceMemory||8)<=4)document.documentElement.classList.add("lite")}catch(e){}</script>
+  <script src="/boot.js"></script>
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/favicon.png" />
   <!-- link previews (WhatsApp, Telegram, X) -->
@@ -18,16 +18,6 @@
   <meta name="twitter:card" content="summary" />
   
   <!-- Lossless Referral Catcher: Executes immediately before anything else -->
-  <script>
-    (function () {
-      try {
-        var ref = new URLSearchParams(window.location.search).get("ref");
-        if (ref && ref.trim()) {
-          localStorage.setItem("daovault_pending_ref", ref.trim().toUpperCase());
-        }
-      } catch (e) {}
-    })();
-  </script>
 
   <!-- Google Fonts: Outfit, Plus Jakarta Sans, JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -90,7 +80,7 @@
         <div class="hero-left" data-reveal>
           <div class="kicker mono">
             <i class="kicker-dot"></i>
-            <span>BNB SMART CHAIN (BEP-20) &middot; 100% PERFORMANCE &middot; ZERO ROI</span>
+            <span>BNB SMART CHAIN (BEP-20) &middot; 100% PERFORMANCE &middot; REFERRAL-POWERED REWARDS</span>
           </div>
 
           <!-- Animated Section Path Laser Beam -->
@@ -196,43 +186,43 @@
 
             <div class="crypto-exchange-card ex-card-2 glass-v2">
               <div class="ex-card-top">
-                <span class="ex-pair mono"><i class="ex-dot cyan"></i> INSTANT PAYOUT</span>
-                <span class="ex-badge-cyan mono">&check; 0.8s BSC</span>
+                <span class="ex-pair mono"><i class="ex-dot cyan"></i> L1 DIRECT REWARD</span>
+                <span class="ex-badge-cyan mono">10% &middot; LEVEL 1</span>
               </div>
               <div class="ex-card-val-row">
                 <span class="ex-val text-cyan">+$30.00</span>
-                <span class="ex-sub mono">USDT / DIR</span>
+                <span class="ex-sub mono">USDT / DIRECT</span>
               </div>
               <div class="ex-footer-meta mono">
-                <span>Non-Custodial</span> &bull; <span id="mkGas">Gas: live</span>
+                <span>Withdraw to your wallet</span> &bull; <span id="mkGas">Gas: live</span>
               </div>
             </div>
 
             <div class="crypto-exchange-card ex-card-3 glass-v2">
               <div class="ex-card-top">
-                <span class="ex-pair mono"><i class="ex-dot violet"></i> LEVEL VELOCITY</span>
-                <span class="ex-badge-violet mono">20 LEVELS</span>
+                <span class="ex-pair mono"><i class="ex-dot violet"></i> EARNING CAP</span>
+                <span class="ex-badge-violet mono">PER PACKAGE</span>
               </div>
               <div class="ex-card-val-row">
                 <span class="ex-val text-violet">25&times; CAP</span>
-                <span class="ex-sub mono">MAX PAYOUT</span>
+                <span class="ex-sub mono">LEVEL INCOME</span>
               </div>
-              <div class="ex-progress-bar">
-                <div class="ex-progress-fill"></div>
+              <div class="ex-footer-meta mono">
+                <span>Up to $7,500 per $300 package</span>
               </div>
             </div>
 
             <div class="crypto-exchange-card ex-card-4 glass-v2">
               <div class="ex-card-top">
-                <span class="ex-pair mono"><i class="ex-dot green"></i> SOLVENCY SHIELD</span>
-                <span class="ex-badge-green mono">100% ACTIVITY</span>
+                <span class="ex-pair mono"><i class="ex-dot green"></i> FAIR REWARDS</span>
+                <span class="ex-badge-green mono">REAL ACTIVITY</span>
               </div>
               <div class="ex-card-val-row">
-                <span class="ex-val text-green">0% ROI</span>
-                <span class="ex-sub mono">NO PONZI</span>
+                <span class="ex-val text-green">100%</span>
+                <span class="ex-sub mono">COMMUNITY-POWERED</span>
               </div>
               <div class="ex-footer-meta mono">
-                <span>50:50 Balance Rule</span>
+                <span>DAO Matching on Both Sides</span>
               </div>
             </div>
           </div>
@@ -258,14 +248,14 @@
       <div class="ticker-track">
         <span class="ticker-item"><i class="ticker-dot"></i> Blockchain: <b>BSC (BEP-20)</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Entry: <b>$300 Fixed</b></span>
-        <span class="ticker-item"><i class="ticker-dot"></i> Passive ROI: <b>STRICTLY 0%</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Rewards: <b>Performance-Based Only</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Level Income: <b>40% Distribution (20 Levels)</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Earning Limit: <b>25&times; Max Cap ($7,500)</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Withdrawal Fee: <b>5% Flat</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Rank Pool: <b>Up to $200,000 Cash</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Blockchain: <b>BSC (BEP-20)</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Entry: <b>$300 Fixed</b></span>
-        <span class="ticker-item"><i class="ticker-dot"></i> Passive ROI: <b>STRICTLY 0%</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Rewards: <b>Performance-Based Only</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Level Income: <b>40% Distribution (20 Levels)</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Earning Limit: <b>25&times; Max Cap ($7,500)</b></span>
       </div>
@@ -364,11 +354,10 @@
           </div>
           <p class="section-tag mono">LEADERSHIP INCENTIVE POOL</p>
           <h2 class="section-title">
-            <span class="wm-line"><span>11-Tier <span class="grad-text">Rank &amp; Reward Pool</span></span></span>
+            <span class="wm-line"><span>11-Tier <span class="grad-text">Rank &amp; Rewards</span></span></span>
           </h2>
           <p class="section-sub">
-            Achieve milestone volume across your organization and unlock instant cash rewards. 
-            Regulated by our transparent <b>50:50 Leg Ratio Rule</b> for fair, decentralized balancing.
+            Grow your team on both sides and unlock a one-time cash reward at every milestone. Each rank needs its <b>DAO target matched on both sides</b>: your Strong Leg and your Other Leg (all your other legs combined).
           </p>
         </header>
 
@@ -379,15 +368,15 @@
               <span>01</span> APEX LEADERSHIP VAULT
             </p>
             <h3>
-              First to Balance.<br /><span class="grad-text">First to Claim.</span>
+              Balance Both Sides.<br /><span class="grad-text">Claim Your Reward.</span>
             </h3>
             <p>
-              DAOVAULT reserves an exclusive <b>$200,000 Leadership Reward Pool</b> across 11 milestone tiers. Operating on a decentralized FIFO protocol: the moment your organization achieves the target volume under the strict <b>50:50 Leg Ratio Rule</b>, your position is permanently secured — from the foundational reward of <b>$150 (Starter)</b> through the ultimate apex reward of <b>$200,000 (Crown President)</b>.
+              DAOVAULT pays a one-time cash reward at each of 11 rank tiers, from <b>$150 (Starter)</b> up to <b>$200,000 (Crown President)</b>. Reach a rank's DAO target on both sides, your Strong Leg and your Other Leg, and that reward is yours. Ranks never go down, and each reward is paid once.
             </p>
             <p class="rule mono">
-              <span class="rule-step"><b>01</b>QUALIFY 50:50 VOLUME</span>
+              <span class="rule-step"><b>01</b>MATCH DAO ON BOTH SIDES</span>
               <span class="rule-link"><i></i><em>&rarr;</em></span>
-              <span class="rule-step is-win"><b>02</b>CLAIM APEX POOL REWARD</span>
+              <span class="rule-step is-win"><b>02</b>CLAIM YOUR RANK REWARD</span>
             </p>
           </div>
           <div class="bz1-visual trophy-stage" id="trophyVisual" aria-label="DAOvault Apex Championship Trophy">
@@ -456,26 +445,26 @@
                   <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M7 21h10M5 7h14"/><path d="M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></svg>
                 </span>
                 <div>
-                  <h4>50:50 DAO Matching</h4>
+                  <h4>DAO Matching on Both Sides</h4>
                   <span class="leg-head-kicker mono">How volume is counted</span>
                 </div>
               </div>
               <p class="leg-rule-sub">
-                The rank's DAO must be matched on <b>both sides</b>: the full amount from your strongest leg (Power Leg) <b>and</b> the same amount from all your other legs combined.
+                The rank's DAO must be matched on <b>both sides</b>: the full amount from your <b>Strong Leg</b> (your biggest team) <b>and</b> the same amount from your <b>Other Leg</b> (all your other legs combined).
               </p>
 
               <div class="leg-split-bar" aria-hidden="true">
-                <div class="leg-power" title="Full DAO from the Power Leg"></div>
-                <div class="leg-other" title="Full DAO from the Other Legs"></div>
+                <div class="leg-power" title="Full DAO from the Strong Leg"></div>
+                <div class="leg-other" title="Full DAO from the Other Leg"></div>
               </div>
 
               <div class="leg-labels">
                 <div class="leg-stat leg-stat--power">
-                  <span class="leg-stat-lbl mono"><i></i>Power Leg Target</span>
+                  <span class="leg-stat-lbl mono"><i></i>Strong Leg Target</span>
                   <strong id="rankPowerLegVal">25 DAO</strong>
                 </div>
                 <div class="leg-stat leg-stat--other">
-                  <span class="leg-stat-lbl mono"><i></i>Other Legs Target</span>
+                  <span class="leg-stat-lbl mono"><i></i>Other Leg Target</span>
                   <strong id="rankOtherLegVal">25 DAO</strong>
                 </div>
               </div>
@@ -598,7 +587,7 @@
                   <div class="meter-track">
                     <div class="meter-fill fill-100 green"></div>
                   </div>
-                  <div class="meter-footnote mono">Instant Payout Active &bull; Zero Lockup Period</div>
+                  <div class="meter-footnote mono">Credited to your balance on activation &bull; Withdraw to your wallet</div>
                 </div>
               </div>
 
@@ -607,7 +596,7 @@
                 <div class="cypheir-meta-cluster mono">
                   <div class="meta-row">
                     <span class="meta-k">VELOCITY</span>
-                    <span class="meta-v text-gold">INSTANT BSC</span>
+                    <span class="meta-v text-gold">ON ACTIVATION</span>
                   </div>
                   <div class="meta-row">
                     <span class="meta-k">GENERATION</span>
@@ -993,10 +982,10 @@
           </div>
           <p class="section-tag mono">INTERACTIVE ARCHITECTURAL PILLARS</p>
           <h2 class="section-title">
-            <span class="wm-line"><span>Engineered for <span class="grad-text">Mathematical Solvency</span></span></span>
+            <span class="wm-line"><span>Engineered for <span class="grad-text">Long-Term Sustainability</span></span></span>
           </h2>
           <p class="section-sub">
-            Hover over any pillar below to flip the 3D card and inspect the cryptographic proof and solvency rules.
+            Flip any card below to see the rule behind it and how it keeps DAOVAULT sustainable.
           </p>
         </header>
 
@@ -1006,7 +995,7 @@
             <div class="flip-card-inner">
               <div class="flip-card-front">
                 <div>
-                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">LAYER 01 &middot; SOLVENCY</span>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">LAYER 01 &middot; SUSTAINABILITY</span>
                   <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">25&times; Sustainability Cap</h3>
                   <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
                     $300 entry can earn up to a maximum of $7,500 before mandatory re-entry.
@@ -1037,9 +1026,9 @@
               <div class="flip-card-front">
                 <div>
                   <span class="mono" style="font-size: 0.75rem; color: var(--green);">LAYER 02 &middot; ETHICS</span>
-                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">Strictly 0% Passive ROI</h3>
+                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">No Fixed Returns, Only Real Growth</h3>
                   <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
-                    Zero fake daily returns or arbitrary staking ponzis. 100% activity backed.
+                    No promised daily returns or staking schemes. Every reward is backed by real activity.
                   </p>
                 </div>
                 <div class="flip-hint mono" style="color: var(--green);">
@@ -1055,7 +1044,7 @@
                   </p>
                 </div>
                 <div class="mono" style="font-size: 0.78rem; color: var(--green); border-top: 1px solid rgba(16,185,129,0.3); padding-top: 0.6rem;">
-                  Daily ROI: 0.00% Always
+                  Every reward comes from a real $300 activation
                 </div>
               </div>
             </div>
@@ -1081,7 +1070,7 @@
                   <span class="mono" style="font-size: 0.75rem; color: var(--cyan);">&check; DIRECT INCENTIVE</span>
                   <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Meritocratic Unlocks</h4>
                   <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
-                    L1 gives 10% ($30) with 0 directs required. To tap into the deeper 19 levels, affiliates must introduce active direct members (up to 15 directs for L20), guaranteeing healthy horizontal community expansion.
+                    L1 gives 10% ($30) with 0 directs required. To tap into the deeper 19 levels, affiliates must introduce active direct members (up to 15 directs for L20), encouraging healthy, wide community growth.
                   </p>
                 </div>
                 <div class="mono" style="font-size: 0.78rem; color: var(--cyan); border-top: 1px solid rgba(34,211,238,0.3); padding-top: 0.6rem;">
@@ -1140,7 +1129,7 @@
             <span class="wm-line"><span>Why DAOvault is a <span class="grad-text">Structural Upgrade</span></span></span>
           </h2>
           <p class="section-sub">
-            Traditional MLM &amp; ROI schemes rely on black-box manipulation. DAOvault operates entirely on verifiable Web3 math.
+            Old fixed-return models rely on hidden math. DAOvault operates entirely on verifiable Web3 math.
           </p>
         </header>
 
@@ -1149,7 +1138,7 @@
             <thead>
               <tr>
                 <th>Dimension</th>
-                <th>Traditional ROI / Ponzi Schemes</th>
+                <th>Traditional Fixed-Return Platforms</th>
                 <th>DAOVAULT Web3 Protocol</th>
               </tr>
             </thead>
@@ -1165,14 +1154,14 @@
                 <td><span class="badge-positive">&rarr; Your Non-Custodial Web3 Wallet Always</span></td>
               </tr>
               <tr>
-                <td><strong>System Solvency</strong></td>
+                <td><strong>Sustainability</strong></td>
                 <td><span class="badge-negative">&cross; Unlimited whale draining &amp; sudden rug</span></td>
                 <td><span class="badge-positive">&rarr; 25&times; Max Earning Cap ($7,500 Safety Lock)</span></td>
               </tr>
               <tr>
                 <td><strong>Leadership Balancing</strong></td>
                 <td><span class="badge-negative">&cross; Single-leg manipulation &amp; fake ranks</span></td>
-                <td><span class="badge-positive">&rarr; Strict 50:50 Power Leg Mathematical Rule</span></td>
+                <td><span class="badge-positive">&rarr; DAO Matching on Both Sides (Strong Leg + Other Leg)</span></td>
               </tr>
               <tr>
                 <td><strong>Level Depth</strong></td>
@@ -1186,6 +1175,27 @@
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Verify it yourself: Activation contract + USDT, one BscScan button each, no address printed (chainProof.ts) -->
+        <div class="verify-card glass" id="verifyCard" data-reveal>
+          <div class="verify-head">
+            <div class="verify-tagrow">
+              <p class="section-tag mono">VERIFY IT YOURSELF</p>
+              <div class="verify-badges" id="verifyBadges"></div>
+            </div>
+            <h3>Don't just trust. <span class="grad-text">Verify on BscScan.</span></h3>
+            <p>Your $300 activation goes through a public smart contract on BNB Smart Chain. Open it on BscScan and check every transaction yourself.</p>
+          </div>
+          <div class="verify-rows" id="verifyRows"></div>
+          <form class="vc-check" id="verifyCheck" novalidate>
+            <label class="vc-label mono" for="verifyWallet">Check any wallet</label>
+            <div class="vc-check-row">
+              <input id="verifyWallet" class="mono" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a wallet address (0x…)" />
+              <button type="submit" class="vc-btn mono">View on BscScan &#8599;</button>
+            </div>
+            <small>Opens that wallet on BscScan in a new tab.</small>
+          </form>
         </div>
       </div>
     </section>
@@ -1320,16 +1330,13 @@
           <span class="wm-line"><span><span class="grad-text">Decentralized Finance.</span></span></span>
         </h2>
         <p class="section-sub cta-sub">
-          Your assets. Your community. Your decisions. One fixed $300 entry, a 25&times; solvency cap and payouts
+          Your assets. Your community. Your decisions. One fixed $300 entry, a 25&times; earnings cap and payouts
           straight to your own wallet on BNB Smart Chain.
         </p>
         <div class="cta-actions">
           <button class="btn btn-grad btn-lg" data-connect-trigger type="button">
             <span>Connect Wallet &amp; Activate ID &rarr;</span>
           </button>
-          <a class="btn btn-line btn-lg" href="dashboard.html">
-            <span>Launch Dashboard</span>
-          </a>
         </div>
       </div>
     </section>
@@ -1459,8 +1466,8 @@
 
         <div class="wallet-dialog-foot mono">
           <span>&bull; Non-Custodial</span>
-          <span>&bull; Instant BEP-20 Payouts</span>
-          <span>&bull; Solvency Cap 25&times;</span>
+          <span>&bull; USDT (BEP-20) Payouts</span>
+          <span>&bull; Earnings Cap 25&times;</span>
         </div>
       </div>
     </div>

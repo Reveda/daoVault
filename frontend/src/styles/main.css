@@ -5592,7 +5592,7 @@ main {
   }
 
   .compare-matrix td:nth-child(2)::before {
-    content: 'TRADITIONAL ROI / PONZI';
+    content: 'TRADITIONAL FIXED-RETURN';
   }
 
   .compare-matrix td:nth-child(3)::before {
@@ -6982,3 +6982,30 @@ html.lite .hw-wallet { animation: none; filter: none; }
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* ── Verify it yourself card (chainProof.ts, owner 2026-10-09): no address printed, BscScan buttons ── */
+.verify-card { margin-top: 2rem; padding: clamp(1.1rem, 3vw, 1.8rem); border-radius: 22px; border: 1px solid rgba(212, 175, 55, 0.3); }
+.verify-head { margin-bottom: 1.2rem; }
+.verify-tagrow { display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem 0.8rem; }
+.verify-head h3 { margin: 0.35rem 0 0.4rem; font-size: clamp(1.25rem, 2.6vw, 1.6rem); }
+.verify-head > p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; }
+.verify-badges { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+.vc-badge { padding: 0.35rem 0.75rem; border-radius: 999px; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.06em; border: 1px solid rgba(255, 255, 255, 0.14); color: var(--text-muted); background: rgba(255, 255, 255, 0.04); white-space: nowrap; }
+.vc-badge.is-net { color: var(--gold); border-color: rgba(212, 175, 55, 0.4); background: rgba(212, 175, 55, 0.08); }
+.vc-badge.is-live { color: var(--green); border-color: rgba(16, 185, 129, 0.45); background: rgba(16, 185, 129, 0.1); }
+.verify-rows { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 0.8rem; }
+.vc-row { display: grid; justify-items: start; gap: 0.45rem; padding: 0.9rem 1rem; border-radius: 14px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.07); min-width: 0; }
+.vc-label { font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
+.vc-addr { font-size: 0.95rem; font-weight: 700; color: var(--gold); }
+.vc-row small { font-size: 0.78rem; color: var(--text-muted); line-height: 1.5; }
+.vc-btn { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.5rem 0.95rem; border-radius: 999px; font-size: 0.78rem; font-weight: 700; color: var(--gold); text-decoration: none; background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.45); transition: background 0.2s, color 0.2s; }
+.vc-btn:hover, .vc-btn:focus-visible { background: var(--grad-gold); color: #0b0b0b; }
+@media (max-width: 600px) { .vc-btn { width: 100%; justify-content: center; } }
+.verify-rows[hidden] { display: none; }
+.verify-rows[hidden] + .vc-check { margin-top: 0; }
+.vc-check { display: grid; gap: 0.45rem; margin-top: 0.8rem; padding: 0.9rem 1rem; border-radius: 14px; background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.07); }
+.vc-check-row { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.vc-check-row input { flex: 1 1 260px; min-width: 0; padding: 0.6rem 0.9rem; border-radius: 999px; font-size: 0.85rem; color: #fff; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(212, 175, 55, 0.3); outline: none; }
+.vc-check-row input:focus-visible { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.18); }
+.vc-check-row .vc-btn { cursor: pointer; font-family: inherit; }
+.vc-check small { font-size: 0.76rem; color: var(--text-muted); }

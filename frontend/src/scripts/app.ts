@@ -8,6 +8,7 @@ import { initApexTrophy } from './trophy3d.ts';
 import { initScrollAnimations } from './scrollAnimations.ts';
 import { initHeroWallet } from './heroWallet.ts';
 import { initLiveMarket } from './liveMarket.ts';
+import { initChainProof } from './chainProof.ts';
 import { initMatrixAutoDeck } from './matrixAutoDeck.ts';
 import {
   initReferralCapture,
@@ -39,7 +40,7 @@ import { initRankGameCard } from './rankGameCard.ts';
 import { initMatrixDial } from './matrixDial.ts';
 import { initVaultQuiz } from './quiz.ts';
 import { initDvLogos } from './dvLogo.ts';
-import { wakeBackend } from './api.ts';
+import { ApiError, getSponsorByCode, wakeBackend } from './api.ts';
 
 // start waking the backend right away (Render free plan sleeps it); the dashboard needs it next
 wakeBackend();
@@ -51,6 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initOffscreenPause(); // looping CSS animations pause off screen
   enableTouchPress(); // smooth card press feedback on phones (iOS needs a touch listener)
   initReferralCapture();
+  checkInviteCode();
   init3DScene();
   initHeroCore3D();
   initApexTrophy();
@@ -102,6 +104,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   autoConnectFromWalletApp(); // opened inside a wallet app from our Connect: connect right away
   initHeroWallet(); // our own wallet + circling coins in the hero Connect badge
   initLiveMarket(); // live BNB/USDT rate + BSC gas on the hero metric cards
+  initChainProof(); // #compare "Verify it yourself": BscScan buttons for the contract + USDT (no address printed)
 
   // A connected member belongs on their own dashboard (that is where activation lives too).
   // Not when the dashboard itself just sent them here, or the two pages would bounce.
@@ -241,11 +244,10 @@ function initCardTilt(): void {
 
 function initFlipCards(): void {
   const cards = document.querySelectorAll<HTMLElement>('.flip-card-wrap');
-  // phones have no hover: the cards flip on tap, so say so
-  if (matchMedia('(hover: none)').matches) {
+  // only a mouse hovers (same test as the CSS hover-flip); every touch screen flips on tap,
+  // including phones that report (hover: hover)
+  if (!matchMedia('(hover: hover) and (pointer: fine)').matches) {
     document.querySelectorAll<HTMLElement>('#about .flip-hint span').forEach((el) => { el.textContent = 'Tap to flip card'; });
-    const sub = document.querySelector<HTMLElement>('#about .section-sub');
-    if (sub) sub.textContent = sub.textContent?.replace('Hover over any pillar', 'Tap any pillar') ?? '';
   }
   // Touch screens: 3D only while turning. At rest the card was still drawn through a
   // preserve-3d context (and the back face as 180deg + 180deg), which phones rasterise at
@@ -758,4 +760,21 @@ function updateConnectButtonUI(account: string): void {
     else btn.innerHTML = `<span>🟢</span> ${formatAddress(account)}`;
     btn.classList.add('connected');
   });
+}
+
+/**
+ * A visitor arriving with ?ref=CODE learns right away whether that invite can sponsor them
+ * (only activated members can), instead of at payment time. Server asleep: says nothing.
+ */
+function checkInviteCode(): void {
+  const ref = new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase() ?? '';
+  if (!/^DV[A-F0-9]{6,14}$/.test(ref)) return;
+  getSponsorByCode(ref).then(
+    () => window.setTimeout(() => showToast(`Invited by ${ref}. Connect your wallet to join.`), 3200),
+    (error) => {
+      if (error instanceof ApiError && error.status === 404) {
+        window.setTimeout(() => showToast(`Invite code ${ref} is not active yet: its owner must activate first.`, true), 3200);
+      }
+    },
+  );
 }

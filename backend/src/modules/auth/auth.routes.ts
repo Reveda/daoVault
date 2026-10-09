@@ -12,7 +12,7 @@ export const authRouter = Router();
 // 1. get the message to sign
 authRouter.post("/challenge", authRateLimiter, validateRequest({ body: z.object({ walletAddress: address }) }), async (req, res, next) => {
   try {
-    res.json({ success: true, data: await authService.createChallenge(req.body.walletAddress) });
+    res.json({ success: true, data: await authService.createChallenge(req.body.walletAddress, req.get("origin")) });
   } catch (error) { next(error); }
 });
 
@@ -22,6 +22,14 @@ authRouter.post("/verify", authRateLimiter, validateRequest({
 }), async (req, res, next) => {
   try {
     res.json({ success: true, data: await authService.verifySignature(req.body.walletAddress, req.body.signature) });
+  } catch (error) { next(error); }
+});
+
+// "Log out all devices": voids every token of this wallet, on every device
+authRouter.post("/logout-all", requireAuth, async (req, res, next) => {
+  try {
+    await authService.revokeAllSessions(req.auth!.sub);
+    res.json({ success: true, data: { loggedOut: true } });
   } catch (error) { next(error); }
 });
 

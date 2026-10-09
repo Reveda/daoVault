@@ -19,6 +19,7 @@ export type DashboardData = {
     packageAmount: number | string;
     totalEarned: number | string;
     maxCapLimit: number | string;
+    activationTxHash?: string;
     status: string;
   }>;
   levels: Array<{ level: number; pct: number; reqDirects: number; unlocked: boolean; members: number; earnedUsd: number }>;
@@ -101,8 +102,9 @@ async function request<T>(path: string, init: RequestInit & { token?: string } =
 const post = <T>(path: string, body: unknown, token?: string) =>
   request<T>(path, { method: 'POST', body: JSON.stringify(body), token });
 
-export function getDashboardData(walletAddress: string): Promise<DashboardData> {
-  return request<DashboardData>(`/dashboard/${encodeURIComponent(walletAddress)}`);
+/** The member's own vault: needs their sign-in token (session.ts). */
+export function getDashboardData(walletAddress: string, token: string): Promise<DashboardData> {
+  return request<DashboardData>(`/dashboard/${encodeURIComponent(walletAddress)}`, { token });
 }
 
 export type LevelMembers = {
@@ -114,13 +116,13 @@ export type LevelMembers = {
 };
 
 /** Who joined at one level of the wallet's downline (dashboard level modal), 50 per page. */
-export function getLevelMembers(walletAddress: string, level: number, page = 1): Promise<LevelMembers> {
-  return request<LevelMembers>(`/dashboard/${encodeURIComponent(walletAddress)}/levels/${level}?page=${page}`);
+export function getLevelMembers(walletAddress: string, level: number, page: number, token: string): Promise<LevelMembers> {
+  return request<LevelMembers>(`/dashboard/${encodeURIComponent(walletAddress)}/levels/${level}?page=${page}`, { token });
 }
 
 /** First dashboard visit: reserves the wallet's permanent referral code (no payment needed; idempotent). */
-export function registerWallet(walletAddress: string): Promise<{ walletAddress: string; referralCode: string; activated: boolean }> {
-  return post('/users/register', { walletAddress });
+export function registerWallet(walletAddress: string, token: string): Promise<{ walletAddress: string; referralCode: string; activated: boolean }> {
+  return post('/users/register', { walletAddress }, token);
 }
 
 /** Invite code -> sponsor wallet (404 when the code is unknown or not activated). */
@@ -150,6 +152,8 @@ export const getAuthChallenge = (walletAddress: string) =>
   post<{ message: string; expiresAt: string }>('/auth/challenge', { walletAddress });
 export const verifyAuthSignature = (walletAddress: string, signature: string) =>
   post<{ token: string; role: 'member' | 'admin'; walletAddress: string; expiresAt: string }>('/auth/verify', { walletAddress, signature });
+/** "Log out all devices": every token of this wallet stops working. */
+export const logoutAllDevices = (token: string) => post<{ loggedOut: boolean }>('/auth/logout-all', {}, token);
 
 // ── withdrawals ──
 export const getWithdrawals = (token: string) => request<WithdrawalSummary>('/withdrawals', { token });

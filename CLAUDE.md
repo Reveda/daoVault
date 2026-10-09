@@ -8,8 +8,8 @@ Web3 referral/affiliate reward dApp on **BNB Smart Chain (BEP-20)**. Users conne
 ## Business rules (summary)
 - $300 fixed package, no passive ROI. 40% ($120) paid across 20 upline levels (L1 10%, L2 5%, L3-4 3%, L5-7 2%, L8-20 1%), levels unlock by direct-referral count (15 directs unlocks all 20).
 - 11 rank tiers (Starter 25 DAO/$150, Builder 50/$300, Leader 100/$500, Elite 200/$1,200, Executive 375/$2,500, Crown Exec 1,000/$7,500,
-  Crown Director 3,000/$15,000, Ambassador 7,000/$30,000, Crown Ambassador 12,000/$50,000, President 20,000/$75,000, Crown President 50,000/$200,000; owner plan 2026-10-09); 1 DAO = 1 activated package. Rank rule (owner, 2026-10-08): the DAO matching is needed on EACH side, power leg AND
-  other legs combined (Starter 25 = 25 + 25 = 50 total); matchedVolume = min(power, other). Replaced the old split rule
+  Crown Director 3,000/$15,000, Ambassador 7,000/$30,000, Crown Ambassador 12,000/$50,000, President 20,000/$75,000, Crown President 50,000/$200,000; owner plan 2026-10-09); 1 DAO = 1 activated package. Rank rule (owner, 2026-10-08): the DAO matching is needed on EACH side, power leg (UI: "Strong Leg") AND
+  other legs combined (UI: "Other Leg") (Starter 25 = 25 + 25 = 50 total); matchedVolume = min(power, other). Replaced the old split rule
   (V/2 + V/2). Single source: backend/src/modules/plan/plan.ts.
 - Earnings cap 25x ($7,500) of level income per package (was 10x; rank rewards outside it); 5% withdrawal fee.
 - Referral: `?ref=CODE` saved to `localStorage['daovault_pending_ref']`. Codes are `DV` + first 6 hex chars of wallet (longer if taken; the server value wins).
@@ -24,7 +24,7 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
   src/modules/<name>/      routes -> controller -> service -> repository pattern
     health      GET  /health
     users       GET  /users/:walletAddress
-    dashboard   GET  /dashboard/:walletAddress
+    dashboard   GET  /dashboard/:walletAddress   (JWT, own wallet or admin: requireSelfOrAdmin; 403 otherwise)
                 GET  /dashboard/:walletAddress/levels/:level?page=  (members exactly N levels down: DV code, short
                 wallet, sponsor code, joined date; 50/page) -> frontend levelModal.ts (tap a 20-Level Downline row)
     activation  POST /activation/verify  (verifies tx + Activated event on-chain, then activation.engine.ts processActivation:
@@ -32,7 +32,10 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
     users       GET  /users/referral/:code  (invite code -> sponsor wallet)
                 POST /users/register  (first dashboard visit: reserves the wallet's permanent code, no package/upline;
                 processActivation keeps the record + code and links the sponsor; only activated codes can sponsor)
-    auth        POST /auth/challenge, /auth/verify (wallet signature -> JWT; middlewares/auth.ts requireAuth/requireAdmin)
+    auth        POST /auth/challenge, /auth/verify (EIP-4361 SIWE message: domain from the Origin header only if it is a
+                FRONTEND_URL origin, chain ID, nonce 5 min single use -> JWT 12h with `ver`), POST /auth/logout-all (bumps
+                auth_sessions.version: every older token is refused). middlewares/auth.ts requireAuth (async, checks ver),
+                requireAdmin, requireSelfOrAdmin. Also protected: GET /users/:wallet, POST /users/register (own wallet).
     withdrawals GET/POST /withdrawals (member) ; /admin/stats, /admin/withdrawals[/:id/approve|reject|complete]
                 (ADMIN_WALLETS; complete verifies the USDT payout on-chain; no private keys on the server)
                 instant: withdrawals/payout.ts signs EIP-712 vouchers for contracts/DAOvaultPayout.sol (member claims,
@@ -47,6 +50,11 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   index.html -> src/scripts/app.ts        landing page (3D scene, rank cards, wallet picker)
   dashboard.html -> src/scripts/dashboard.ts  user dashboard (live API data, legs, income, withdraw w/ wallet sign-in)
   admin.html -> src/scripts/admin.ts      withdrawal queue for ADMIN_WALLETS
+  session.ts: member sign-in (signIn / requireSession: decline -> "Sign in to open your vault" gate), token in
+           sessionStorage only (old localStorage tokens dropped), Log out clears it, menu "Log out all devices".
+           Dashboard data, level modal and register all send the token. admin.ts keeps its token in memory only.
+  CSP: no inline scripts (public/boot.js = html.lite + ?ref capture in <head>). Production CSP in render.yaml headers,
+           same string in vite.config.js (preview only); keep both in sync. Checked: zero violations on all pages.
   scripts: core.ts (referral capture, preloader, countUp, reveal stagger, toast), wallet.ts (EIP-6963, BSC switch, reconnect),
            payment.ts (resolveSponsor, approve + activate + POST verify, retry pending), api.ts (backend calls),
            trophy3d.ts (our own three.js Apex trophy), walletDialog3D.ts, rankGameCard.ts (RANK_DATA), matrixAutoDeck.ts, scrollAnimations.ts (GSAP per section,
@@ -68,6 +76,12 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
     liveMarket.ts     hero metric card #mkCard: live BNB/USDT price + 24h change + 24h sparkline (Binance public API,
                       CoinGecko fallback) and live BSC gas (#mkGas, eth_gasPrice); refresh 60s while on screen.
                       No fake numbers: placeholders until data arrives.
+    chainProof.ts     #compare "Verify it yourself" card: Activation contract + USDT rows, each ONE "View on BscScan"
+                      button, no address printed (owner). "Live on BSC" badge only if eth_getCode finds code; no address
+                      configured = "Published here at launch" / "Coming at launch".
+                      Dashboard: #dashActivationTx chip links the member's own activationTxHash on BscScan.
+  Landing wording (owner 2026-10-09): no "ROI"/"Ponzi"/"FIFO"/"pool"/"guarantee"/"solvency"/instant-payout claims;
+  rank rule copy says "DAO Matching on Both Sides". CTA has only Connect Wallet. Flip hint says Tap on touch screens.
     landingFx.ts      nav scrollspy, "How to Join" progress rail / lit steps, initDropCards() ([data-drop] cards fall
                       from above then their .drop-body unfolds; used by the #vision DAO + VAULT = DAOVAULT cards); initJoinSteps(): #how expanding step
                       cards (one open at a time, auto-advance, progress stage)
@@ -86,6 +100,9 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
                       app.ts autoplay steps a level every 2s while .matrix-calc-box is on screen)
     rewardVaults.ts   dashboard #rewardsSection: 11 rank boxes (locked/ready/opened, opened state in localStorage only,
                       never a payout) + header #walletMenu (copy, BscScan, Log out = #dashLogoutBtn)
+    rankProgress.ts   dashboard #rankListSection "All Ranks": per rank Power Leg / Other Legs bars vs the DAO target
+                      (each side, DAO only), reward, Achieved/In progress/Locked, All/Achieved/Pending
+                      filter. Pure frontend from GET /dashboard legs + currentRank.
     giftBox.ts        openGiftBox(): three.js surprise box overlay (drop, rattle, shake, lid burst, reward reveal); red box,
                       white ribbon + bow, gold-rimmed DAOvault seal on all 4 sides; .gift-scroll keeps it on any screen height
   Landing nav: no Matrix/Dashboard items; li.nav-dash shows only with body.wallet-connected; landingFx initNavIndicator

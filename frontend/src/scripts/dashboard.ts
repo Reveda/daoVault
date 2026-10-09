@@ -11,6 +11,7 @@ import {
   showToast,
   showLaunchNotice,
   getPendingReferral,
+  clearPendingReferral,
   countUp,
   initOffscreenPause,
   enableTouchPress,
@@ -27,13 +28,13 @@ import { Contract } from 'ethers';
 import type { LevelMatrixRow } from './types.ts';
 import {
   ApiError,
-  getAuthChallenge,
   getDashboardData,
+  getSponsorByCode,
   registerWallet,
   getWithdrawals,
   requestWithdrawal,
   confirmWithdrawal,
-  verifyAuthSignature,
+  logoutAllDevices,
   type DashboardData,
   type WithdrawalSummary,
   type Withdrawal,
@@ -50,6 +51,8 @@ import {
 import { renderRewardVaults, initWalletMenu, RANK_TIERS } from './rewardVaults.ts';
 import { initDvLogos } from './dvLogo.ts';
 import { openLevelModal } from './levelModal.ts';
+import { renderRankProgress } from './rankProgress.ts';
+import { clearAllSessions, clearSession, requireSession, savedSession, signIn } from './session.ts';
 
 // 20-Level Matrix Specification with strict LevelMatrixRow interface
 const LEVEL_MATRIX: LevelMatrixRow[] = [
@@ -104,6 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (next && next.toLowerCase() !== account.toLowerCase()) window.location.reload();
   });
   window.addEventListener('daovault:disconnected', () => {
+    clearAllSessions();
     try { sessionStorage.setItem('dv_dash_bounce', '1'); } catch { /* storage blocked */ }
     window.location.href = 'index.html';
   });
@@ -119,13 +123,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 3. Setup Disconnect
-  const logoutBtn = document.getElementById('dashLogoutBtn');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-      disconnectWallet();
-      window.location.href = 'index.html';
-    });
-  }
+  const logOut = () => {
+    clearAllSessions();
+    disconnectWallet();
+    window.location.href = 'index.html';
+  };
+  document.getElementById('dashLogoutBtn')?.addEventListener('click', logOut);
+  document.getElementById('dashLogoutAllBtn')?.addEventListener('click', async () => {
+    const token = savedSession(account);
+    try {
+      if (token) await logoutAllDevices(token);
+      showToast('Logged out on every device.');
+    } catch {
+      showToast('Could not reach the server: logged out on this device only.', true);
+    }
+    logOut();
+  });
 
   // 4. Wallet menu + nav
   initWalletMenu(account);
@@ -143,21 +156,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   // activated, so no "Activate $300" card and no "activate to get your link" text
   let serverDown = false;
   let registered = false;
+  let resigned = false;
+  let token = '';
   let leaving = false;
   window.addEventListener('pagehide', () => { leaving = true; });
   const refInput = document.getElementById('dashRefLinkInput') as HTMLInputElement | null;
   if (refInput) refInput.value = 'Loading your invite link…';
   for (let attempt = 0; ; attempt++) {
     try {
-      dashboardData = await getDashboardData(account);
+      token ||= await requireSession(account, logOut);
+      dashboardData = await getDashboardData(account, token);
       break;
     } catch (error) {
       if (leaving) return; // a navigation cancelled the request: not a server problem
+      if (error instanceof ApiError && error.status === 401 && !resigned) {
+        // session ended (expired, or "log out all devices" elsewhere): sign in again once
+        resigned = true;
+        clearSession(account);
+        token = '';
+        continue;
+      }
       if (error instanceof ApiError && error.status === 404) {
         // first visit: give this wallet its permanent referral code, then load its dashboard
         if (!registered) {
           registered = true;
-          if (await registerWallet(account).then(() => true, () => false)) continue;
+          if (await registerWallet(account, token).then(() => true, () => false)) continue;
         }
         showToast('Activate your wallet to unlock your dashboard.', true);
         break;
@@ -193,6 +216,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // 7b. Rank reward vaults (surprise boxes)
   renderRewardVaults(account, dashboardData?.currentRank ?? 0);
+  renderRankProgress(dashboardData);
 
   // 8. 20-level table, legs, income
   renderLevelTable(dashboardData);
@@ -286,6 +310,14 @@ function updateMemberDetails(data: DashboardData | null, active: boolean, capEar
     tag.textContent = active ? `• Active member · ${net}` : data ? `• Not activated yet · ${net}` : `• Wallet connected · ${net}`;
     tag.classList.toggle('is-active', active);
   }
+  // the member's own proof: their $300 activation transaction on BscScan (public chain data)
+  const proof = document.getElementById('dashActivationTx') as HTMLAnchorElement | null;
+  const txHash = data?.packages?.[0]?.activationTxHash ?? '';
+  if (proof) {
+    const valid = /^0x[0-9a-fA-F]{64}$/.test(txHash);
+    proof.hidden = !valid;
+    if (valid) proof.href = scanTx(txHash);
+  }
   const unlocked = data?.levelsUnlocked ?? 0;
   const set = (id: string, text: string) => { const el = document.getElementById(id); if (el) el.textContent = text; };
   set('metricDirectsNote', unlocked >= 20 ? 'All 20 levels unlocked' : `Levels unlocked: ${unlocked} / 20`);
@@ -363,10 +395,22 @@ function initReferralLink(account: string, data: DashboardData | null, serverDow
   // every wallet gets its permanent link on its first visit; invites through it only
   // work once the wallet is activated (the contract accepts activated sponsors only)
   const activated = Boolean(data?.packages?.length);
+  // the member's own invite code is never their sponsor (they opened their own link)
+  let pendingRef = getPendingReferral().replace(/[^A-Za-z0-9]/g, '');
+  if (data && pendingRef === refCode) { clearPendingReferral(); pendingRef = ''; }
   if (sponsorTag) {
     // before activation the sponsor is still the invite code this visitor arrived with
-    const sponsor = data?.sponsorCode ?? (activated ? null : getPendingReferral());
+    const sponsor = data?.sponsorCode ?? (activated ? null : pendingRef);
     sponsorTag.innerHTML = sponsor ? `Sponsor <b>${sponsor.replace(/[^A-Za-z0-9]/g, '')}</b>` : 'Joined direct';
+    // say it now, not at payment time, when the invite code cannot sponsor yet
+    if (!data?.sponsorCode && !activated && pendingRef) {
+      getSponsorByCode(pendingRef).catch((error) => {
+        if (!(error instanceof ApiError && error.status === 404)) return;
+        sponsorTag.innerHTML = `Invite <b>${pendingRef}</b> not active yet`;
+        sponsorTag.classList.add('is-warn');
+        showToast(`Invite code ${pendingRef} is not active yet: its owner must activate first. Ask them, or use another invite link.`, true);
+      });
+    }
   }
   if (!data && copyBtn) (copyBtn as HTMLButtonElement).disabled = true;
   const copiedMsg = activated
@@ -452,31 +496,6 @@ function renderLevelTable(data: DashboardData | null): void {
 }
 
 // ── Withdrawals: wallet-signature session, request, history ─────────────
-
-const SESSION_KEY = (wallet: string) => `daovault_session_${wallet.toLowerCase()}`;
-
-function savedSession(wallet: string): string | null {
-  try {
-    const raw = JSON.parse(localStorage.getItem(SESSION_KEY(wallet)) || 'null') as { token: string; expiresAt: string } | null;
-    if (raw && new Date(raw.expiresAt).getTime() > Date.now() + 60_000) return raw.token;
-  } catch { /* ignore */ }
-  return null;
-}
-
-/** Asks the wallet to sign a one-time message (no gas) and keeps the session for a few hours. */
-async function signIn(wallet: string): Promise<string> {
-  const existing = savedSession(wallet);
-  if (existing) return existing;
-  const provider = getActiveProvider();
-  if (!provider) throw new Error('Reconnect your wallet to sign in.');
-  const { message } = await getAuthChallenge(wallet);
-  showToast('Sign the message in your wallet (no gas)...');
-  const signer = await getSignerFor(provider, wallet);
-  const signature = await signer.signMessage(message);
-  const session = await verifyAuthSignature(wallet, signature);
-  try { localStorage.setItem(SESSION_KEY(wallet), JSON.stringify({ token: session.token, expiresAt: session.expiresAt })); } catch { /* ignore */ }
-  return session.token;
-}
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: 'Waiting for review',
@@ -573,7 +592,7 @@ function initWithdrawals(wallet: string, availableBalance: number, data: Dashboa
 
   const failMessage = (error: unknown) => {
     if (error instanceof ApiError && error.status === 401) {
-      try { localStorage.removeItem(SESSION_KEY(wallet)); } catch { /* ignore */ }
+      clearSession(wallet);
       return 'Session expired. Tap again to sign in.';
     }
     const code = (error as { code?: string | number })?.code;
@@ -593,7 +612,7 @@ function initWithdrawals(wallet: string, availableBalance: number, data: Dashboa
   const token = savedSession(wallet);
   if (token) {
     if (label) label.textContent = 'Withdraw now →';
-    refresh(token).catch(() => { try { localStorage.removeItem(SESSION_KEY(wallet)); } catch { /* ignore */ } });
+    refresh(token).catch(() => clearSession(wallet));
   }
 
   submitBtn.addEventListener('click', async (e: MouseEvent) => {

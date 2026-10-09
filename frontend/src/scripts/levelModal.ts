@@ -5,6 +5,7 @@
  * Closes with the X, a tap outside the card or Escape; focus returns to the row.
  */
 import { getLevelMembers, type LevelMembers } from './api.ts';
+import { signIn } from './session.ts';
 
 let overlay: HTMLElement | null = null;
 let lastFocus: HTMLElement | null = null;
@@ -82,7 +83,7 @@ export function openLevelModal(wallet: string, level: number, pct: number, usd: 
   const load = async () => {
     more.disabled = true;
     try {
-      const data = await getLevelMembers(wallet, level, page);
+      const data = await getLevelMembers(wallet, level, page, await signIn(wallet));
       if (overlay !== mine) return; // closed meanwhile
       if (page === 1) list.innerHTML = '';
       count.textContent = `${data.total.toLocaleString()} ${data.total === 1 ? 'member' : 'members'}`;

@@ -115,3 +115,13 @@ model AuthNonce {
 
   @@map("auth_nonces")
 }
+
+/// Sign-in session version per wallet. Every token carries the version it was issued with;
+/// "Log out all devices" bumps it, which voids every older token at once.
+model AuthSession {
+  walletAddress String   @id @map("wallet_address") @db.VarChar(42)
+  version       Int      @default(0)
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("auth_sessions")
+}

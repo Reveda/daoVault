@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getSponsorByCode, getUserProfile, registerWallet } from "./users.controller.js";
 import { validateRequest } from "../../middlewares/validateRequest.js";
+import { requireSelfOrAdmin } from "../../middlewares/auth.js";
 import { z } from "zod";
 
 export const usersRouter = Router();
@@ -16,11 +17,13 @@ usersRouter.get(
 usersRouter.post(
   "/register",
   validateRequest({ body: z.object({ walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address") }) }),
+  requireSelfOrAdmin("body"),
   registerWallet,
 );
 
 usersRouter.get(
   "/:walletAddress",
   validateRequest({ params: z.object({ walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address") }) }),
+  requireSelfOrAdmin(),
   getUserProfile,
 );

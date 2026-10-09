@@ -6,22 +6,12 @@
   <title>Dashboard | DAOVAULT</title>
   <meta name="theme-color" content="#050505" />
   <!-- lite mode (phones / low-power devices): lighter effects, set before first paint -->
-  <script>try{var n=navigator;if(matchMedia("(max-width: 900px)").matches||(n.hardwareConcurrency||8)<=4||(n.deviceMemory||8)<=4)document.documentElement.classList.add("lite")}catch(e){}</script>
+  <script src="/boot.js"></script>
   <link rel="icon" type="image/png" href="/favicon.png" />
   <link rel="apple-touch-icon" href="/favicon.png" />
   <meta name="description" content="Manage your DAOVAULT decentralized affiliate account, view your 25x cap gauge meter, track 20-level earnings, and withdraw USDT." />
 
   <!-- Lossless Referral Catcher -->
-  <script>
-    (function () {
-      try {
-        var ref = new URLSearchParams(window.location.search).get("ref");
-        if (ref && ref.trim()) {
-          localStorage.setItem("daovault_pending_ref", ref.trim().toUpperCase());
-        }
-      } catch (e) {}
-    })();
-  </script>
 
   <!-- Google Fonts: Outfit, Plus Jakarta Sans, JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -70,6 +60,7 @@
           <button type="button" role="menuitem" id="walletCopyBtn">Copy address</button>
           <a role="menuitem" id="walletScanLink" href="https://bscscan.com" target="_blank" rel="noopener">View on BscScan &nearr;</a>
           <button type="button" role="menuitem" class="is-danger" id="dashLogoutBtn">Log out</button>
+          <button type="button" role="menuitem" class="is-danger" id="dashLogoutAllBtn">Log out all devices</button>
         </div>
       </div>
       </div>
@@ -88,6 +79,7 @@
         <div class="dash-id-chips mono">
           <span class="dash-chip">Member ID <b id="dashMemberId">&ndash;</b></span>
           <span class="dash-chip" id="dashSponsorTag">Joined direct</span>
+          <a class="dash-chip dash-chip--proof" id="dashActivationTx" href="#" target="_blank" rel="noopener" hidden>Activation on BscScan &#8599;</a>
         </div>
       </div>
 
@@ -156,6 +148,25 @@
           </div>
         </div>
         <div class="reward-boxes" id="rewardBoxes"></div>
+      </section>
+
+      <!-- All ranks: Strong Leg / Other Leg progress, reward and status per rank (rankProgress.ts) -->
+      <section class="glass rewards-card rank-list-card" id="rankListSection">
+        <div class="rank-list-head">
+          <div>
+            <span class="mono rewards-tag">ALL RANKS</span>
+            <h3>Rank <span class="grad-text">Progress</span></h3>
+            <p>Each rank needs its DAO on both sides: your Strong Leg and your Other Leg (all your other legs combined). 1 DAO = 1 activated $300 package.</p>
+          </div>
+          <span class="rank-achieved-chip mono" id="rankAchievedChip">0 / 11 Achieved</span>
+        </div>
+        <div class="rank-filter mono" id="rankFilter" role="group" aria-label="Filter ranks">
+          <button type="button" data-filter="all" class="is-active" aria-pressed="true">All <em>11</em></button>
+          <button type="button" data-filter="achieved" aria-pressed="false">Achieved <em>0</em></button>
+          <button type="button" data-filter="pending" aria-pressed="false">Pending <em>11</em></button>
+        </div>
+        <ol class="rank-list" id="rankList"></ol>
+        <p class="rank-list-empty mono" hidden>No ranks achieved yet. Your first one is Starter: 25 DAO on each side.</p>
       </section>
 
       <!-- 25x Capping Gauge Meter Card with High-Tech Rotating Border Beam -->
@@ -265,13 +276,13 @@
 
             <div class="leg-box">
               <div class="leg-row mono">
-                <span style="color: var(--gold);">Power leg <small>(strongest leg)</small></span>
+                <span style="color: var(--gold);">Strong Leg <small>(your biggest team)</small></span>
                 <span id="legPowerVal">0 / 25 DAO</span>
               </div>
               <div class="cap-bar-track leg-track"><div class="leg-fill leg-fill--power" id="legPowerBar"></div></div>
 
               <div class="leg-row mono">
-                <span style="color: #f3ecd6;">Other legs combined</span>
+                <span style="color: #f3ecd6;">Other Leg <small>(all other legs combined)</small></span>
                 <span id="legOtherVal">0 / 25 DAO</span>
               </div>
               <div class="cap-bar-track leg-track"><div class="leg-fill leg-fill--other" id="legOtherBar"></div></div>
