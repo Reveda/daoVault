@@ -105,6 +105,19 @@ export function getDashboardData(walletAddress: string): Promise<DashboardData> 
   return request<DashboardData>(`/dashboard/${encodeURIComponent(walletAddress)}`);
 }
 
+export type LevelMembers = {
+  level: number;
+  total: number;
+  page: number;
+  pageSize: number;
+  members: Array<{ referralCode: string; wallet: string; sponsorCode: string | null; joinedAt: string | null }>;
+};
+
+/** Who joined at one level of the wallet's downline (dashboard level modal), 50 per page. */
+export function getLevelMembers(walletAddress: string, level: number, page = 1): Promise<LevelMembers> {
+  return request<LevelMembers>(`/dashboard/${encodeURIComponent(walletAddress)}/levels/${level}?page=${page}`);
+}
+
 /** First dashboard visit: reserves the wallet's permanent referral code (no payment needed; idempotent). */
 export function registerWallet(walletAddress: string): Promise<{ walletAddress: string; referralCode: string; activated: boolean }> {
   return post('/users/register', { walletAddress });

@@ -7,6 +7,7 @@ import { init3DScene, initHeroCore3D } from './scene.ts';
 import { initApexTrophy } from './trophy3d.ts';
 import { initScrollAnimations } from './scrollAnimations.ts';
 import { initHeroWallet } from './heroWallet.ts';
+import { initLiveMarket } from './liveMarket.ts';
 import { initMatrixAutoDeck } from './matrixAutoDeck.ts';
 import {
   initReferralCapture,
@@ -100,6 +101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initWalletPicker();
   autoConnectFromWalletApp(); // opened inside a wallet app from our Connect: connect right away
   initHeroWallet(); // our own wallet + circling coins in the hero Connect badge
+  initLiveMarket(); // live BNB/USDT rate + BSC gas on the hero metric cards
 
   // A connected member belongs on their own dashboard (that is where activation lives too).
   // Not when the dashboard itself just sent them here, or the two pages would bounce.

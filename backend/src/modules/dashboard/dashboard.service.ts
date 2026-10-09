@@ -74,6 +74,30 @@ export class DashboardService {
       })),
     };
   }
+
+  /** Who joined at one level of the member's downline (dashboard level modal), 50 per page. */
+  async getLevelMembers(walletAddress: string, level: number, page: number) {
+    const user = await prisma.user.findUnique({ where: { walletAddress: walletAddress.toLowerCase() }, select: { id: true } });
+    if (!user) {
+      const error = new Error("User not found") as Error & { statusCode?: number };
+      error.statusCode = 404;
+      throw error;
+    }
+    const pageSize = 50;
+    const { total, rows } = await dashboardRepository.membersAtLevel(user.id, level, pageSize, (page - 1) * pageSize);
+    return {
+      level,
+      total,
+      page,
+      pageSize,
+      members: rows.map((r) => ({
+        referralCode: r.referral_code,
+        wallet: `${r.wallet_address.slice(0, 6)}…${r.wallet_address.slice(-4)}`,
+        sponsorCode: r.sponsor_code,
+        joinedAt: r.joined_at ? r.joined_at.toISOString() : null,
+      })),
+    };
+  }
 }
 
 export const dashboardService = new DashboardService();

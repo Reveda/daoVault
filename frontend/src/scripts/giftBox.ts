@@ -1,7 +1,7 @@
 /**
  * DAOvault AI — Rank reward surprise box (TPR World's gift box, rebuilt for DAOvault)
  *
- * A black vault box with gold trim, ribbon and the DV mark drops in and idles.
+ * A red gift box with a white ribbon and the DAOvault seal on every side drops in and idles.
  * Opening it: it shakes harder and harder while gold light charges inside, the
  * lid blows off, beams and sparks burst out, coins rise, and the reward counts
  * up. A sealed (locked) box only rattles and says what unlocks it, with an
@@ -10,6 +10,7 @@
  */
 
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { hasWebGL } from './core.ts';
 
 export interface GiftBoxOptions {
@@ -37,6 +38,7 @@ function buildOverlay(): HTMLElement {
   el.setAttribute('aria-label', 'Rank reward box');
   el.innerHTML = `
     <div class="gift-rays" aria-hidden="true"></div>
+    <div class="gift-scroll">
     <div class="gift-stage">
       <button class="gift-close" type="button" aria-label="Close">&times;</button>
       <p class="gift-kicker mono"></p>
@@ -49,49 +51,72 @@ function buildOverlay(): HTMLElement {
       </div>
       <div class="gift-actions"></div>
     </div>
+    </div>
     <div class="gift-flash" aria-hidden="true"></div>`;
   document.body.appendChild(el);
   return el;
 }
 
-/** the vault box, built in code: black body, gold trim and ribbon, DV mark on the front */
+/**
+ * The reward box, built in code (owner, 2026-10-09): glossy red body and lid, white satin
+ * ribbon with a bow, a gold-rimmed DAOvault seal on all four sides and a gold lid trim.
+ */
 function makeBox(logo: THREE.Texture | null) {
+  const red = new THREE.MeshPhysicalMaterial({ color: 0xe8101c, metalness: 0.05, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.1, sheen: 0.4, sheenColor: 0xff5a5a, emissive: 0x7a0008, emissiveIntensity: 0.35 }); // bright gift-wrap red
+  const ribbon = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.05, roughness: 0.32, emissive: 0xffffff, emissiveIntensity: 0.14 });
   const gold = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.22, emissive: 0x5a3f06, emissiveIntensity: 0.25 });
-  const black = new THREE.MeshStandardMaterial({ color: 0x0d0d0d, metalness: 0.7, roughness: 0.35 });
   const box = new THREE.Group();
 
   const body = new THREE.Group();
-  body.add(new THREE.Mesh(new THREE.BoxGeometry(2, 1.6, 2), black));
-  // gold frame along the body's edges
-  const edges = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(2.02, 1.62, 2.02)), new THREE.LineBasicMaterial({ color: 0xffe08a }));
-  body.add(edges);
-  body.add(new THREE.Mesh(new THREE.BoxGeometry(2.04, 1.62, 0.3), gold));
-  body.add(new THREE.Mesh(new THREE.BoxGeometry(0.3, 1.62, 2.04), gold));
-  if (logo) {
-    const front = new THREE.Mesh(new THREE.PlaneGeometry(0.95, 0.95), new THREE.MeshBasicMaterial({ map: logo, transparent: true }));
-    front.position.set(0, 0.02, 1.025);
-    body.add(front);
+  body.add(new THREE.Mesh(new RoundedBoxGeometry(2, 1.6, 2, 4, 0.07), red));
+  body.add(new THREE.Mesh(new THREE.BoxGeometry(2.03, 1.6, 0.34), ribbon));
+  body.add(new THREE.Mesh(new THREE.BoxGeometry(0.34, 1.6, 2.03), ribbon));
+
+  // the DAOvault seal on every side, sitting on the ribbon
+  const sealFace = new THREE.MeshBasicMaterial({ color: logo ? 0xffffff : 0x111111, map: logo });
+  const sealDisc = new THREE.CircleGeometry(0.36, 48);
+  const sealRim = new THREE.TorusGeometry(0.37, 0.035, 12, 48);
+  for (let i = 0; i < 4; i++) {
+    const side = new THREE.Group();
+    side.rotation.y = (i * Math.PI) / 2;
+    const face = new THREE.Mesh(sealDisc, sealFace);
+    face.position.z = 1.04;
+    const rim = new THREE.Mesh(sealRim, gold);
+    rim.position.z = 1.04;
+    side.add(face, rim);
+    body.add(side);
   }
   body.position.y = -0.3;
   box.add(body);
 
   const lid = new THREE.Group();
-  lid.add(new THREE.Mesh(new THREE.BoxGeometry(2.18, 0.42, 2.18), black));
-  lid.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(2.2, 0.44, 2.2)), new THREE.LineBasicMaterial({ color: 0xffe08a })));
-  lid.add(new THREE.Mesh(new THREE.BoxGeometry(2.22, 0.44, 0.32), gold));
-  lid.add(new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.44, 2.22), gold));
-  const bowGeo = new THREE.TorusGeometry(0.32, 0.09, 10, 24);
-  const bowL = new THREE.Mesh(bowGeo, gold);
-  bowL.position.set(-0.28, 0.42, 0);
-  bowL.rotation.set(Math.PI / 2.4, 0.5, 0);
-  const bowR = bowL.clone();
-  bowR.position.x = 0.28;
-  bowR.rotation.y = -0.5;
-  lid.add(bowL, bowR);
+  lid.add(new THREE.Mesh(new RoundedBoxGeometry(2.18, 0.42, 2.18, 4, 0.07), red));
+  const trim = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.05, 2.2), gold);
+  trim.position.y = -0.17;
+  lid.add(trim);
+  lid.add(new THREE.Mesh(new THREE.BoxGeometry(2.21, 0.43, 0.36), ribbon));
+  lid.add(new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.43, 2.21), ribbon));
+
+  // bow: two loops, a knot and two tails resting on the lid
+  const loopGeo = new THREE.TorusGeometry(0.34, 0.085, 14, 36);
+  loopGeo.scale(1, 0.7, 1);
+  for (const dir of [-1, 1]) {
+    const loop = new THREE.Mesh(loopGeo, ribbon);
+    loop.position.set(dir * 0.36, 0.45, 0);
+    loop.rotation.set(0, dir * 0.35, dir * 0.38);
+    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.03, 0.62), ribbon);
+    tail.position.set(dir * 0.16, 0.235, 0.36);
+    tail.rotation.y = -dir * 0.5;
+    lid.add(loop, tail);
+  }
+  const knot = new THREE.Mesh(new THREE.SphereGeometry(0.17, 20, 16), ribbon);
+  knot.scale.set(1, 0.8, 0.9);
+  knot.position.y = 0.32;
+  lid.add(knot);
   lid.position.y = 0.72;
   box.add(lid);
 
-  return { box, body, lid, gold };
+  return { box, body, lid, glow: { red, ribbon, gold } };
 }
 
 export function openGiftBox(opts: GiftBoxOptions): void {
@@ -131,7 +156,7 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   cleanups.push(() => document.removeEventListener('keydown', onKey));
   const closeBtn = el.querySelector<HTMLButtonElement>('.gift-close');
   if (closeBtn) closeBtn.onclick = close;
-  el.onclick = (e) => { if (e.target === el) close(); };
+  el.onclick = (e) => { if (e.target === el || (e.target as HTMLElement).classList.contains('gift-scroll')) close(); };
 
   const button = (text: string, cls: string, onClick: () => void) => {
     const b = document.createElement('button');
@@ -192,6 +217,10 @@ export function openGiftBox(opts: GiftBoxOptions): void {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
+    // narrow phone canvases: step the camera back so the whole box (and the flying lid) stays in frame
+    const dist = camera.aspect < 1.15 ? 7.2 * Math.min(1.35, 1.15 / camera.aspect) : 7.2;
+    camera.position.set(0, 1.1 * (dist / 7.2), dist);
+    camera.lookAt(0, 0.2, 0);
     camera.updateProjectionMatrix();
   };
   const scene = new THREE.Scene();
@@ -202,8 +231,12 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   window.addEventListener('resize', size);
   cleanups.push(() => { window.removeEventListener('resize', size); renderer.dispose(); });
 
-  scene.add(new THREE.AmbientLight(0xffffff, 0.9));
-  const key = new THREE.DirectionalLight(0xfff1c1, 2.4);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x5a0a0a, 0.8));
+  const rimLight = new THREE.DirectionalLight(0xffc46b, 1.6);
+  rimLight.position.set(-4, 3, -4);
+  scene.add(rimLight);
+  const key = new THREE.DirectionalLight(0xfff8ec, 2.4);
   key.position.set(3, 5, 4);
   scene.add(key);
   const inner = new THREE.PointLight(0xffd76a, 0, 9);
@@ -212,7 +245,10 @@ export function openGiftBox(opts: GiftBoxOptions): void {
 
   const logo = new THREE.TextureLoader().load('/favicon.png');
   logo.colorSpace = THREE.SRGBColorSpace;
-  const { box, lid, gold } = makeBox(logo);
+  // the square logo inside the round seal: shrink it so its corners are not cut (the edge pixels are black)
+  logo.repeat.set(1.3, 1.3);
+  logo.offset.set(-0.15, -0.15);
+  const { box, lid, glow } = makeBox(logo);
   scene.add(box);
 
   // burst pieces, hidden until the box opens
@@ -331,7 +367,9 @@ export function openGiftBox(opts: GiftBoxOptions): void {
       box.rotation.x = Math.cos(t * 47) * amp * 0.6;
       box.position.y = Math.abs(Math.sin(t * 30)) * amp * 0.8;
       inner.intensity = k * 6;
-      gold.emissiveIntensity = 0.25 + k * 1.4;
+      glow.gold.emissiveIntensity = 0.25 + k * 1.4;
+      glow.ribbon.emissiveIntensity = 0.14 + k * 0.6;
+      glow.red.emissiveIntensity = 0.35 + k * 1.6; // the box glows red-hot before it bursts
       flash.style.opacity = String(k * 0.15);
       if (k >= 1) burst();
     } else if (phase === 'burst') {

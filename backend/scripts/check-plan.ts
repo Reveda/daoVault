@@ -79,12 +79,12 @@ try {
     const rH = await activate(H, wallet());
     check("unknown sponsor is not linked", !rH.sponsorLinked && rH.commissions.length === 0);
 
-    // 10x cap: A at $2,990 earns only $10 more, then is CAPPED and skipped
+    // 25x cap: A at $7,490 earns only $10 more, then is CAPPED and skipped
     const pkgA = await pkgOf(A);
-    await tx.package.update({ where: { id: pkgA.id }, data: { totalEarned: 2990 } });
+    await tx.package.update({ where: { id: pkgA.id }, data: { totalEarned: 7490 } });
     const rI = await activate(wallet(), A);
     check("cap: A paid only $10", rI.commissions.some((c) => c.wallet === A && c.amountUsd === 10));
-    check("cap: A package is CAPPED at $3,000", (await pkgOf(A)).status === "CAPPED" && Number((await pkgOf(A)).totalEarned) === 3000);
+    check("cap: A package is CAPPED at $7,500", (await pkgOf(A)).status === "CAPPED" && Number((await pkgOf(A)).totalEarned) === 7500);
     const rJ = await activate(wallet(), A);
     check("cap: capped A is skipped", rJ.skipped.some((s) => s.wallet === A && s.reason === "capped"));
 
@@ -94,7 +94,7 @@ try {
     const c1 = await activate(same1); const c2 = await activate(same2);
     check("referral codes stay unique", c1.referralCode !== c2.referralCode, `${c1.referralCode} / ${c2.referralCode}`);
 
-    // rank: R with two legs of 25 -> Starter + $100 reward, once
+    // rank: R with two legs of 25 -> Starter + $150 reward, once
     const R = wallet();
     await activate(R);
     const buildLeg = async (size: number) => {
@@ -109,7 +109,7 @@ try {
     const rRank = await activate(last, lastLegHead[0].walletAddress);
     check("rank: 25 + 25 makes R Starter", (await userOf(R)).currentRank === 1, JSON.stringify(rRank.rankUps.filter((u) => u.wallet === R)));
     const rewards = await tx.earning.findMany({ where: { recipient: { walletAddress: R }, type: "RANK_REWARD" } });
-    check("rank: Starter reward $100 paid once", rewards.length === 1 && Number(rewards[0].amountUsd) === 100);
+    check("rank: Starter reward $150 paid once", rewards.length === 1 && Number(rewards[0].amountUsd) === 150);
 
     // ── confirmed rule: a level is never back-paid once it unlocks ──
     const P = wallet(); await activate(P);
@@ -122,19 +122,19 @@ try {
     const l2After = await tx.earning.findMany({ where: { recipient: { walletAddress: P }, level: 2 } });
     check("no back-pay: only the new L2 member pays $15", l2After.length === 1 && Number(l2After[0].amountUsd) === 15);
 
-    // ── confirmed rule: rank rewards sit outside the 10x cap ──
+    // ── confirmed rule: rank rewards sit outside the 25x cap ──
     const Q = wallet(); await activate(Q);
     const pkgQ = await pkgOf(Q);
-    await tx.package.update({ where: { id: pkgQ.id }, data: { totalEarned: 3000, status: "CAPPED" } });
+    await tx.package.update({ where: { id: pkgQ.id }, data: { totalEarned: 7500, status: "CAPPED" } });
     for (let leg = 0; leg < 2; leg++) {
       let parent = Q;
       for (let i = 0; i < 25; i++) { const w = wallet(); await activate(w, parent); parent = w; }
     }
     const qRewards = await tx.earning.findMany({ where: { recipient: { walletAddress: Q }, type: "RANK_REWARD" } });
     const qLevel = await tx.earning.count({ where: { recipient: { walletAddress: Q }, type: "LEVEL_COMMISSION" } });
-    check("outside cap: a CAPPED member still gets the Starter $100 rank reward", qRewards.length === 1 && Number(qRewards[0].amountUsd) === 100);
+    check("outside cap: a CAPPED member still gets the Starter $150 rank reward", qRewards.length === 1 && Number(qRewards[0].amountUsd) === 150);
     check("outside cap: the capped member gets no more level income", qLevel === 0);
-    check("outside cap: the rank reward does not use up the 10x cap", Number((await pkgOf(Q)).totalEarned) === 3000);
+    check("outside cap: the rank reward does not use up the 25x cap", Number((await pkgOf(Q)).totalEarned) === 7500);
 
     throw new Rollback();
   }, { timeout: 180_000, maxWait: 20_000 });

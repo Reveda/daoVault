@@ -15,22 +15,23 @@ export const LEVELS = [
   ...Array.from({ length: 13 }, (_, i) => ({ level: 8 + i, pct: 1, reqDirects: 15 })),
 ] as const;
 
-/** 11 rank tiers: DAO matching needed on EACH side (power leg and other legs; 1 DAO = 1 activated package) and the one-time reward in USD. */
+/** 11 rank tiers (marketing plan, owner 2026-10-09): DAO matching needed on EACH side (power leg and other legs; 1 DAO = 1 activated package) and the one-time reward in USD. */
 export const RANKS = [
-  { rank: 1, name: "Starter", volume: 25, rewardUsd: 100 },
-  { rank: 2, name: "Builder", volume: 50, rewardUsd: 250 },
+  { rank: 1, name: "Starter", volume: 25, rewardUsd: 150 },
+  { rank: 2, name: "Builder", volume: 50, rewardUsd: 300 },
   { rank: 3, name: "Leader", volume: 100, rewardUsd: 500 },
-  { rank: 4, name: "Elite Leader", volume: 200, rewardUsd: 1_000 },
+  { rank: 4, name: "Elite Leader", volume: 200, rewardUsd: 1_200 },
   { rank: 5, name: "Executive", volume: 375, rewardUsd: 2_500 }, // owner, 2026-10-09: 375 per side (plan image said 350)
-  { rank: 6, name: "Crown Executive", volume: 1_000, rewardUsd: 5_000 },
-  { rank: 7, name: "Crown Director", volume: 3_000, rewardUsd: 10_000 },
-  { rank: 8, name: "Ambassador", volume: 7_000, rewardUsd: 20_000 },
-  { rank: 9, name: "Crown Ambassador", volume: 12_000, rewardUsd: 30_000 },
-  { rank: 10, name: "President", volume: 20_000, rewardUsd: 50_000 },
-  { rank: 11, name: "Crown President", volume: 50_000, rewardUsd: 100_000 },
+  { rank: 6, name: "Crown Executive", volume: 1_000, rewardUsd: 7_500 },
+  { rank: 7, name: "Crown Director", volume: 3_000, rewardUsd: 15_000 },
+  { rank: 8, name: "Ambassador", volume: 7_000, rewardUsd: 30_000 },
+  { rank: 9, name: "Crown Ambassador", volume: 12_000, rewardUsd: 50_000 },
+  { rank: 10, name: "President", volume: 20_000, rewardUsd: 75_000 },
+  { rank: 11, name: "Crown President", volume: 50_000, rewardUsd: 200_000 },
 ] as const;
 
-export const CAP_MULTIPLIER = 10;
+/** Level income cap per package: 25x ($7,500 on $300); owner 2026-10-09, was 10x. Rank rewards sit outside it. */
+export const CAP_MULTIPLIER = 25;
 
 /** Is `level` (1-based) open for a member with `activeDirects`? */
 export const isLevelUnlocked = (level: number, activeDirects: number): boolean =>

@@ -51,7 +51,7 @@ model Package {
   userId          String        @map("user_id") @db.Uuid
   packageAmount   Decimal       @default(300) @map("package_amount") @db.Decimal(18, 2)
   totalEarned     Decimal       @default(0) @map("total_earned") @db.Decimal(18, 2)
-  maxCapLimit     Decimal       @default(3000) @map("max_cap_limit") @db.Decimal(18, 2)
+  maxCapLimit     Decimal       @default(7500) @map("max_cap_limit") @db.Decimal(18, 2)
   status          PackageStatus @default(ACTIVE)
   activationTxHash String       @unique @map("activation_tx_hash") @db.VarChar(66)
   createdAt       DateTime      @default(now()) @map("created_at")

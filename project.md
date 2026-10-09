@@ -1,5 +1,7 @@
 # DAOvault AI — Web3 Decentralised Ecosystem & Master Specification
 
+> **Superseded values (owner, 2026-10-09):** max cap is **25× ($7,500)**, not 10×. Rank rewards: Starter $150, Builder $300, Leader $500, Elite Leader $1,200, Executive (375 DAO) $2,500, Crown Executive $7,500, Crown Director $15,000, Ambassador $30,000, Crown Ambassador $50,000, President $75,000, Crown President $200,000. DAO matching is needed on each side. The code (`backend/src/modules/plan/plan.ts`) is the source of truth; older figures below are kept for history.
+
 > **Design & UX Benchmark:** [TPR World (BSC BEP-20 Architecture, 3D WebGL Canvas & UX)](https://tprworld.org/index.html?ref=TR18AF8C15)  
 > **Blockchain Network:** BNB Smart Chain (BSC - BEP-20) | Chain ID: `56` (`0x38`)  
 > **Entry Package:** Fixed **$300 USD** (BEP-20 USDT / DAO Token)  

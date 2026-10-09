@@ -11,17 +11,17 @@ import { openGiftBox } from './giftBox.ts';
 import { BSC_CHAIN_ID, showToast } from './core.ts';
 
 export const RANK_TIERS = [
-  { name: 'Starter', volume: 25, reward: 100 },
-  { name: 'Builder', volume: 50, reward: 250 },
+  { name: 'Starter', volume: 25, reward: 150 },
+  { name: 'Builder', volume: 50, reward: 300 },
   { name: 'Leader', volume: 100, reward: 500 },
-  { name: 'Elite Leader', volume: 200, reward: 1000 },
+  { name: 'Elite Leader', volume: 200, reward: 1200 },
   { name: 'Executive', volume: 375, reward: 2500 },
-  { name: 'Crown Executive', volume: 1000, reward: 5000 },
-  { name: 'Crown Director', volume: 3000, reward: 10000 },
-  { name: 'Ambassador', volume: 7000, reward: 20000 },
-  { name: 'Crown Ambassador', volume: 12000, reward: 30000 },
-  { name: 'President', volume: 20000, reward: 50000 },
-  { name: 'Crown President', volume: 50000, reward: 100000 },
+  { name: 'Crown Executive', volume: 1000, reward: 7500 },
+  { name: 'Crown Director', volume: 3000, reward: 15000 },
+  { name: 'Ambassador', volume: 7000, reward: 30000 },
+  { name: 'Crown Ambassador', volume: 12000, reward: 50000 },
+  { name: 'President', volume: 20000, reward: 75000 },
+  { name: 'Crown President', volume: 50000, reward: 200000 },
 ];
 
 const money = (n: number) => `$${n.toLocaleString('en-US')}`;

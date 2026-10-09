@@ -1,6 +1,6 @@
 /**
  * DAOvault AI — DApp Dashboard Controller (TypeScript)
- * 10x Capping Meter, 20-Level Matrix Explorer, 50% Leg Breakdown, and 5% Withdrawal Portal
+ * 25x Capping Meter, 20-Level Matrix Explorer, 50% Leg Breakdown, and 5% Withdrawal Portal
  */
 
 import { init3DScene } from './scene.ts';
@@ -49,6 +49,7 @@ import {
 } from './dashboardFx.ts';
 import { renderRewardVaults, initWalletMenu, RANK_TIERS } from './rewardVaults.ts';
 import { initDvLogos } from './dvLogo.ts';
+import { openLevelModal } from './levelModal.ts';
 
 // 20-Level Matrix Specification with strict LevelMatrixRow interface
 const LEVEL_MATRIX: LevelMatrixRow[] = [
@@ -176,7 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const pkg = dashboardData?.packages?.[0];
   const totalEarned = toNumber(dashboardData?.totalEarned, 0);
-  const capEarned = toNumber(pkg?.totalEarned, 0); // level income only: rank rewards sit outside the 10x cap
+  const capEarned = toNumber(pkg?.totalEarned, 0); // level income only: rank rewards sit outside the 25x cap
   const activeDirects = dashboardData?.activeDirects ?? 0;
   const maxCap = toNumber(pkg?.maxCapLimit, 0);
   const hasLiveData = dashboardData !== null;
@@ -187,7 +188,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateOverviewMetrics(activeDirects, totalEarned, capEarned, maxCap, dashboardData?.currentRank, pkg?.status);
   updateMemberDetails(dashboardData, Boolean(pkg), capEarned, maxCap);
 
-  // 7. 10x capping gauge
+  // 7. 25x capping gauge
   initCapMeter(capEarned, maxCap);
 
   // 7b. Rank reward vaults (surprise boxes)
@@ -388,9 +389,9 @@ function initReferralLink(account: string, data: DashboardData | null, serverDow
 }
 
 /**
- * 10x Capping Meter Progress
+ * 25x Capping Meter Progress
  */
-function initCapMeter(currentEarned: number, maxCap: number = 3000): void {
+function initCapMeter(currentEarned: number, maxCap: number = 7500): void {
   const earnedEl = document.getElementById('capEarnedVal');
   const maxEl = document.getElementById('capMaxVal');
   const barEl = document.getElementById('capFillBar') as HTMLElement | null;
@@ -402,7 +403,7 @@ function initCapMeter(currentEarned: number, maxCap: number = 3000): void {
 
   if (earnedEl) countUp(earnedEl, currentEarned, '$', 1000);
   if (maxEl) maxEl.textContent = `$${maxCap.toLocaleString()}`;
-  if (pctEl) pctEl.textContent = `${percentage}% of 10× Cap Reached`;
+  if (pctEl) pctEl.textContent = `${percentage}% of 25× Cap Reached`;
 
   setTimeout(() => {
     if (barEl) barEl.style.width = `${percentage}%`;
@@ -434,9 +435,18 @@ function renderLevelTable(data: DashboardData | null): void {
           ${isUnlocked ? '✓ Unlocked' : '🔒 Locked'}
         </span>
       </td>
-      <td>${(live?.members ?? 0).toLocaleString()}</td>
+      <td><span class="lvl-members">${(live?.members ?? 0).toLocaleString()} <i aria-hidden="true">&rsaquo;</i></span></td>
       <td><strong>${formatUsd(live?.earnedUsd ?? 0)}</strong></td>
     `;
+    // tap a level: modal with everyone who joined at that level (levelModal.ts)
+    if (data) {
+      tr.tabIndex = 0;
+      tr.setAttribute('role', 'button');
+      tr.setAttribute('aria-label', `Level ${row.level}: see who joined`);
+      const open = () => openLevelModal(data.walletAddress, row.level, row.pct, row.usd);
+      tr.addEventListener('click', open);
+      tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+    }
     tbody.appendChild(tr);
   });
 }

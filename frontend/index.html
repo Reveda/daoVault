@@ -116,7 +116,7 @@
           <p class="hero-lead">
             The traditional financial system was built for institutions. <b>DAOVAULT is built for communities</b>:
             one transparent, community-driven DeFi ecosystem on BNB Smart Chain. A single fixed entry of <b>$300</b>,
-            <b>20 generational levels</b>, rank rewards up to <b>$100,000</b> and a <b>10&times; earnings cap</b>.
+            <b>20 generational levels</b>, rank rewards up to <b>$200,000</b> and a <b>25&times; earnings cap</b>.
           </p>
 
           <!-- The wallet plays inside a round badge, then the badge opens into the Connect
@@ -170,19 +170,20 @@
             </div>
 
             <!-- Alex Bender Inspired 3D Crypto Exchange Live Cards -->
-            <div class="crypto-exchange-card ex-card-1 glass-v2">
+            <!-- live BNB / USDT market rate (liveMarket.ts): Binance spot, refreshed every 60s -->
+            <div class="crypto-exchange-card ex-card-1 glass-v2" id="mkCard">
               <div class="ex-card-top">
-                <span class="ex-pair mono"><i class="ex-dot gold"></i> USDT / BSC POOL</span>
-                <span class="ex-badge-green mono">&uarr; +24.8% 24H</span>
+                <span class="ex-pair mono"><i class="ex-dot gold"></i> BNB / USDT &middot; LIVE</span>
+                <span class="ex-badge-green mono" id="mkChange">24H</span>
               </div>
               <div class="ex-card-val-row">
-                <span class="ex-val">$100,000</span>
-                <span class="ex-sub mono">FIFO APEX</span>
+                <span class="ex-val" id="mkPrice">&mdash;</span>
+                <span class="ex-sub mono">BINANCE SPOT</span>
               </div>
               <div class="ex-sparkline">
                 <svg viewBox="0 0 120 28" fill="none">
-                  <path d="M0,22 Q20,8 40,16 T80,10 T100,4 T120,2" stroke="#ffb800" stroke-width="2.2" stroke-linecap="round"/>
-                  <path d="M0,22 Q20,8 40,16 T80,10 T100,4 T120,2 L120,28 L0,28 Z" fill="url(#exGoldGrad)" opacity="0.25"/>
+                  <path id="mkSparkLine" d="M0,14 L120,14" stroke="#ffb800" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path id="mkSparkFill" d="M0,14 L120,14 L120,28 L0,28 Z" fill="url(#exGoldGrad)" opacity="0.25"/>
                   <defs>
                     <linearGradient id="exGoldGrad" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stop-color="#ffb800" stop-opacity="0.8"/>
@@ -203,7 +204,7 @@
                 <span class="ex-sub mono">USDT / DIR</span>
               </div>
               <div class="ex-footer-meta mono">
-                <span>Non-Custodial</span> &bull; <span>Gas: 3 Gwei</span>
+                <span>Non-Custodial</span> &bull; <span id="mkGas">Gas: live</span>
               </div>
             </div>
 
@@ -213,7 +214,7 @@
                 <span class="ex-badge-violet mono">20 LEVELS</span>
               </div>
               <div class="ex-card-val-row">
-                <span class="ex-val text-violet">10&times; CAP</span>
+                <span class="ex-val text-violet">25&times; CAP</span>
                 <span class="ex-sub mono">MAX PAYOUT</span>
               </div>
               <div class="ex-progress-bar">
@@ -259,14 +260,14 @@
         <span class="ticker-item"><i class="ticker-dot"></i> Entry: <b>$300 Fixed</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Passive ROI: <b>STRICTLY 0%</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Level Income: <b>40% Distribution (20 Levels)</b></span>
-        <span class="ticker-item"><i class="ticker-dot"></i> Earning Limit: <b>10&times; Max Cap ($3,000)</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Earning Limit: <b>25&times; Max Cap ($7,500)</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Withdrawal Fee: <b>5% Flat</b></span>
-        <span class="ticker-item"><i class="ticker-dot"></i> Rank Pool: <b>Up to $100,000 Cash</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Rank Pool: <b>Up to $200,000 Cash</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Blockchain: <b>BSC (BEP-20)</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Entry: <b>$300 Fixed</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Passive ROI: <b>STRICTLY 0%</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Level Income: <b>40% Distribution (20 Levels)</b></span>
-        <span class="ticker-item"><i class="ticker-dot"></i> Earning Limit: <b>10&times; Max Cap ($3,000)</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Earning Limit: <b>25&times; Max Cap ($7,500)</b></span>
       </div>
     </div>
 
@@ -381,7 +382,7 @@
               First to Balance.<br /><span class="grad-text">First to Claim.</span>
             </h3>
             <p>
-              DAOVAULT reserves an exclusive <b>$100,000 Leadership Reward Pool</b> across 11 milestone tiers. Operating on a decentralized FIFO protocol: the moment your organization achieves the target volume under the strict <b>50:50 Leg Ratio Rule</b>, your position is permanently secured — from the foundational reward of <b>$100 (Starter)</b> through the ultimate apex reward of <b>$100,000 (Crown President)</b>.
+              DAOVAULT reserves an exclusive <b>$200,000 Leadership Reward Pool</b> across 11 milestone tiers. Operating on a decentralized FIFO protocol: the moment your organization achieves the target volume under the strict <b>50:50 Leg Ratio Rule</b>, your position is permanently secured — from the foundational reward of <b>$150 (Starter)</b> through the ultimate apex reward of <b>$200,000 (Crown President)</b>.
             </p>
             <p class="rule mono">
               <span class="rule-step"><b>01</b>QUALIFY 50:50 VOLUME</span>
@@ -437,7 +438,7 @@
               <div class="rank-qualified-tag mono">
                 <span class="rank-tag-dot"></span> QUALIFIED REWARD
               </div>
-              <div class="rank-big-reward" id="rankDisplayReward">$100</div>
+              <div class="rank-big-reward" id="rankDisplayReward">$150</div>
               <h3 id="rankDisplayTitle">1. Starter</h3>
               <p id="rankDisplayDesc">
                 The gateway milestone for active team initiators.
@@ -1006,9 +1007,9 @@
               <div class="flip-card-front">
                 <div>
                   <span class="mono" style="font-size: 0.75rem; color: var(--gold);">LAYER 01 &middot; SOLVENCY</span>
-                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">10&times; Sustainability Cap</h3>
+                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">25&times; Sustainability Cap</h3>
                   <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
-                    $300 entry can earn up to a maximum of $3,000 before mandatory re-entry.
+                    $300 entry can earn up to a maximum of $7,500 before mandatory re-entry.
                   </p>
                 </div>
                 <div class="flip-hint mono">
@@ -1020,11 +1021,11 @@
                   <span class="mono" style="font-size: 0.75rem; color: var(--gold);">&check; PROOF MECHANISM</span>
                   <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Anti-Drain Architecture</h4>
                   <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
-                    Legacy crypto networks collapse when top whales drain liquidity. The 10&times; safety ceiling requires top earners to continuously re-seed the network with fresh $300 packages, providing permanent bottom-up liquidity.
+                    Legacy crypto networks collapse when top whales drain liquidity. The 25&times; safety ceiling requires top earners to continuously re-seed the network with fresh $300 packages, providing permanent bottom-up liquidity.
                   </p>
                 </div>
                 <div class="mono" style="font-size: 0.78rem; color: var(--gold); border-top: 1px solid rgba(255,196,0,0.25); padding-top: 0.6rem;">
-                  Cap: $3,000 Max Payout
+                  Cap: $7,500 Max Payout
                 </div>
               </div>
             </div>
@@ -1166,7 +1167,7 @@
               <tr>
                 <td><strong>System Solvency</strong></td>
                 <td><span class="badge-negative">&cross; Unlimited whale draining &amp; sudden rug</span></td>
-                <td><span class="badge-positive">&rarr; 10&times; Max Earning Cap ($3,000 Safety Lock)</span></td>
+                <td><span class="badge-positive">&rarr; 25&times; Max Earning Cap ($7,500 Safety Lock)</span></td>
               </tr>
               <tr>
                 <td><strong>Leadership Balancing</strong></td>
@@ -1278,7 +1279,7 @@
               </button>
               <div class="join-step-body"><div>
                 <p>Reach milestone volume and withdraw your earnings directly to your Web3 wallet.</p>
-                <ul class="join-step-tags mono"><li>11 ranks</li><li>Up to $100,000</li><li>Your wallet</li></ul>
+                <ul class="join-step-tags mono"><li>11 ranks</li><li>Up to $200,000</li><li>Your wallet</li></ul>
               </div></div>
             </li>
           </ol>
@@ -1319,7 +1320,7 @@
           <span class="wm-line"><span><span class="grad-text">Decentralized Finance.</span></span></span>
         </h2>
         <p class="section-sub cta-sub">
-          Your assets. Your community. Your decisions. One fixed $300 entry, a 10&times; solvency cap and payouts
+          Your assets. Your community. Your decisions. One fixed $300 entry, a 25&times; solvency cap and payouts
           straight to your own wallet on BNB Smart Chain.
         </p>
         <div class="cta-actions">
@@ -1459,7 +1460,7 @@
         <div class="wallet-dialog-foot mono">
           <span>&bull; Non-Custodial</span>
           <span>&bull; Instant BEP-20 Payouts</span>
-          <span>&bull; Solvency Cap 10&times;</span>
+          <span>&bull; Solvency Cap 25&times;</span>
         </div>
       </div>
     </div>

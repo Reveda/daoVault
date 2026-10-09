@@ -146,7 +146,7 @@ function buildIcon(kind: IconKind, root: THREE.Group): (t: number, speed: number
   }
 
   if (kind === 'infinity') {
-    // the 10x cap: an endless knot that reads as "infinity"
+    // the 25x cap: an endless knot that reads as "infinity"
     const knot = new THREE.Mesh(new THREE.TorusKnotGeometry(0.72, 0.2, 96, 12, 2, 3), goldMaterial(0x4a3306, 0.55));
     root.add(knot);
     return (t, speed) => {

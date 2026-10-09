@@ -6970,3 +6970,15 @@ html.lite .hw-wallet { animation: none; filter: none; }
 @media (max-width: 960px) {
   .rank-leg-meter .leg-stat-lbl { white-space: nowrap; font-size: 0.6rem; letter-spacing: 0.03em; }
 }
+
+/* live market card (liveMarket.ts): falling price */
+.ex-badge-red {
+  font-size: 0.60rem;
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.14);
+  border: 1px solid rgba(248, 113, 113, 0.32);
+  padding: 0.14rem 0.42rem;
+  border-radius: 4px;
+  font-weight: 700;
+  white-space: nowrap;
+}

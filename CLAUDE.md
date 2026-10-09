@@ -7,10 +7,11 @@ Web3 referral/affiliate reward dApp on **BNB Smart Chain (BEP-20)**. Users conne
 
 ## Business rules (summary)
 - $300 fixed package, no passive ROI. 40% ($120) paid across 20 upline levels (L1 10%, L2 5%, L3-4 3%, L5-7 2%, L8-20 1%), levels unlock by direct-referral count (15 directs unlocks all 20).
-- 11 rank tiers (Starter 25 DAO/$100 ... Crown Ambassador 12,000/$30,000 ... Crown President 50,000 DAO/$100,000); 1 DAO = 1 activated package. Rank rule (owner, 2026-10-08): the DAO matching is needed on EACH side, power leg AND
+- 11 rank tiers (Starter 25 DAO/$150, Builder 50/$300, Leader 100/$500, Elite 200/$1,200, Executive 375/$2,500, Crown Exec 1,000/$7,500,
+  Crown Director 3,000/$15,000, Ambassador 7,000/$30,000, Crown Ambassador 12,000/$50,000, President 20,000/$75,000, Crown President 50,000/$200,000; owner plan 2026-10-09); 1 DAO = 1 activated package. Rank rule (owner, 2026-10-08): the DAO matching is needed on EACH side, power leg AND
   other legs combined (Starter 25 = 25 + 25 = 50 total); matchedVolume = min(power, other). Replaced the old split rule
   (V/2 + V/2). Single source: backend/src/modules/plan/plan.ts.
-- Earnings cap 10x ($3,000) per package; 5% withdrawal fee.
+- Earnings cap 25x ($7,500) of level income per package (was 10x; rank rewards outside it); 5% withdrawal fee.
 - Referral: `?ref=CODE` saved to `localStorage['daovault_pending_ref']`. Codes are `DV` + first 6 hex chars of wallet (longer if taken; the server value wins).
 
 ## Layout
@@ -24,8 +25,10 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
     health      GET  /health
     users       GET  /users/:walletAddress
     dashboard   GET  /dashboard/:walletAddress
+                GET  /dashboard/:walletAddress/levels/:level?page=  (members exactly N levels down: DV code, short
+                wallet, sponsor code, joined date; 50/page) -> frontend levelModal.ts (tap a 20-Level Downline row)
     activation  POST /activation/verify  (verifies tx + Activated event on-chain, then activation.engine.ts processActivation:
-                directs, 20-level commissions w/ unlock + 10x cap, team volume, 50:50 ranks + rank rewards; serializable tx)
+                directs, 20-level commissions w/ unlock + 25x cap, team volume, 50:50 ranks + rank rewards; serializable tx)
     users       GET  /users/referral/:code  (invite code -> sponsor wallet)
                 POST /users/register  (first dashboard visit: reserves the wallet's permanent code, no package/upline;
                 processActivation keeps the record + code and links the sponsor; only activated codes can sponsor)
@@ -62,6 +65,9 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
                       Connect button ([data-wallet-icon]); badge opens into the full button (.is-ready), coins swirl
                       every 5s. Replaced the third-party Lottie (lottie-web no longer loaded on the landing page).
                       The final CTA has no wallet animation (owner removed it). Brand text is "DAOvault" (no ".AI").
+    liveMarket.ts     hero metric card #mkCard: live BNB/USDT price + 24h change + 24h sparkline (Binance public API,
+                      CoinGecko fallback) and live BSC gas (#mkGas, eth_gasPrice); refresh 60s while on screen.
+                      No fake numbers: placeholders until data arrives.
     landingFx.ts      nav scrollspy, "How to Join" progress rail / lit steps, initDropCards() ([data-drop] cards fall
                       from above then their .drop-body unfolds; used by the #vision DAO + VAULT = DAOVAULT cards); initJoinSteps(): #how expanding step
                       cards (one open at a time, auto-advance, progress stage)
@@ -80,7 +86,8 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
                       app.ts autoplay steps a level every 2s while .matrix-calc-box is on screen)
     rewardVaults.ts   dashboard #rewardsSection: 11 rank boxes (locked/ready/opened, opened state in localStorage only,
                       never a payout) + header #walletMenu (copy, BscScan, Log out = #dashLogoutBtn)
-    giftBox.ts        openGiftBox(): TPR-style three.js surprise box overlay (drop, rattle, shake, lid burst, reward reveal)
+    giftBox.ts        openGiftBox(): three.js surprise box overlay (drop, rattle, shake, lid burst, reward reveal); red box,
+                      white ribbon + bow, gold-rimmed DAOvault seal on all 4 sides; .gift-scroll keeps it on any screen height
   Landing nav: no Matrix/Dashboard items; li.nav-dash shows only with body.wallet-connected; landingFx initNavIndicator
   glides a highlight. MutationObservers must never react to their own writes (classList.add re-sets the attribute even
   when unchanged); a self-triggering observer froze the page on the preloader once.

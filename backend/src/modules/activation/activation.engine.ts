@@ -51,7 +51,7 @@ async function ancestorsOf(tx: Tx, userId: string): Promise<Array<{ id: string; 
 /**
  * Re-evaluates the rank of each member in `ids` from their legs (50:50 rule). Ranks only
  * go up. Every newly reached tier pays its one-time reward once (rank rewards are a
- * separate pool, so they are not limited by the 10x level-income cap).
+ * separate pool, so they are not limited by the 25x level-income cap).
  */
 export async function recomputeRanks(tx: Tx, ids: string[]): Promise<ActivationResult["rankUps"]> {
   if (!ids.length) return [];
@@ -98,7 +98,7 @@ export async function recomputeRanks(tx: Tx, ids: string[]): Promise<ActivationR
  *  1. member + package (upline set once, never overwritten)
  *  2. sponsor's active directs +1
  *  3. 20-level commissions: each upline is paid only if it has an ACTIVE package, the
- *     level is unlocked by its directs, and the payment fits under its 10x cap (partial
+ *     level is unlocked by its directs, and the payment fits under its 25x cap (partial
  *     up to the cap, then the package becomes CAPPED). Unpaid shares stay in the treasury.
  *  4. team volume +1 for every upline, then ranks re-evaluated with the 50:50 rule.
  * Must run inside a serializable transaction (see config/transaction.ts).
