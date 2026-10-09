@@ -1,39 +1,52 @@
 /**
- * Member sign-in session (owner, 2026-10-09). The wallet signs a free EIP-4361 (Sign-In with
- * Ethereum) message from the server and gets a JWT, which the dashboard API requires: a
- * vault opens only for its own wallet.
- * The token lives in sessionStorage (ends when the tab closes) and Log out removes it.
+ * Member sign-in session (owner, 2026-10-09).
+ *  - The wallet signs a free EIP-4361 (Sign-In with Ethereum) message once.
+ *  - The server answers with a short ACCESS token (kept in memory only, never in storage)
+ *    and sets a REFRESH token as an httpOnly cookie that page scripts cannot read.
+ *  - When the access token is missing (new tab, reload) or expiring, the cookie gets a new one
+ *    silently, so the member signs again only after the refresh token expires (30 days),
+ *    after Log out, or when the wallet changes.
  */
-import { getAuthChallenge, verifyAuthSignature } from './api.ts';
+import { ApiError, getAuthChallenge, logoutAuthSession, refreshAuthSession, verifyAuthSignature } from './api.ts';
 import { getActiveProvider, getSignerFor } from './wallet.ts';
 import { showToast } from './core.ts';
 
-const PREFIX = 'daovault_session_';
-const KEY = (wallet: string) => `${PREFIX}${wallet.toLowerCase()}`;
+type Access = { wallet: string; token: string; expiresAt: number };
+let access: Access | null = null;
 const pending = new Map<string, Promise<string>>();
 
-// tokens from older builds sat in localStorage for 12h: drop them
-try {
-  Object.keys(localStorage).filter((k) => k.startsWith(PREFIX)).forEach((k) => localStorage.removeItem(k));
-} catch { /* storage blocked */ }
+// tokens from older builds sat in localStorage / sessionStorage: drop them
+for (const getStore of [() => localStorage, () => sessionStorage]) {
+  try {
+    const store = getStore(); // even reading the property throws when storage is blocked
+    Object.keys(store).filter((k) => k.startsWith('daovault_session_')).forEach((k) => store.removeItem(k));
+  } catch { /* storage blocked */ }
+}
 
+const remember = (wallet: string, token: string, expiresAt: string) => {
+  access = { wallet: wallet.toLowerCase(), token, expiresAt: new Date(expiresAt).getTime() };
+  return token;
+};
+
+/** The in-memory access token for this wallet, if it is still valid for at least a minute. */
 export function savedSession(wallet: string): string | null {
-  try {
-    const raw = JSON.parse(sessionStorage.getItem(KEY(wallet)) || 'null') as { token: string; expiresAt: string } | null;
-    if (raw && new Date(raw.expiresAt).getTime() > Date.now() + 60_000) return raw.token;
-  } catch { /* ignore */ }
-  return null;
+  return access && access.wallet === wallet.toLowerCase() && access.expiresAt > Date.now() + 60_000 ? access.token : null;
 }
 
+/** Forget the access token (e.g. the server said it ended); the next call refreshes. */
 export function clearSession(wallet: string): void {
-  try { sessionStorage.removeItem(KEY(wallet)); } catch { /* ignore */ }
+  if (access?.wallet === wallet.toLowerCase()) access = null;
 }
 
-/** Log out: every saved session in this tab. */
-export function clearAllSessions(): void {
-  try {
-    Object.keys(sessionStorage).filter((k) => k.startsWith(PREFIX)).forEach((k) => sessionStorage.removeItem(k));
-  } catch { /* ignore */ }
+/** Log out this device: the server deletes the refresh token and clears the cookie. */
+export async function logout(): Promise<void> {
+  access = null;
+  // at most 3s: a sleeping server (Render free plan) must not hold the member on the page;
+  // offline, the refresh token still expires on its own
+  await Promise.race([
+    logoutAuthSession().catch(() => undefined),
+    new Promise((resolve) => window.setTimeout(resolve, 3000)),
+  ]);
 }
 
 export const isUserRejection = (error: unknown): boolean => {
@@ -41,14 +54,30 @@ export const isUserRejection = (error: unknown): boolean => {
   return code === 'ACTION_REJECTED' || code === 4001;
 };
 
-/** The saved session, or a new one: the wallet signs the server's one-time message (no gas). */
+/** New access token from the refresh cookie, only if it belongs to this wallet. */
+async function refreshFor(wallet: string): Promise<string | null> {
+  try {
+    const session = await refreshAuthSession();
+    if (session.walletAddress.toLowerCase() !== wallet.toLowerCase()) return null; // another wallet signed in here
+    return remember(wallet, session.token, session.expiresAt);
+  } catch (error) {
+    // no cookie / expired / revoked: sign in again. Server asleep or down: no signature
+    // prompt for a session that is probably fine; the caller retries.
+    if (error instanceof ApiError && error.status < 500) return null;
+    throw error;
+  }
+}
+
+/** Valid access token: memory, else the refresh cookie, else the wallet signs (no gas). */
 export function signIn(wallet: string): Promise<string> {
   const existing = savedSession(wallet);
   if (existing) return Promise.resolve(existing);
   const key = wallet.toLowerCase();
   const running = pending.get(key);
-  if (running) return running; // one signature prompt at a time
+  if (running) return running; // one refresh / signature prompt at a time
   const job = (async () => {
+    const refreshed = await refreshFor(wallet);
+    if (refreshed) return refreshed;
     const provider = getActiveProvider();
     if (!provider) throw new Error('Reconnect your wallet to sign in.');
     const { message } = await getAuthChallenge(wallet);
@@ -56,8 +85,7 @@ export function signIn(wallet: string): Promise<string> {
     const signer = await getSignerFor(provider, wallet);
     const signature = await signer.signMessage(message);
     const session = await verifyAuthSignature(wallet, signature);
-    try { sessionStorage.setItem(KEY(wallet), JSON.stringify({ token: session.token, expiresAt: session.expiresAt })); } catch { /* ignore */ }
-    return session.token;
+    return remember(wallet, session.token, session.expiresAt);
   })();
   pending.set(key, job);
   job.finally(() => pending.delete(key)).catch(() => { /* handled by the caller */ });

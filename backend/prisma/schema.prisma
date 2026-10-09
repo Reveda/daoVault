@@ -125,3 +125,21 @@ model AuthSession {
 
   @@map("auth_sessions")
 }
+
+/// Refresh tokens (httpOnly cookie dv_rt). Only the SHA-256 hash is stored. Every use rotates
+/// it: usedAt is set and a new token is issued in the same family. A used token presented
+/// again (after a 30s grace window for parallel tabs) means it was copied: the wallet's
+/// tokens are all revoked.
+model RefreshToken {
+  id            String    @id @default(uuid()) @db.Uuid
+  walletAddress String    @map("wallet_address") @db.VarChar(42)
+  tokenHash     String    @unique @map("token_hash") @db.Char(64)
+  familyId      String    @map("family_id") @db.Uuid
+  expiresAt     DateTime  @map("expires_at")
+  usedAt        DateTime? @map("used_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([walletAddress])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}

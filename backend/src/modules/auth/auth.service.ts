@@ -1,14 +1,19 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import jwt from "jsonwebtoken";
 import { getAddress, verifyMessage } from "ethers";
 import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
 
 const NONCE_TTL_MS = 5 * 60_000;
+/** two tabs refreshing at the same moment send the same token: not a theft */
+const REUSE_GRACE_MS = 30_000;
 
 export type AuthClaims = { sub: string; role: "member" | "admin" };
+export type AccessSession = { token: string; role: AuthClaims["role"]; walletAddress: string; expiresAt: Date };
+export type RefreshCookie = { value: string; expiresAt: Date };
 
 const httpError = (message: string, statusCode: number) => Object.assign(new Error(message), { statusCode });
+const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
 export const isAdminWallet = (wallet: string) => env.ADMIN_WALLETS.includes(wallet.toLowerCase());
 
@@ -27,7 +32,7 @@ function signInOrigin(requestOrigin?: string): string {
   return FRONTEND_ORIGINS[0] ?? "http://localhost:3000";
 }
 
-/** Current session version of a wallet (0 until it first logs out of all devices). */
+/** Current session version of a wallet: bumped when its refresh token was stolen. */
 async function sessionVersion(walletAddress: string): Promise<number> {
   const row = await prisma.authSession.findUnique({ where: { walletAddress } });
   return row?.version ?? 0;
@@ -66,8 +71,8 @@ export class AuthService {
     return { message, expiresAt };
   }
 
-  /** Checks the signature against the stored challenge (single use) and issues a JWT. */
-  async verifySignature(walletInput: string, signature: string) {
+  /** Checks the signature against the stored challenge (single use): access token + refresh cookie. */
+  async verifySignature(walletInput: string, signature: string): Promise<{ access: AccessSession; refresh: RefreshCookie }> {
     const walletAddress = getAddress(walletInput).toLowerCase();
     // delete first so a challenge can never be used twice, even by parallel requests
     const challenge = await prisma.authNonce.delete({ where: { walletAddress } }).catch(() => null);
@@ -81,16 +86,62 @@ export class AuthService {
       throw httpError("Invalid signature.", 401);
     }
     if (signer !== walletAddress) throw httpError("Signature does not match this wallet.", 401);
+    return { access: await this.issueAccess(walletAddress), refresh: await this.issueRefresh(walletAddress, randomUUID()) };
+  }
 
+  /** Short-lived access token (the browser keeps it in memory only). Role is re-read each time. */
+  private async issueAccess(walletAddress: string): Promise<AccessSession> {
     const role: AuthClaims["role"] = isAdminWallet(walletAddress) ? "admin" : "member";
-    const expiresInSec = Math.round(env.JWT_EXPIRES_HOURS * 3600);
+    const expiresInSec = env.ACCESS_TOKEN_MINUTES * 60;
     const token = jwt.sign({ role, ver: await sessionVersion(walletAddress) }, env.JWT_SECRET, {
       subject: walletAddress, expiresIn: expiresInSec, algorithm: "HS256",
     });
     return { token, role, walletAddress, expiresAt: new Date(Date.now() + expiresInSec * 1000) };
   }
 
-  /** Valid signature + not expired + not voided by "log out all devices". */
+  /** New refresh token in a family; only its hash is stored. Old expired rows of the wallet are swept. */
+  private async issueRefresh(walletAddress: string, familyId: string): Promise<RefreshCookie> {
+    const value = randomBytes(32).toString("base64url");
+    const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_DAYS * 86_400_000);
+    await prisma.$transaction([
+      prisma.refreshToken.deleteMany({ where: { walletAddress, expiresAt: { lt: new Date() } } }),
+      prisma.refreshToken.create({ data: { walletAddress, tokenHash: sha256(value), familyId, expiresAt } }),
+    ]);
+    return { value, expiresAt };
+  }
+
+  /**
+   * Refresh: a valid unused cookie token is rotated (marked used, a new one issued in the same
+   * family) and a new access token returned. A used token within the grace window (parallel
+   * tabs) only gets an access token. A used token after that was copied: every session of the
+   * wallet ends (refresh tokens deleted, access tokens voided by the version bump).
+   */
+  async refresh(cookieValue: string | undefined): Promise<{ access: AccessSession; refresh: RefreshCookie | null }> {
+    if (!cookieValue) throw httpError("Not signed in.", 401);
+    const row = await prisma.refreshToken.findUnique({ where: { tokenHash: sha256(cookieValue) } });
+    if (!row || row.expiresAt.getTime() < Date.now()) throw httpError("Session expired. Sign in again.", 401);
+
+    // claim the token: only one request can turn usedAt from null to now
+    const claimed = row.usedAt ? 0 : (await prisma.refreshToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: new Date() } })).count;
+    if (claimed === 1) {
+      return { access: await this.issueAccess(row.walletAddress), refresh: await this.issueRefresh(row.walletAddress, row.familyId) };
+    }
+    const fresh = await prisma.refreshToken.findUnique({ where: { id: row.id } });
+    if (fresh?.usedAt && Date.now() - fresh.usedAt.getTime() < REUSE_GRACE_MS) {
+      return { access: await this.issueAccess(row.walletAddress), refresh: null };
+    }
+    await this.revokeAllSessions(row.walletAddress);
+    throw httpError("Session ended for safety. Sign in again.", 401);
+  }
+
+  /** Log out this device: its refresh token family is deleted. */
+  async logout(cookieValue: string | undefined) {
+    if (!cookieValue) return;
+    const row = await prisma.refreshToken.findUnique({ where: { tokenHash: sha256(cookieValue) } });
+    if (row) await prisma.refreshToken.deleteMany({ where: { familyId: row.familyId } });
+  }
+
+  /** Valid signature + not expired + not voided by a stolen-token alarm. */
   async verifyToken(token: string): Promise<AuthClaims> {
     const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as jwt.JwtPayload;
     if (typeof decoded.sub !== "string" || (decoded.role !== "member" && decoded.role !== "admin")) {
@@ -102,13 +153,16 @@ export class AuthService {
     return { sub: decoded.sub, role: decoded.role };
   }
 
-  /** "Log out all devices": every token issued so far for this wallet stops working at once. */
+  /** Ends every session of a wallet: refresh tokens deleted, access tokens voided. */
   async revokeAllSessions(walletAddress: string) {
-    await prisma.authSession.upsert({
-      where: { walletAddress },
-      update: { version: { increment: 1 } },
-      create: { walletAddress, version: 1 },
-    });
+    await prisma.$transaction([
+      prisma.refreshToken.deleteMany({ where: { walletAddress } }),
+      prisma.authSession.upsert({
+        where: { walletAddress },
+        update: { version: { increment: 1 } },
+        create: { walletAddress, version: 1 },
+      }),
+    ]);
   }
 }
 

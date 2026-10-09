@@ -55,17 +55,14 @@ export type WithdrawalSummary = {
   items: Withdrawal[];
 };
 
-// Local Vite uses a same-origin /api proxy, so browser CORS cannot block it.
-// Production can provide VITE_API_BASE_URL for a separately hosted API.
-// The live backend on Render. Used when VITE_API_BASE_URL is missing or still a template
-// placeholder: a placeholder ("ACTUAL-BACKEND-URL") once sent every live request to a dead host.
-const RENDER_API = 'https://daovault-2.onrender.com/api/v1';
-
+// The API lives on the site's own origin: Render rewrites /api/* on the frontend to the
+// backend service, and Vite proxies /api locally. Same origin = no CORS and a first-party
+// refresh cookie. VITE_API_BASE_URL can still point elsewhere; a template placeholder
+// ("ACTUAL-BACKEND-URL") once sent every live request to a dead host, so it is ignored.
 function resolveApiBase(): string {
   const configured = String(import.meta.env.VITE_API_BASE_URL || '').trim();
   const placeholder = /ACTUAL-BACKEND-URL|example\.com|your[-_]/i.test(configured);
   if (configured && !placeholder) return configured.replace(/\/$/, '');
-  if (window.location.hostname.endsWith('.onrender.com')) return RENDER_API;
   return '/api/v1';
 }
 
@@ -87,10 +84,10 @@ async function request<T>(path: string, init: RequestInit & { token?: string } =
       ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    // No cookies: sign-in uses the Bearer token. 'include' made the browser reject every
-    // answer from the separately hosted API (it sends no Allow-Credentials header), so on
-    // the live site the dashboard, referral link and sign-in all failed.
-    credentials: 'omit',
+    // The API is served from the site's own origin (Render rewrite /api/* -> backend, Vite
+    // proxy locally), so the httpOnly refresh cookie travels with same-origin requests only.
+    // Never 'include': a cross-origin API would then need Allow-Credentials.
+    credentials: 'same-origin',
   });
   const payload = (await response.json().catch(() => null)) as { success: boolean; data: T; error?: string } | null;
   if (!response.ok || !payload?.success) {
@@ -153,7 +150,11 @@ export const getAuthChallenge = (walletAddress: string) =>
 export const verifyAuthSignature = (walletAddress: string, signature: string) =>
   post<{ token: string; role: 'member' | 'admin'; walletAddress: string; expiresAt: string }>('/auth/verify', { walletAddress, signature });
 /** "Log out all devices": every token of this wallet stops working. */
-export const logoutAllDevices = (token: string) => post<{ loggedOut: boolean }>('/auth/logout-all', {}, token);
+/** New access token from the httpOnly refresh cookie (the cookie is rotated). */
+export const refreshAuthSession = () =>
+  post<{ token: string; role: 'member' | 'admin'; walletAddress: string; expiresAt: string }>('/auth/refresh', {});
+/** Log out this device: the server deletes the refresh token and clears the cookie. */
+export const logoutAuthSession = () => post<{ loggedOut: boolean }>('/auth/logout', {});
 
 // ── withdrawals ──
 export const getWithdrawals = (token: string) => request<WithdrawalSummary>('/withdrawals', { token });

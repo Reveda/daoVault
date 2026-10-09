@@ -64,6 +64,12 @@ services:
     buildCommand: npm ci && npm run build
     staticPublishPath: dist
     autoDeployTrigger: checksPass
+    # the API on the site's own origin: /api/* is proxied to the backend service, so the
+    # httpOnly refresh-token cookie is first-party (works in Safari and wallet browsers)
+    routes:
+      - type: rewrite
+        source: /api/*
+        destination: https://daovault-2.onrender.com/api/*
     # /static = Vite build output with content hashes in the names: safe to cache for a year.
     # Pages stay revalidated so a new deploy shows at once; logo images/video cache a day.
     headers:
@@ -85,7 +91,7 @@ services:
         value: strict-origin-when-cross-origin
     envVars:
       - key: VITE_API_BASE_URL
-        value: https://daovault-2.onrender.com/api/v1
+        value: /api/v1
       - key: VITE_BSC_CHAIN_ID
         value: 56
       - key: VITE_BSC_RPC_URL

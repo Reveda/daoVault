@@ -4,16 +4,15 @@
  * wallet; the backend accepts "paid" only after it finds that USDT transfer on-chain.
  */
 import { BSC_CHAIN_ID, formatAddress, showToast } from './core.ts';
-import { autoReconnect, connectWithProvider, getActiveProvider, getInstalledWallets, getSignerFor } from './wallet.ts';
+import { autoReconnect, connectWithProvider, getInstalledWallets } from './wallet.ts';
+import { signIn as sessionFor } from './session.ts';
 import {
   ApiError,
   approveWithdrawal,
   completeWithdrawal,
   getAdminStats,
   getAdminWithdrawals,
-  getAuthChallenge,
   rejectWithdrawal,
-  verifyAuthSignature,
   type Withdrawal,
 } from './api.ts';
 import { initDvLogos } from './dvLogo.ts';
@@ -23,7 +22,9 @@ const usd = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigi
 const scan = (kind: 'tx' | 'address', v: string) => `https://${BSC_CHAIN_ID === 97 ? 'testnet.' : ''}bscscan.com/${kind}/${v}`;
 const esc = (s: string) => s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
-let token = '';
+// admin wallet once signed in; every call gets a fresh access token (memory + refresh cookie)
+let adminWallet = '';
+const token = () => sessionFor(adminWallet);
 let status: Withdrawal['status'] = 'PENDING';
 
 const HELP: Record<Withdrawal['status'], string> = {
@@ -40,26 +41,29 @@ async function signIn(): Promise<void> {
     if (!first) { showToast('Install or open a Web3 wallet to sign in.', true); return; }
     wallet = await connectWithProvider(first.provider, first.name);
   }
-  const { message } = await getAuthChallenge(wallet);
-  const signer = await getSignerFor(getActiveProvider(), wallet);
-  const session = await verifyAuthSignature(wallet, await signer.signMessage(message));
-  if (session.role !== 'admin') {
-    showToast('This wallet is not an admin.', true);
-    $('adminState')!.textContent = `• ${formatAddress(wallet)} is not an admin wallet`;
-    return;
+  await sessionFor(wallet);
+  adminWallet = wallet;
+  try {
+    await loadStats(); // the server answers 403 unless this wallet is in ADMIN_WALLETS
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 403) {
+      showToast('This wallet is not an admin.', true);
+      $('adminState')!.textContent = `• ${formatAddress(wallet)} is not an admin wallet`;
+      return;
+    }
+    throw error;
   }
-  token = session.token;
   const badge = $('adminWallet');
   if (badge) { badge.hidden = false; badge.textContent = formatAddress(wallet); }
   $('adminSignIn')!.hidden = true;
   $('adminLocked')!.hidden = true;
   $('adminApp')!.hidden = false;
   $('adminState')!.textContent = '• Signed in as admin';
-  await Promise.all([loadStats(), loadList()]);
+  await loadList();
 }
 
 async function loadStats(): Promise<void> {
-  const s = await getAdminStats(token);
+  const s = await getAdminStats(await token());
   const pending = s.withdrawals.PENDING;
   const approved = s.withdrawals.PROCESSING;
   const tile = (label: string, value: string, note = '') =>
@@ -77,7 +81,7 @@ async function loadStats(): Promise<void> {
 
 async function loadList(): Promise<void> {
   $('adminHelp')!.textContent = HELP[status];
-  const items = await getAdminWithdrawals(token, status);
+  const items = await getAdminWithdrawals(await token(), status);
   const list = $('adminList')!;
   if (!items.length) { list.innerHTML = '<p class="admin-empty">Nothing here.</p>'; return; }
   list.innerHTML = items.map((w) => `
@@ -109,17 +113,17 @@ async function act(item: HTMLElement, action: string, button: HTMLButtonElement)
   const field = (name: string) => item.querySelector<HTMLInputElement>(`[data-field="${name}"]`)?.value.trim() ?? '';
   button.disabled = true;
   try {
-    if (action === 'approve') await approveWithdrawal(token, id);
+    if (action === 'approve') await approveWithdrawal(await token(), id);
     if (action === 'reject') {
       const reason = field('reason');
       if (reason.length < 3) { showToast('Write a short reason first.', true); return; }
-      await rejectWithdrawal(token, id, reason);
+      await rejectWithdrawal(await token(), id, reason);
     }
     if (action === 'complete') {
       const tx = field('tx');
       if (!/^0x[a-fA-F0-9]{64}$/.test(tx)) { showToast('Paste the full payout transaction hash.', true); return; }
       showToast('Checking the transfer on-chain...');
-      await completeWithdrawal(token, id, tx);
+      await completeWithdrawal(await token(), id, tx);
     }
     showToast(action === 'approve' ? 'Approved. Now send the payout.' : action === 'reject' ? 'Rejected. Amount returned to member.' : 'Payout verified on-chain.');
     await Promise.all([loadStats(), loadList()]);

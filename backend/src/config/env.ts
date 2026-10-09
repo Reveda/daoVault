@@ -23,7 +23,9 @@ const envSchema = z.object({
   FINANCIAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   LOG_REQUESTS: z.coerce.boolean().default(true),
   // wallet-signature login
-  JWT_EXPIRES_HOURS: z.coerce.number().positive().max(72).default(12),
+  // access token (memory only, short) + refresh token (httpOnly cookie, rotated on every use)
+  ACCESS_TOKEN_MINUTES: z.coerce.number().int().min(1).max(60).default(15),
+  REFRESH_TOKEN_DAYS: z.coerce.number().int().min(1).max(90).default(30),
   /** comma-separated wallets allowed to use /admin (they still have to sign in with that wallet) */
   ADMIN_WALLETS: z.string().default("").transform((v) => v.split(",").map((w) => w.trim().toLowerCase()).filter((w) => /^0x[a-f0-9]{40}$/.test(w))),
   // withdrawals

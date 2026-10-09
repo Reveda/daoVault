@@ -34,7 +34,6 @@ import {
   getWithdrawals,
   requestWithdrawal,
   confirmWithdrawal,
-  logoutAllDevices,
   type DashboardData,
   type WithdrawalSummary,
   type Withdrawal,
@@ -52,7 +51,7 @@ import { renderRewardVaults, initWalletMenu, RANK_TIERS } from './rewardVaults.t
 import { initDvLogos } from './dvLogo.ts';
 import { openLevelModal } from './levelModal.ts';
 import { renderRankProgress } from './rankProgress.ts';
-import { clearAllSessions, clearSession, requireSession, savedSession, signIn } from './session.ts';
+import { clearSession, logout, requireSession, savedSession, signIn } from './session.ts';
 
 // 20-Level Matrix Specification with strict LevelMatrixRow interface
 const LEVEL_MATRIX: LevelMatrixRow[] = [
@@ -106,8 +105,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const next = (e as CustomEvent<{ account: string }>).detail?.account;
     if (next && next.toLowerCase() !== account.toLowerCase()) window.location.reload();
   });
-  window.addEventListener('daovault:disconnected', () => {
-    clearAllSessions();
+  window.addEventListener('daovault:disconnected', async () => {
+    await logout();
     try { sessionStorage.setItem('dv_dash_bounce', '1'); } catch { /* storage blocked */ }
     window.location.href = 'index.html';
   });
@@ -123,22 +122,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 3. Setup Disconnect
-  const logOut = () => {
-    clearAllSessions();
+  // Log out: the server deletes this device's refresh token, then the wallet disconnects
+  const logOut = async () => {
+    await logout();
     disconnectWallet();
     window.location.href = 'index.html';
   };
-  document.getElementById('dashLogoutBtn')?.addEventListener('click', logOut);
-  document.getElementById('dashLogoutAllBtn')?.addEventListener('click', async () => {
-    const token = savedSession(account);
-    try {
-      if (token) await logoutAllDevices(token);
-      showToast('Logged out on every device.');
-    } catch {
-      showToast('Could not reach the server: logged out on this device only.', true);
-    }
-    logOut();
-  });
+  document.getElementById('dashLogoutBtn')?.addEventListener('click', () => void logOut());
 
   // 4. Wallet menu + nav
   initWalletMenu(account);
@@ -164,7 +154,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (refInput) refInput.value = 'Loading your invite link…';
   for (let attempt = 0; ; attempt++) {
     try {
-      token ||= await requireSession(account, logOut);
+      token ||= await requireSession(account, () => void logOut());
       dashboardData = await getDashboardData(account, token);
       break;
     } catch (error) {

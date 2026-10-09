@@ -33,8 +33,11 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
                 POST /users/register  (first dashboard visit: reserves the wallet's permanent code, no package/upline;
                 processActivation keeps the record + code and links the sponsor; only activated codes can sponsor)
     auth        POST /auth/challenge, /auth/verify (EIP-4361 SIWE message: domain from the Origin header only if it is a
-                FRONTEND_URL origin, chain ID, nonce 5 min single use -> JWT 12h with `ver`), POST /auth/logout-all (bumps
-                auth_sessions.version: every older token is refused). middlewares/auth.ts requireAuth (async, checks ver),
+                FRONTEND_URL origin, chain ID, nonce 5 min single use -> access JWT with `ver` + refresh cookie) (bumps
+                auth_sessions.version on refresh-token theft: every older token is refused). Access token 15 min
+                (ACCESS_TOKEN_MINUTES) in the body; refresh token 30 days (REFRESH_TOKEN_DAYS) as httpOnly SameSite=Strict
+                cookie dv_rt on /api/v1/auth, hashed in refresh_tokens, rotated by POST /auth/refresh (30s grace for
+                parallel tabs; reuse after that revokes the wallet), POST /auth/logout. middlewares/auth.ts requireAuth (async, checks ver),
                 requireAdmin, requireSelfOrAdmin. Also protected: GET /users/:wallet, POST /users/register (own wallet).
     withdrawals GET/POST /withdrawals (member) ; /admin/stats, /admin/withdrawals[/:id/approve|reject|complete]
                 (ADMIN_WALLETS; complete verifies the USDT payout on-chain; no private keys on the server)
@@ -50,9 +53,10 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   index.html -> src/scripts/app.ts        landing page (3D scene, rank cards, wallet picker)
   dashboard.html -> src/scripts/dashboard.ts  user dashboard (live API data, legs, income, withdraw w/ wallet sign-in)
   admin.html -> src/scripts/admin.ts      withdrawal queue for ADMIN_WALLETS
-  session.ts: member sign-in (signIn / requireSession: decline -> "Sign in to open your vault" gate), token in
-           sessionStorage only (old localStorage tokens dropped), Log out clears it, menu "Log out all devices".
-           Dashboard data, level modal and register all send the token. admin.ts keeps its token in memory only.
+  session.ts: member sign-in (signIn / requireSession: decline -> "Sign in to open your vault" gate). Access token in
+           memory only (no localStorage/sessionStorage); missing/expiring -> POST /auth/refresh with the cookie; sign
+           again only when that fails. logout() deletes the refresh token. Dashboard, level modal, register and
+           admin.ts all get tokens through signIn().
   CSP: no inline scripts (public/boot.js = html.lite + ?ref capture in <head>). Production CSP in render.yaml headers,
            same string in vite.config.js (preview only); keep both in sync. Checked: zero violations on all pages.
   scripts: core.ts (referral capture, preloader, countUp, reveal stagger, toast), wallet.ts (EIP-6963, BSC switch, reconnect),
@@ -142,5 +146,6 @@ sponsor's activation never reached the backend. See document.md section 4.
   without the owner saying it is launch time. The live site (daovault-1.onrender.com) is built for chain 56.
 - Transactions: requireBSCNetwork(provider) before new BrowserProvider; sign with getSignerFor(provider, account).
 - Render: frontend https://daovault-1.onrender.com, backend https://daovault-2.onrender.com (service daoVault-2).
-  api.ts falls back to the backend URL when VITE_API_BASE_URL is missing/placeholder. Backend `npm start` =
+  The API is same-origin: render.yaml routes rewrite /api/* on daovault-1 to daoVault-2 (VITE_API_BASE_URL=/api/v1;
+  api.ts falls back to /api/v1, fetch credentials same-origin). Backend `npm start` =
   scripts/start.mjs: prisma migrate deploy, then dist/server.js (free plan: no shell / pre-deploy step).
