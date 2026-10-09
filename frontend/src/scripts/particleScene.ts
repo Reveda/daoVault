@@ -43,8 +43,11 @@ export interface SceneState {
 }
 
 export const SCENE_STATES: Record<string, SceneState> = {
-  // landing, in page order. Hero: loose dust only (the logo video has the stage).
-  hero:    { shape: 'dust', x: 0,     y: 0,    s: 1,    op: 0.4,  storm: 0.35, mop: 0.3 },
+  // landing, in page order. Hero (owner, 2026-10-09): particle DAOVAULT shapes like the other
+  // sections, changing every 6s - logo -> DV mark -> vault dial (scene.ts heroShowcase)
+  hero:     { shape: 'logo', x: 0, y: 0.05, s: 1,    op: 0.8,  storm: 0.8, my: -0.05, mop: 0.55 },
+  heroMark: { shape: 'mark', x: 0, y: 0.05, s: 0.95, op: 0.8,  storm: 0.8, my: -0.05, mop: 0.55 },
+  heroDial: { shape: 'dial', x: 0, y: 0.05, s: 0.95, op: 0.75, storm: 0.8, my: -0.05, mop: 0.5 },
   metrics: { shape: 'dial', x: 0.56,  y: 0,    s: 0.95, op: 0.8,  storm: 0.5, anchor: '#heroMetrics .scene-slot', fit: 0.9 },
   vision:  { shape: 'mark', x: -0.58, y: 0,    s: 0.95, op: 0.85, storm: 0.6, anchor: '#vision .scene-slot' },
   ranks:   { shape: 'logo', x: 0.58,  y: 0,    s: 0.95, op: 0.85, storm: 0.8, anchor: '#ranks .scene-slot' },

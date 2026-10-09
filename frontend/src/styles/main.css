@@ -2660,6 +2660,15 @@ h1, h2, h3, h4, h5, h6 {
   visibility: visible;
 }
 
+/* a closed modal is only hidden, so its looping animations (rotating border beam) kept
+   running for the whole visit: pause everything inside until it opens */
+.modal-overlay:not(.active),
+.modal-overlay:not(.active) *,
+.modal-overlay:not(.active) *::before,
+.modal-overlay:not(.active) *::after {
+  animation-play-state: paused !important;
+}
+
 /* Fullscreen WebGL 3D Canvas behind the modal */
 .wallet-3d-canvas {
   display: none;
@@ -3158,14 +3167,28 @@ h1, h2, h3, h4, h5, h6 {
   position: relative;
   width: 100%;
   height: 100%;
-  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  /* even ease in and out, so the flip reads the same both ways */
+  transition: transform 0.8s cubic-bezier(0.45, 0.05, 0.25, 1);
   transform-style: preserve-3d;
   cursor: pointer;
 }
 
-.flip-card-wrap:hover .flip-card-inner,
+/* tap/click toggles the card; hover flips it only where there is a real mouse (on
+   phones :hover sticks after a tap, so the card could never flip back) */
 .flip-card-wrap.flipped .flip-card-inner {
   transform: rotateY(180deg);
+}
+@media (hover: hover) and (pointer: fine) {
+  .flip-card-wrap:hover .flip-card-inner { transform: rotateY(180deg); }
+}
+
+/* phones: the two faces share one grid cell, so the card is as tall as its longer face
+   (a fixed 320px left a big empty area under short text) */
+@media (max-width: 900px) {
+  .flip-card-wrap { min-height: 0; }
+  .flip-card-wrap .flip-card-inner { display: grid; height: auto; }
+  .flip-card-wrap .flip-card-front,
+  .flip-card-wrap .flip-card-back { position: relative; inset: auto; grid-area: 1 / 1; padding: 1.4rem 1.3rem; gap: 0.9rem; }
 }
 
 .flip-card-front,
@@ -5598,7 +5621,7 @@ main {
 
 /* Hero connect: the wallet animation plays in a round badge, then the badge
    opens into the Connect button (the wallet stays inside as its icon) and
-   Explore slides in. coinWalletLottie.ts adds .is-ready after the intro. */
+   Explore slides in. heroWallet.ts adds .is-ready after the intro. */
 .hero-actions .btn.btn-wallet {
   display: inline-flex;
   align-items: center;
@@ -5623,7 +5646,7 @@ main {
   transition: flex-basis 0.9s cubic-bezier(0.16, 1, 0.3, 1), width 0.9s cubic-bezier(0.16, 1, 0.3, 1), height 0.9s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.btn-wallet-icon .coin-wallet-lottie {
+.btn-wallet-icon .hero-wallet {
   width: 100%;
   height: 100%;
   transform: scale(1.45);
@@ -5923,7 +5946,7 @@ main {
   height: 50px;
 }
 
-.btn-wallet-icon .coin-wallet-lottie {
+.btn-wallet-icon .hero-wallet {
   transform: scale(1.06);
   filter: drop-shadow(0 0 2px rgba(255, 214, 90, 0.9)) brightness(1.12);
 }
@@ -6532,6 +6555,47 @@ main {
   .re-ticks, .re-orbit, .re-coin, .re-front::after { animation: none; }
 }
 
+/* Rank card: page scrolling stays normal; the rank changes with the visible tabs, the
+   arrows + dots and a left/right swipe on the card (rankGameCard.ts initCardSwipe).
+   pan-y keeps vertical scrolling native while sideways swipes reach the card. */
+#rankDisplayCard { touch-action: pan-y; }
+.rank-swipe-hint { display: none; }
+@media (hover: none) {
+  .rank-swipe-hint {
+    display: block; margin: 0.55rem 0 0; text-align: center;
+    font-size: 0.66rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim);
+  }
+}
+
+/* Phones / tablets: compact rank card, no wasted space. It was ~970px tall:
+   medallion 178 + reward block 265 + long rule text 109 + roomy padding. */
+@media (max-width: 960px) {
+  .rank-card-display {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "emblem info" "meter meter";
+    gap: 0.9rem 1rem;
+    padding: 1.1rem 1rem 1rem;
+  }
+  .rank-card-display > .rank-emblem { grid-area: emblem; grid-column: auto; grid-row: auto; gap: 0.35rem; }
+  .rank-card-display > .rank-info-col { grid-area: info; }
+  .rank-card-display > .rank-leg-meter { grid-area: meter; }
+  .re-stage { width: 92px; }
+  .re-num { font-size: 1.35rem; }
+  .re-caption { font-size: 0.58rem; letter-spacing: 0.12em; }
+  .rank-info-col .rank-qualified-tag { font-size: 0.62rem; margin-bottom: 0.2rem; }
+  .rank-info-col .rank-big-reward { font-size: clamp(2rem, 10vw, 2.6rem); line-height: 1; margin: 0.1rem 0 0.25rem; }
+  .rank-info-col h3 { font-size: 1.15rem; line-height: 1.2; margin: 0 0 0.25rem; }
+  .rank-info-col p { font-size: 0.78rem; line-height: 1.4; margin: 0 0 0.55rem; }
+  .rank-info-col .rank-btn-wrap { margin-top: 0; }
+  .rank-info-col .btn-rank-qualify { padding: 0.6rem 1rem; font-size: 0.8rem; }
+  .rank-card-display .rank-leg-meter { padding: 0.85rem 0.9rem; gap: 0.55rem; }
+  .rank-leg-meter .leg-head h4 { font-size: 0.95rem; }
+  .rank-leg-meter .leg-rule-sub { font-size: 0.74rem; line-height: 1.45; margin: 0; }
+  .rank-leg-meter .leg-stat { padding: 0.5rem 0.6rem; }
+  .rank-leg-meter .leg-stat strong { font-size: 1.05rem; }
+  .rank-leg-meter .leg-total-row { padding-top: 0.5rem; }
+}
+
 /* ── "Crack the Vault" quiz (quiz.ts) ────────────────────────────────── */
 .quiz-section { position: relative; }
 .quiz-stage { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); gap: 3rem; align-items: center; margin-top: 2.5rem; }
@@ -6731,7 +6795,7 @@ main {
   outline-offset: 0;
 }
 .hero-connect-showcase:not(.is-ready) .btn-wallet-icon { box-shadow: none; }
-.hero-connect-showcase:not(.is-ready) .btn-wallet-icon .coin-wallet-lottie { transform: scale(1.18); }
+.hero-connect-showcase:not(.is-ready) .btn-wallet-icon .hero-wallet { transform: scale(1.18); }
 /* closed badge: the hidden label takes no room, so the wallet icon sits centred in the circle
    (it used to be pushed out to the left and the badge looked like a plain ball) */
 .btn-wallet .btn-label { display: inline-block; max-width: 22rem; overflow: hidden; transition: opacity 0.5s ease 0.35s, max-width 0.9s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -6782,12 +6846,127 @@ html.lite *::after {
 }
 html.lite .hero-dv-logo { filter: none; }
 html.lite .hero-connect-showcase:not(.is-ready) .btn.btn-wallet { animation: none; box-shadow: 0 0 22px rgba(212, 175, 55, 0.35); }
-html.lite .btn-wallet-icon .coin-wallet-lottie { filter: none; }
+html.lite .btn-wallet-icon .hero-wallet { filter: none; }
 html.lite .quiz-bolts { mix-blend-mode: normal; }
 html.lite .cursor-spotlight { display: none; }
+/* lite: paint-heavy decorative loops stay static - a 50px-blurred glow that keeps scaling,
+   a pulsing box-shadow and a pulsing drop-shadow repaint on every frame on phones */
+html.lite .neural-glow::before { animation: none; transform: translate(-50%, -50%); }
+html.lite .rule-step.is-win { animation: none; }
+html.lite .beam-dot { animation: none; }
 html.lite .top-header,
 html.lite .top-header.scrolled { background: rgba(5, 5, 12, 0.96); }
 /* phones: the countdown fits the screen (it ran past the right edge) */
 @media (max-width: 600px) {
   .countdown-box { max-width: 100%; box-sizing: border-box; justify-content: space-between; padding-inline: 0.9rem; gap: 0.35rem; }
+}
+
+/* ── Touch screens: smooth press feedback ─────────────────────────────────
+   No grey/blue tap flash; hover lifts/tilts no longer stick after a tap (touch keeps
+   :hover until you tap elsewhere); a tapped card sinks a little and eases back.
+   The stack-deck cards and the rank card are left out: scroll animations drive their
+   transforms, and forcing one there made them jump. */
+html { -webkit-tap-highlight-color: transparent; }
+@media (hover: none) {
+  .glass:hover, .crypto-exchange-card:hover, .step-card:hover,
+  .matrix-calc-box .calc-stat:hover, .reward-box:hover, .metric-card:hover, .rule-step:hover {
+    transform: none !important;
+  }
+  .glass, .crypto-exchange-card, .step-card, .calc-stat, .reward-box, .metric-card, .rule-step {
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, border-color 0.28s ease;
+  }
+  .glass:active, .crypto-exchange-card:active, .step-card:active, .matrix-calc-box .calc-stat:active,
+  .reward-box:active, .metric-card:active, .rule-step:active {
+    transform: scale(0.975) !important;
+    transition-duration: 0.12s;
+  }
+}
+
+/* ── Hero Connect badge: our own wallet + circling DV coins (heroWallet.ts) ──
+   Replaces the third-party Lottie. Transform/opacity only, so it stays smooth on phones. */
+.btn-wallet-icon .hero-wallet { position: relative; display: grid; place-items: center; width: 100%; height: 100%; transform: none; filter: none; --r: 17px; }
+.hero-connect-showcase:not(.is-ready) .btn-wallet-icon .hero-wallet { transform: none; --r: 24px; }
+.hw-wallet { width: 62%; height: 62%; filter: drop-shadow(0 0 3px rgba(255, 214, 90, 0.55)); animation: hwBob 3.2s ease-in-out infinite; }
+.hw-coins { position: absolute; inset: 0; pointer-events: none; }
+.hw-coin {
+  position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; margin: -4.5px 0 0 -4.5px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6c4, #e2b33d 45%, #8a6510 100%);
+  box-shadow: inset 0 0 0 1px rgba(80, 55, 5, 0.55), 0 0 6px rgba(255, 214, 90, 0.7);
+  opacity: 0;
+}
+.hero-wallet.is-swirling .hw-coin { animation: hwOrbit 1.5s cubic-bezier(0.45, 0.05, 0.25, 1) var(--d) both; }
+@keyframes hwOrbit {
+  0% { opacity: 0; transform: rotate(var(--a)) translateX(3px) scale(0.3); }
+  18% { opacity: 1; }
+  82% { opacity: 1; transform: rotate(calc(var(--a) + 300deg)) translateX(var(--r)) scale(1); }
+  100% { opacity: 0; transform: rotate(calc(var(--a) + 360deg)) translateX(var(--r)) scale(0.6); }
+}
+@keyframes hwBob { 50% { transform: translateY(-1.5px); } }
+html.lite .hw-wallet { animation: none; filter: none; }
+@media (prefers-reduced-motion: reduce) { .hw-wallet, .hero-wallet.is-swirling .hw-coin { animation: none; } }
+
+/* Navbar Connect Wallet: the hero's wallet badge in a smaller size (heroWallet.ts) */
+.btn.btn-wallet--nav { gap: 0.55rem; padding: 0.32rem 1.15rem 0.32rem 0.36rem; }
+.btn-wallet--nav .btn-wallet-icon { flex: 0 0 32px; width: 32px; height: 32px; }
+.btn-wallet--nav .hero-wallet { --r: 11px; }
+.btn-wallet--nav .hw-coin { width: 6px; height: 6px; margin: -3px 0 0 -3px; }
+@media (max-width: 480px) {
+  .btn.btn-wallet--nav { padding: 0.28rem 0.85rem 0.28rem 0.3rem; gap: 0.4rem; font-size: 0.8rem; }
+  .btn-wallet--nav .btn-wallet-icon { flex-basis: 28px; width: 28px; height: 28px; }
+  .btn-wallet--nav .hero-wallet { --r: 9.5px; }
+}
+
+/* Flip cards at rest on touch screens (app.ts initFlipCards): flat, no 3D, so the text is
+   drawn sharp; 3D is used only while a card turns */
+.flip-card-wrap.no-anim .flip-card-inner { transition: none !important; }
+.flip-card-wrap.is-settled .flip-card-inner { transform: none; transform-style: flat; }
+.flip-card-wrap.is-settled:not(.flipped) .flip-card-back { visibility: hidden; }
+.flip-card-wrap.is-settled.flipped .flip-card-front { visibility: hidden; }
+.flip-card-wrap.is-settled.flipped .flip-card-back { transform: none; }
+
+/* Comparison cards on phones (owner, 2026-10-09): no bluish table background behind the
+   cards, the DAOVAULT answer in its own full-width gold box (the desktop column tint became
+   a broken strip), clearer labels, tidy multi-line text and a soft press on tap */
+@media (max-width: 600px) {
+  .compare-matrix { background: none; border: 0; border-radius: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
+  .compare-matrix tbody tr { box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35); }
+  .compare-matrix td:first-child strong { font-size: 1.02rem; color: #fff; letter-spacing: -0.01em; }
+  .compare-matrix td:nth-child(2)::before,
+  .compare-matrix td:nth-child(3)::before { font-size: 0.62rem; color: #8f8a7c; }
+  .compare-matrix td:nth-child(3)::before { color: var(--gold); }
+  .compare-matrix tbody td:last-child {
+    margin-top: 0.45rem; padding: 0.6rem 0.75rem !important;
+    background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.28) !important; border-radius: 10px;
+  }
+  .compare-matrix .badge-negative,
+  .compare-matrix .badge-positive { display: flex; align-items: flex-start; gap: 0.35rem; line-height: 1.45; font-size: 0.86rem; }
+}
+@media (max-width: 600px) and (hover: none) {
+  .compare-matrix tbody tr { transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease; }
+  .compare-matrix tbody tr:active { transform: scale(0.98); border-color: rgba(212, 175, 55, 0.55); transition-duration: 0.12s; }
+}
+
+/* Touch glow (core.ts enableTouchPress): a touched card lights up gold, then fades out */
+@media (hover: none) {
+  .compare-matrix tbody tr, .glass, .metric-card, .calc-stat, .step-card, .reward-box, .crypto-exchange-card {
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.5s ease, box-shadow 0.5s ease;
+  }
+  .tap-glow {
+    border-color: rgba(245, 215, 110, 0.85) !important;
+    box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.45), 0 0 26px rgba(212, 175, 55, 0.35), 0 12px 30px rgba(0, 0, 0, 0.45) !important;
+    transition-duration: 0.12s;
+  }
+}
+
+/* Crisp text on phones: no permanent 3D context. preserve-3d on every .chapter and on the
+   rank card made phones draw their text inside a 3D layer, at low quality (blurry). The rank
+   card's turn carries its own perspective in the animation (rankGameCard.ts). */
+.rank-game-card { transform-style: flat; perspective: none; }
+@media (max-width: 900px) {
+  .chapter { transform-style: flat; }
+}
+/* rank card leg boxes: labels on one line, both values on the same baseline */
+.rank-leg-meter .leg-stat { display: flex; flex-direction: column; justify-content: space-between; }
+@media (max-width: 960px) {
+  .rank-leg-meter .leg-stat-lbl { white-space: nowrap; font-size: 0.6rem; letter-spacing: 0.03em; }
 }

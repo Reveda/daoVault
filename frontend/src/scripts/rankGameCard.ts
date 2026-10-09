@@ -14,6 +14,11 @@
 import { gsap } from 'gsap';
 import type { RankTier } from './types.ts';
 import { mountRankEmblem, updateRankEmblem } from './rankEmblem.ts';
+import { LITE } from './perf.ts';
+
+/** Card brightness flash during a rank change; skipped on lite devices (a filter on the
+ *  whole card made phones repaint it on every frame of the transition). */
+const glow = (value: string): { filter?: string } => (LITE ? {} : { filter: value });
 
 export const RANK_DATA: RankTier[] = [
   {
@@ -47,7 +52,7 @@ export const RANK_DATA: RankTier[] = [
   {
     id: 5,
     title: 'Executive',
-    dao: 350,
+    dao: 375, // owner, 2026-10-09: 375 per side
     reward: 2500,
     desc: 'High-impact team builder with substantial ecosystem volume.',
   },
@@ -147,6 +152,9 @@ export function initRankGameCard(): void {
   // 4. Initial Render
   renderRankData(RANK_DATA[0]);
   updateSliderProgress(0);
+
+  // 4b. Swipe left/right on the card changes the rank; vertical scrolling stays normal
+  initCardSwipe(card);
 
   // 5. Start Auto-Cycle ONLY when #ranks section is actively in viewport
   const ranksSection = document.getElementById('ranks');
@@ -262,11 +270,12 @@ function animateCardTransition(rank: RankTier, direction: number): void {
 
   // 1. Tilt away Phase (Out)
   tl.to(card, {
+    transformPerspective: 1100, // own perspective: the card is flat at rest (crisp text)
     rotateY: direction * -12,
     x: direction * -28,
     scale: 0.965,
     opacity: 0.35,
-    filter: 'brightness(0.8)',
+    ...glow('brightness(0.8)'),
     duration: 0.22,
     ease: 'power2.in',
   });
@@ -280,18 +289,19 @@ function animateCardTransition(rank: RankTier, direction: number): void {
   tl.fromTo(
     card,
     {
+      transformPerspective: 1100,
       rotateY: direction * 14,
       x: direction * 32,
       scale: 0.955,
       opacity: 0.3,
-      filter: 'brightness(1.25)',
+      ...glow('brightness(1.25)'),
     },
     {
       rotateY: 0,
       x: 0,
       scale: 1,
       opacity: 1,
-      filter: 'brightness(1)',
+      ...glow('brightness(1)'),
       duration: 0.5,
       ease: 'back.out(1.3)',
     }
@@ -384,6 +394,8 @@ function animateCountUp(target: HTMLElement, finalValue: number): void {
  * 3D Gyroscopic Cursor Parallax on the Game Card
  */
 function setupCard3DParallax(card: HTMLElement): void {
+  // mouse only: a tap's single emulated mousemove left the card tilted on phones
+  if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
   const glare = document.getElementById('rankInteractiveGlare');
 
   card.addEventListener('mousemove', (e: MouseEvent) => {
@@ -472,6 +484,31 @@ function updateSliderProgress(index: number): void {
   if (thumb) {
     thumb.style.left = `${pct}%`;
   }
+}
+
+/**
+ * Swipe the card left/right to step through the ranks (owner, 2026-10-09: page scrolling
+ * must stay normal, the rank changes with visible controls). `touch-action: pan-y` keeps
+ * vertical scrolling native; only a clearly sideways swipe changes the rank.
+ */
+function initCardSwipe(card: HTMLElement): void {
+  let x0 = 0;
+  let y0 = 0;
+  let tracking = false;
+  card.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    x0 = t.clientX; y0 = t.clientY; tracking = e.touches.length === 1;
+  }, { passive: true });
+  card.addEventListener('touchend', (e) => {
+    if (!tracking) return;
+    tracking = false;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - x0;
+    const dy = t.clientY - y0;
+    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // a scroll, not a swipe
+    const next = currentRankIndex + (dx < 0 ? 1 : -1);
+    if (next >= 0 && next < RANK_DATA.length) selectRank(next, true, dx < 0 ? 1 : -1);
+  }, { passive: true });
 }
 
 /**

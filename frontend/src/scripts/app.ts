@@ -6,7 +6,7 @@
 import { init3DScene, initHeroCore3D } from './scene.ts';
 import { initApexTrophy } from './trophy3d.ts';
 import { initScrollAnimations } from './scrollAnimations.ts';
-import { initCoinWalletLottie } from './coinWalletLottie.ts';
+import { initHeroWallet } from './heroWallet.ts';
 import { initMatrixAutoDeck } from './matrixAutoDeck.ts';
 import {
   initReferralCapture,
@@ -15,6 +15,7 @@ import {
   initCircuitSpine,
   initTrophyBoom,
   initOffscreenPause,
+  enableTouchPress,
   countUp,
   formatAddress,
   showToast,
@@ -47,6 +48,7 @@ import { initAnchorScroll, initScrollSpy, initNavIndicator, initJoinSteps, initD
 document.addEventListener('DOMContentLoaded', async () => {
   initDvLogos(); // animated DAOVAULT logo: preloader, header, footer
   initOffscreenPause(); // looping CSS animations pause off screen
+  enableTouchPress(); // smooth card press feedback on phones (iOS needs a touch listener)
   initReferralCapture();
   init3DScene();
   initHeroCore3D();
@@ -97,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initMatrixAutoDeck();
   initWalletPicker();
   autoConnectFromWalletApp(); // opened inside a wallet app from our Connect: connect right away
-  initCoinWalletLottie();
+  initHeroWallet(); // our own wallet + circling coins in the hero Connect badge
 
   // A connected member belongs on their own dashboard (that is where activation lives too).
   // Not when the dashboard itself just sent them here, or the two pages would bounce.
@@ -189,6 +191,9 @@ function initHeroMetricsInteraction(): void {
  * 3D Physical Card Tilt & Linear-Style Cursor Spotlight
  */
 function initCardTilt(): void {
+  // mouse only: on touch screens a tap sends one emulated mousemove and no mouseleave, so
+  // the card tilted toward the finger and stayed tilted (the "ugly press effect")
+  if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
   const cards = document.querySelectorAll('.glass:not(.flip-card-front):not(.flip-card-back):not(.matrix-card):not(.wallet-dialog-box)');
   cards.forEach((card) => {
     const el = card as HTMLElement;
@@ -240,11 +245,41 @@ function initFlipCards(): void {
     const sub = document.querySelector<HTMLElement>('#about .section-sub');
     if (sub) sub.textContent = sub.textContent?.replace('Hover over any pillar', 'Tap any pillar') ?? '';
   }
+  // Touch screens: 3D only while turning. At rest the card was still drawn through a
+  // preserve-3d context (and the back face as 180deg + 180deg), which phones rasterise at
+  // low quality: blurry text. Once a turn ends it settles flat (.is-settled: the visible
+  // face has no transform at all); a tap restores the 3D state instantly, then turns.
+  const settleFlat = matchMedia('(hover: none)').matches;
   cards.forEach((card) => {
+    const inner = card.querySelector<HTMLElement>('.flip-card-inner');
+    if (settleFlat && inner) {
+      card.classList.add('is-settled');
+      inner.addEventListener('transitionend', (e) => {
+        if (e.target !== inner || e.propertyName !== 'transform') return;
+        // switch to the flat pose without animating it
+        card.classList.add('no-anim', 'is-settled');
+        void inner.offsetWidth;
+        card.classList.remove('no-anim');
+      });
+    }
     card.addEventListener('click', () => {
+      if (settleFlat && inner && card.classList.contains('is-settled')) {
+        card.classList.add('no-anim');
+        card.classList.remove('is-settled');
+        void inner.offsetWidth; // back to the 3D pose of the current side, without animating
+        card.classList.remove('no-anim');
+      }
       card.classList.toggle('flipped');
     });
   });
+}
+
+/** Big numbers in short form so they fit the cards: 1.5M, 3B, 10T, 10Qa, 100Qi (below a million: 12,345). */
+function shortNumber(n: number): string {
+  const units: Array<[number, string]> = [[1e18, 'Qi'], [1e15, 'Qa'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M']];
+  const unit = units.find(([size]) => n >= size);
+  if (!unit) return n.toLocaleString();
+  return `${(n / unit[0]).toLocaleString('en-US', { maximumFractionDigits: 2 })}${unit[1]}`;
 }
 
 /**
@@ -254,26 +289,29 @@ function initMatrixCalculator(): void {
   const pillsWrap = document.getElementById('levelPills');
   if (!pillsWrap) return;
 
+  // Theoretical team at a level if every member brings 10 directs: 10^level members,
+  // earning `usd` each (owner, 2026-10-09: 10 directs each instead of the old 3x3)
+  const team = (lvl: number, usd: number) => ({ members: 10 ** lvl, total: 10 ** lvl * usd });
+
   const levelConfigs = [
-    { lvl: 1, pct: 10, usd: 30, req: '0 Directs', reqSub: 'Instant Unlock', members: 3, total: 90 },
-    { lvl: 2, pct: 5, usd: 15, req: '2 Directs', reqSub: 'Qualified', members: 9, total: 135 },
-    { lvl: 3, pct: 3, usd: 9, req: '3 Directs', reqSub: 'Qualified', members: 27, total: 243 },
-    { lvl: 4, pct: 3, usd: 9, req: '5 Directs', reqSub: 'Qualified', members: 81, total: 729 },
-    { lvl: 5, pct: 2, usd: 6, req: '7 Directs', reqSub: 'Qualified', members: 243, total: 1458 },
-    { lvl: 6, pct: 2, usd: 6, req: '9 Directs', reqSub: 'Qualified', members: 729, total: 4374 },
-    { lvl: 7, pct: 2, usd: 6, req: '10 Directs', reqSub: 'Qualified', members: 2187, total: 13122 },
+    { lvl: 1, pct: 10, usd: 30, req: '0 Directs', reqSub: 'Instant Unlock', ...team(1, 30) },
+    { lvl: 2, pct: 5, usd: 15, req: '2 Directs', reqSub: 'Qualified', ...team(2, 15) },
+    { lvl: 3, pct: 3, usd: 9, req: '3 Directs', reqSub: 'Qualified', ...team(3, 9) },
+    { lvl: 4, pct: 3, usd: 9, req: '5 Directs', reqSub: 'Qualified', ...team(4, 9) },
+    { lvl: 5, pct: 2, usd: 6, req: '7 Directs', reqSub: 'Qualified', ...team(5, 6) },
+    { lvl: 6, pct: 2, usd: 6, req: '9 Directs', reqSub: 'Qualified', ...team(6, 6) },
+    { lvl: 7, pct: 2, usd: 6, req: '10 Directs', reqSub: 'Qualified', ...team(7, 6) },
   ];
 
-  // Fill levels 8 to 20 (1% each, $3.00, 15 Directs required). Theoretical team = 3^level
-  // (it used to stop at 3^12, so L12-L20 all showed the same 531,441 members).
+  // Fill levels 8 to 20 (1% each, $3.00, 15 Directs required)
   for (let l = 8; l <= 20; l++) {
-    const mem = Math.pow(3, l);
+    const mem = Math.pow(10, l);
     levelConfigs.push({
       lvl: l,
       pct: 1,
       usd: 3,
       req: '15 Directs',
-      reqSub: 'Full Matrix Depth',
+      reqSub: 'Full Level Depth',
       members: mem,
       total: mem * 3,
     });
@@ -355,9 +393,7 @@ function initMatrixCalculator(): void {
     if (reqEl) reqEl.textContent = cfg.req;
     if (reqSubEl) reqSubEl.textContent = cfg.reqSub;
     // millions and billions (L13+) in short form so they fit the card: 1.59M, $10.46B
-    const short = (n: number) => n >= 1_000_000
-      ? new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(n)
-      : n.toLocaleString();
+    const short = shortNumber;
     if (memEl) memEl.textContent = `${short(cfg.members)} Members`;
     if (totalEl) {
       if (cfg.total >= 1_000_000) totalEl.textContent = `$${short(cfg.total)}`;

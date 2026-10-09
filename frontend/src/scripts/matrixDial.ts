@@ -63,7 +63,7 @@ export function initMatrixDial(): void {
   }).join('');
 
   mount.innerHTML = `
-    <svg class="mdial" viewBox="0 0 400 400" role="slider" tabindex="0" aria-label="Matrix level dial"
+    <svg class="mdial" viewBox="0 0 400 400" role="slider" tabindex="0" aria-label="Level dial"
          aria-valuemin="1" aria-valuemax="20" aria-valuenow="1">
       <defs>
         <radialGradient id="mdialFace" cx="50%" cy="45%" r="60%">
@@ -191,15 +191,15 @@ export function initMatrixDial(): void {
     set('matrixPerMember', `$${perMember}`);
     set('matrixNext', next
       ? `Next: L${LEVELS.indexOf(next) + 1} unlocks at ${next.req} directs`
-      : 'All 20 levels unlocked: full matrix depth');
+      : 'All 20 levels unlocked: full depth');
     if (range) range.style.setProperty('--fill', `${(d / 15) * 100}%`);
     refreshLock();
   };
   range?.addEventListener('input', () => setDirects(Number(range.value)));
 
-  // it is a simulator: always start at 0 (browsers restore a moved slider after a refresh,
-  // which showed e.g. "1" to a visitor as if it were their own data)
-  if (range) range.value = '0';
-  setDirects(0);
+  // it is a simulator: always start at 10 directs (owner, 2026-10-09). Reset on every load:
+  // browsers restore a moved slider after a refresh, which looked like the visitor's own data
+  if (range) range.value = '10';
+  setDirects(10);
   show(Math.max(0, pills().findIndex((p) => p.classList.contains('active'))));
 }

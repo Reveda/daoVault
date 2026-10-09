@@ -37,8 +37,38 @@ export function init3DScene(initialScene = 'hero'): ParticleSceneController | nu
 
   const ctrl = createParticleScene(canvas, { scene: initialScene, flashEl });
   if (ctrl) bindSectionScenes(ctrl);
+  if (ctrl && initialScene === 'hero') heroShowcase(ctrl);
   if (import.meta.env.DEV) (window as unknown as { __daovaultScene?: unknown }).__daovaultScene = ctrl;
   return ctrl;
+}
+
+/**
+ * Hero background (owner, 2026-10-09): a lightning burst as the site opens, then, while the
+ * hero is on screen, the particle cloud re-forms every 6s - DAOVAULT logo -> DV mark ->
+ * vault dial - like the shapes behind the other sections (setScene strikes on each change).
+ * Uses the existing particle canvas; nothing runs once another section has the cloud.
+ */
+const HERO_CYCLE = ['hero', 'heroMark', 'heroDial'];
+const HERO_CYCLE_MS = 6000;
+
+function heroShowcase(ctrl: ParticleSceneController): void {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const burst = () => [0, 260, 640].forEach((ms) => window.setTimeout(() => ctrl.strike(), ms));
+
+  // after the splash screen, so the visitor actually sees it
+  const started = Date.now();
+  const whenReady = () => {
+    if (document.body.classList.contains('ready')) window.setTimeout(burst, 350);
+    else if (Date.now() - started < 15000) window.setTimeout(whenReady, 200);
+  };
+  whenReady();
+
+  window.setInterval(() => {
+    if (document.hidden) return;
+    const at = HERO_CYCLE.indexOf(ctrl.current);
+    if (at < 0) return; // another section has the cloud
+    ctrl.setScene(HERO_CYCLE[(at + 1) % HERO_CYCLE.length]);
+  }, HERO_CYCLE_MS);
 }
 
 /**

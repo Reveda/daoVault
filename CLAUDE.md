@@ -58,9 +58,10 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
                       bootPreloader counts every number 1..100% over SPLASH_MS.
     quiz.ts           "Crack the Vault" quiz above the footer (gold/red answers, 3D coins, canvas lightning, data-scene quiz)
     rankEmblem.ts     #ranks card medallion (11-segment ring, DV coin flip, sparks)
-    coinWalletLottie.ts  hero: wallet plays in a round badge inside the Connect button, then the badge opens into the
-                      full button (.is-ready) and Explore slides in; coins swirl every 5s.
-                      The final CTA has no wallet animation (owner removed it).
+    heroWallet.ts     our own gold wallet (inline SVG) + 4 CSS coins in the hero Connect badge and the navbar
+                      Connect button ([data-wallet-icon]); badge opens into the full button (.is-ready), coins swirl
+                      every 5s. Replaced the third-party Lottie (lottie-web no longer loaded on the landing page).
+                      The final CTA has no wallet animation (owner removed it). Brand text is "DAOvault" (no ".AI").
     landingFx.ts      nav scrollspy, "How to Join" progress rail / lit steps, initDropCards() ([data-drop] cards fall
                       from above then their .drop-body unfolds; used by the #vision DAO + VAULT = DAOVAULT cards); initJoinSteps(): #how expanding step
                       cards (one open at a time, auto-advance, progress stage)

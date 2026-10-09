@@ -13,6 +13,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { hasWebGL } from './core.ts';
+import { LITE } from './perf.ts';
 
 const GOLD = 0xd9ad3c;
 const GOLD_LIGHT = 0xffe08a;
@@ -74,8 +75,8 @@ function buildApexTrophy(): void {
   slot.classList.add('trophy-3d-slot');
 
   if (!hasWebGL()) {
-    slot.innerHTML = '<span class="trophy-fallback" data-dv-logo="mark"></span>';
-    import('./dvLogo.ts').then(({ initDvLogos }) => initDvLogos(slot));
+    // no WebGL: a still render of this same trophy (captured from the 3D scene)
+    slot.innerHTML = '<img class="trophy-canvas trophy-static" src="/assets/trophy-static.webp" alt="" width="435" height="490" decoding="async" loading="lazy" />';
     return;
   }
 
@@ -407,7 +408,13 @@ function buildApexTrophy(): void {
     clock.getDelta();
     if (!raf) raf = requestAnimationFrame(frame);
   };
-  renderer.compileAsync(scene, camera).catch(() => {}).finally(() => { compiled = true; start(); });
+  renderer.compileAsync(scene, camera).catch(() => {}).finally(() => {
+    // one warm-up draw right away: uploads the textures to the GPU now (during the splash
+    // on lite devices) instead of on the first visible frame
+    renderer.render(scene, camera);
+    compiled = true;
+    start();
+  });
 
   new IntersectionObserver(([entry]) => {
     visible = entry.isIntersecting;
@@ -422,6 +429,15 @@ function buildApexTrophy(): void {
 export function initApexTrophy(): void {
   const stage = document.getElementById('trophyVisual');
   if (!stage) return;
+  // Lite devices (phones, low-power): build the 3D trophy during the splash screen, while
+  // the visitor waits anyway. Building it on scroll-in (creating WebGL + compiling the
+  // shaders) froze the page for ~0.5-0.9s right as Rank Rewards came on screen. The frame
+  // loop still only runs while the trophy is visible.
+  if (LITE) {
+    const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
+    if (idle) idle(() => buildApexTrophy(), { timeout: 1200 }); else window.setTimeout(buildApexTrophy, 300);
+    return;
+  }
   if (!('IntersectionObserver' in window)) { buildApexTrophy(); return; }
   const io = new IntersectionObserver(([entry]) => {
     if (!entry.isIntersecting) return;

@@ -4,6 +4,9 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   root: '.',
   build: {
+    // hashed build files get their own folder so the host can cache them for a year
+    // (render.yaml headers); public/assets (logo images, video) keeps short caching
+    assetsDir: 'static',
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),

@@ -233,9 +233,11 @@ export function initMetricIcons3D(): void {
 
     let hovered = false;
     let visible = true;
-    card.addEventListener('pointerenter', () => { hovered = true; });
+    // mouse only: a finger dragging over the card (while scrolling) twisted the icon
+    card.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') hovered = true; });
     card.addEventListener('pointerleave', () => { hovered = false; scene.rotation.set(0, 0, 0); });
     card.addEventListener('pointermove', (e) => {
+      if (e.pointerType === 'touch') return;
       const r = card.getBoundingClientRect();
       scene.rotation.y = ((e.clientX - r.left) / r.width - 0.5) * 0.9;
       scene.rotation.x = -((e.clientY - r.top) / r.height - 0.5) * 0.7;

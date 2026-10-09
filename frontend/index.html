@@ -59,7 +59,7 @@
     <div class="wrap top-bar">
       <a href="index.html" class="brand">
         <div class="brand-icon brand-icon--logo" data-dv-logo="mark"><img src="/favicon.png" alt="" width="40" height="40" /></div>
-        <span>DAOvault<span class="grad-text">.AI</span></span>
+        <span><span class="grad-text">DAO</span>vault</span>
       </a>
 
       <nav class="nav-pill" aria-label="Main Navigation">
@@ -74,8 +74,9 @@
       </nav>
 
       <div>
-        <button class="btn btn-grad" data-connect-trigger type="button">
-          <span>Connect Wallet</span>
+        <button class="btn btn-grad btn-wallet btn-wallet--nav" data-connect-trigger type="button">
+          <span class="btn-wallet-icon" aria-hidden="true"><span class="hero-wallet" data-wallet-icon></span></span>
+          <span class="btn-label">Connect Wallet</span>
         </button>
       </div>
     </div>
@@ -119,11 +120,11 @@
           </p>
 
           <!-- The wallet plays inside a round badge, then the badge opens into the Connect
-               button (coinWalletLottie.ts initHeroWalletSequence + .is-ready in main.css) -->
+               button (heroWallet.ts initHeroWallet + .is-ready in main.css) -->
           <div class="hero-connect-showcase" id="heroConnectShowcase">
             <div class="hero-actions">
               <button class="btn btn-grad btn-lg btn-wallet" data-connect-trigger type="button">
-                <span class="btn-wallet-icon" aria-hidden="true"><span id="heroCoinWalletLottie" class="coin-wallet-lottie"></span></span>
+                <span class="btn-wallet-icon" aria-hidden="true"><span id="heroWallet" class="hero-wallet"></span></span>
                 <span class="btn-label">Connect Wallet &amp; Join</span>
               </button>
               <a class="btn btn-line btn-lg hero-explore" href="#ranks">
@@ -208,7 +209,7 @@
 
             <div class="crypto-exchange-card ex-card-3 glass-v2">
               <div class="ex-card-top">
-                <span class="ex-pair mono"><i class="ex-dot violet"></i> MATRIX VELOCITY</span>
+                <span class="ex-pair mono"><i class="ex-dot violet"></i> LEVEL VELOCITY</span>
                 <span class="ex-badge-violet mono">20 LEVELS</span>
               </div>
               <div class="ex-card-val-row">
@@ -380,7 +381,7 @@
               First to Balance.<br /><span class="grad-text">First to Claim.</span>
             </h3>
             <p>
-              DAOvault AI reserves an exclusive <b>$100,000 Leadership Reward Pool</b> across 11 milestone tiers. Operating on a decentralized FIFO protocol: the moment your organization achieves the target volume under the strict <b>50:50 Leg Ratio Rule</b>, your position is permanently secured — from the foundational reward of <b>$100 (Starter)</b> through the ultimate apex reward of <b>$100,000 (Crown President)</b>.
+              DAOVAULT reserves an exclusive <b>$100,000 Leadership Reward Pool</b> across 11 milestone tiers. Operating on a decentralized FIFO protocol: the moment your organization achieves the target volume under the strict <b>50:50 Leg Ratio Rule</b>, your position is permanently secured — from the foundational reward of <b>$100 (Starter)</b> through the ultimate apex reward of <b>$100,000 (Crown President)</b>.
             </p>
             <p class="rule mono">
               <span class="rule-step"><b>01</b>QUALIFY 50:50 VOLUME</span>
@@ -422,6 +423,7 @@
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
             </button>
           </div>
+          <p class="rank-swipe-hint mono">&larr; Swipe or tap to explore all 11 ranks &rarr;</p>
         </div>
 
         <!-- City of Mist 3D Game Card with Holographic Sheen & Conic Laser Beam -->
@@ -468,11 +470,11 @@
 
               <div class="leg-labels">
                 <div class="leg-stat leg-stat--power">
-                  <span class="leg-stat-lbl mono"><i></i>Power Leg &middot; needed</span>
+                  <span class="leg-stat-lbl mono"><i></i>Power Leg Target</span>
                   <strong id="rankPowerLegVal">25 DAO</strong>
                 </div>
                 <div class="leg-stat leg-stat--other">
-                  <span class="leg-stat-lbl mono"><i></i>Other Legs &middot; needed</span>
+                  <span class="leg-stat-lbl mono"><i></i>Other Legs Target</span>
                   <strong id="rankOtherLegVal">25 DAO</strong>
                 </div>
               </div>
@@ -500,7 +502,7 @@
           </div>
           <p class="section-tag mono">40% AFFILIATE REVENUE SHARING</p>
           <h2 class="section-title">
-            <span class="wm-line"><span>20-Level <span class="grad-text">Income Matrix</span></span></span>
+            <span class="wm-line"><span>20-Level <span class="grad-text">Income Plan</span></span></span>
           </h2>
           <p class="section-sub">
             From every $300 package, exactly <b>40% ($120.00)</b> is paid instantly across 20 generational uplines. 
@@ -672,7 +674,7 @@
                   <div class="meter-track">
                     <div class="meter-fill fill-25 cyan"></div>
                   </div>
-                  <div class="meter-footnote mono">2 Directs Unlocks Generation 2 &bull; 9 Max Team Spots</div>
+                  <div class="meter-footnote mono">2 Directs Unlocks Generation 2 &bull; 100 Team Spots (10 each)</div>
                 </div>
               </div>
 
@@ -680,7 +682,7 @@
                 <div class="cypheir-meta-cluster mono">
                   <div class="meta-row">
                     <span class="meta-k">POTENTIAL</span>
-                    <span class="meta-v text-cyan">$135 USDT</span>
+                    <span class="meta-v text-cyan">$1,500.00 USDT</span>
                   </div>
                   <div class="meta-row">
                     <span class="meta-k">GENERATION</span>
@@ -735,7 +737,7 @@
                   <span class="cypheir-req-tag mono text-violet">3 &amp; 5 DIRECTS UNLOCKS</span>
                 </div>
                 <p class="cypheir-desc">
-                  Combined 6% ($18.00 total) distributed across generational tiers 3 and 4 network spread. Drives deep leader momentum with 108 theoretical member nodes.
+                  Combined 6% ($18.00 total) distributed across generational tiers 3 and 4 network spread. Drives deep leader momentum with 11,000 theoretical members (10 directs each).
                 </p>
 
                 <div class="matrix-cyber-meter cypheir-meter">
@@ -754,7 +756,7 @@
                 <div class="cypheir-meta-cluster mono">
                   <div class="meta-row">
                     <span class="meta-k">COMBINED</span>
-                    <span class="meta-v text-violet">$972 USDT</span>
+                    <span class="meta-v text-violet">$99,000.00 USDT</span>
                   </div>
                   <div class="meta-row">
                     <span class="meta-k">GENERATION</span>
@@ -809,7 +811,7 @@
                   <span class="cypheir-req-tag mono text-blue">7 &ndash; 10 DIRECTS</span>
                 </div>
                 <p class="cypheir-desc">
-                  Triple-depth geometric volume yielding 6% total across deep active generation lines. Scales revenue massively across up to 3,159 organization members.
+                  Triple-depth geometric volume yielding 6% total across deep active generation lines. Scales revenue massively across up to 11.1M organization members (10 directs each).
                 </p>
 
                 <div class="matrix-cyber-meter cypheir-meter">
@@ -828,7 +830,7 @@
                 <div class="cypheir-meta-cluster mono">
                   <div class="meta-row">
                     <span class="meta-k">POTENTIAL</span>
-                    <span class="meta-v text-blue">$18,954 USDT</span>
+                    <span class="meta-v text-blue">$66.6M USDT</span>
                   </div>
                   <div class="meta-row">
                     <span class="meta-k">GENERATION</span>
@@ -887,7 +889,7 @@
 
                 <div class="matrix-cyber-meter cypheir-meter">
                   <div class="meter-info mono">
-                    <span class="meter-lbl">FULL MATRIX UNLOCK</span>
+                    <span class="meter-lbl">FULL LEVEL UNLOCK</span>
                     <span class="meter-val text-gold">&star; 15 Direct Partners</span>
                   </div>
                   <div class="meter-track">
@@ -929,7 +931,7 @@
         <div class="matrix-calc-box glass border-beam-card" data-reveal>
           <div class="calc-header">
             <div class="calc-tag mono">INTERACTIVE SIMULATOR</div>
-            <h3>Explore Any Matrix Generation (Level 1 &ndash; 20)</h3>
+            <h3>Explore Any Generation (Level 1 &ndash; 20)</h3>
             <p>Select any level to inspect instant commission payout, required direct qualifications, and theoretical team revenue.</p>
           </div>
           <div class="level-slider-wrap mdial-pills-fallback" aria-hidden="true">
@@ -954,7 +956,7 @@
                   <span class="calc-stat-sub mono" id="calcReqSub">Instant Active</span>
                 </div>
                 <div class="calc-stat">
-                  <span class="calc-stat-label mono">THEORETICAL TEAM (3&times;3)</span>
+                  <span class="calc-stat-label mono">THEORETICAL TEAM (10 DIRECTS EACH)</span>
                   <span class="calc-stat-val" id="calcMembers" style="color: var(--cyan);">3 Members</span>
                   <span class="calc-stat-sub mono" id="calcTotal">$90.00 Max</span>
                 </div>
@@ -962,14 +964,14 @@
               <div class="mdial-directs">
                 <div class="mdial-directs-head">
                   <span class="mono">TRY IT: SIMULATE ACTIVE DIRECTS</span>
-                  <output class="mdial-directs-val" id="matrixDirectsVal" for="matrixDirects">0</output>
+                  <output class="mdial-directs-val" id="matrixDirectsVal" for="matrixDirects">10</output>
                 </div>
-                <input type="range" id="matrixDirects" min="0" max="15" step="1" value="0" autocomplete="off" aria-label="Simulate active directs" />
+                <input type="range" id="matrixDirects" min="0" max="15" step="1" value="10" autocomplete="off" aria-label="Simulate active directs" />
                 <div class="mdial-directs-out mono">
-                  <span>Levels unlocked <b id="matrixUnlocked">1 / 20</b></span>
-                  <span>Per member, all unlocked levels <b id="matrixPerMember">$30</b></span>
+                  <span>Levels unlocked <b id="matrixUnlocked">7 / 20</b></span>
+                  <span>Per member, all unlocked levels <b id="matrixPerMember">$81</b></span>
                 </div>
-                <p class="mdial-next mono" id="matrixNext">Next: L2 unlocks at 2 directs</p>
+                <p class="mdial-next mono" id="matrixNext">Next: L8 unlocks at 15 directs</p>
               </div>
             </div>
           </div>
@@ -1048,7 +1050,7 @@
                   <span class="mono" style="font-size: 0.75rem; color: var(--green);">&check; ZERO LIABILITY</span>
                   <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">No Fractional Reserves</h4>
                   <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
-                    Platforms that promise 1% daily interest inevitably crash when new deposits slow down. DAOvault AI owes zero daily liability to anyone; every single dollar distributed originates directly from verified package entries.
+                    Platforms that promise 1% daily interest inevitably crash when new deposits slow down. DAOVAULT owes zero daily liability to anyone; every single dollar distributed originates directly from verified package entries.
                   </p>
                 </div>
                 <div class="mono" style="font-size: 0.78rem; color: var(--green); border-top: 1px solid rgba(16,185,129,0.3); padding-top: 0.6rem;">
@@ -1064,7 +1066,7 @@
               <div class="flip-card-front">
                 <div>
                   <span class="mono" style="font-size: 0.75rem; color: var(--cyan);">LAYER 03 &middot; DISTRIBUTION</span>
-                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">40% 20-Level Matrix</h3>
+                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">40% 20-Level Income</h3>
                   <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
                     Automated programmatic commission split across 20 generational uplines.
                   </p>
@@ -1082,7 +1084,7 @@
                   </p>
                 </div>
                 <div class="mono" style="font-size: 0.78rem; color: var(--cyan); border-top: 1px solid rgba(34,211,238,0.3); padding-top: 0.6rem;">
-                  Total Matrix: $120 / $300 Entry
+                  Total Levels: $120 / $300 Entry
                 </div>
               </div>
             </div>
@@ -1147,7 +1149,7 @@
               <tr>
                 <th>Dimension</th>
                 <th>Traditional ROI / Ponzi Schemes</th>
-                <th>DAOvault AI Web3 Protocol</th>
+                <th>DAOVAULT Web3 Protocol</th>
               </tr>
             </thead>
             <tbody>
@@ -1172,7 +1174,7 @@
                 <td><span class="badge-positive">&rarr; Strict 50:50 Power Leg Mathematical Rule</span></td>
               </tr>
               <tr>
-                <td><strong>Matrix Depth</strong></td>
+                <td><strong>Level Depth</strong></td>
                 <td><span class="badge-negative">&cross; Opaque 3–5 levels with hidden admin cut</span></td>
                 <td><span class="badge-positive">&rarr; Programmatic 20 Levels (40% Total Distribution)</span></td>
               </tr>
@@ -1200,7 +1202,7 @@
           </div>
           <p class="section-tag mono">ONBOARDING TIMELINE</p>
           <h2 class="section-title">
-            <span class="wm-line"><span>How to Join <span class="grad-text">DAOvault AI</span></span></span>
+            <span class="wm-line"><span>How to Join <span class="grad-text">DAOVAULT</span></span></span>
           </h2>
           <p class="section-sub">Zero KYC, zero passwords. Five simple steps to begin building your decentralized network.</p>
         </header>
@@ -1261,7 +1263,7 @@
                 <span class="join-step-chev" aria-hidden="true"></span>
               </button>
               <div class="join-step-body"><div>
-                <p>Bring active direct members to unlock deeper generational matrix levels up to Level 20.</p>
+                <p>Bring active direct members to unlock deeper generational levels up to Level 20.</p>
                 <ul class="join-step-tags mono"><li>L1 open</li><li>15 directs</li><li>All 20 levels</li></ul>
               </div></div>
             </li>
@@ -1389,7 +1391,7 @@
         <div data-reveal>
           <a href="index.html" class="brand" style="margin-bottom: 1rem; display: inline-flex;">
             <div class="brand-icon brand-icon--logo" data-dv-logo="mark"><img src="/favicon.png" alt="" width="40" height="40" /></div>
-            <span>DAOvault<span class="grad-text">.AI</span></span>
+            <span><span class="grad-text">DAO</span>vault</span>
           </a>
           <p style="color: var(--text-dim); font-size: 0.88rem; max-width: 320px; line-height: 1.6;">
             Where communities build wealth together. A transparent, community-driven DeFi ecosystem built natively on BNB Smart Chain (BEP-20).
@@ -1403,7 +1405,7 @@
             <li><a href="#vision">Our Vision</a></li>
             <li><a href="#about">Ecosystem</a></li>
             <li><a href="#ranks">Rank Rewards</a></li>
-            <li><a href="#matrix">Level Matrix</a></li>
+            <li><a href="#matrix">Level Plan</a></li>
             <li><a href="#compare">Comparison</a></li>
             <li><a href="#how">How to Join</a></li>
           </ul>
@@ -1435,7 +1437,6 @@
     <div class="wallet-stage-wrap" id="walletStageWrap">
       <!-- Ambient Rotating 3D Coin Lottie Backdrop (Glows Behind Dialog) -->
       <div class="modal-backdrop-coin-orbit" aria-hidden="true">
-        <div id="modalBackdropCoinLottie" class="backdrop-coin-lottie"></div>
       </div>
 
       <!-- Central Web3 Connect Wallet Dialog Box -->

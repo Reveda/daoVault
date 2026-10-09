@@ -368,12 +368,15 @@ export function initScrollAnimations(): void {
 
       const tableRows = tableWrap.querySelectorAll('tbody tr');
       if (tableRows.length) {
+        // phones show the rows as a list of cards: they rise in rather than slide sideways
+        const rowsAsCards = window.matchMedia('(max-width: 600px)').matches;
         gsap.fromTo(
           tableRows,
-          { x: -30, opacity: 0 },
+          rowsAsCards ? { y: 26, opacity: 0 } : { x: -30, opacity: 0 },
           {
             scrollTrigger: { trigger: tableWrap, start: 'top 80%', once: true },
             x: 0,
+            y: 0,
             opacity: 1,
             duration: 0.5,
             stagger: 0.08,

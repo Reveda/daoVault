@@ -15,7 +15,7 @@ export const RANK_TIERS = [
   { name: 'Builder', volume: 50, reward: 250 },
   { name: 'Leader', volume: 100, reward: 500 },
   { name: 'Elite Leader', volume: 200, reward: 1000 },
-  { name: 'Executive', volume: 350, reward: 2500 },
+  { name: 'Executive', volume: 375, reward: 2500 },
   { name: 'Crown Executive', volume: 1000, reward: 5000 },
   { name: 'Crown Director', volume: 3000, reward: 10000 },
   { name: 'Ambassador', volume: 7000, reward: 20000 },

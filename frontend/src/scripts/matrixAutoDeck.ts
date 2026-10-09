@@ -15,11 +15,12 @@ let currentActiveTier = 0;
  * described in project.md and can be changed on #levelMatrixGrid with
  * data-package-price="..." when the value comes from the API.
  */
+// potentialMultiplier = theoretical members at those levels if every member brings 10 directs
 const MATRIX_TIERS = [
   { commission: 0.10, potentialMultiplier: 1 },
-  { commission: 0.05, potentialMultiplier: 9 },
-  { commission: 0.03, potentialMultiplier: 108 },
-  { commission: 0.02, potentialMultiplier: 3159 },
+  { commission: 0.05, potentialMultiplier: 100 },          // L2: 10 x 10 members
+  { commission: 0.03, potentialMultiplier: 11_000 },       // L3 + L4: 1,000 + 10,000
+  { commission: 0.02, potentialMultiplier: 11_100_000 },   // L5-L7: 10^5 + 10^6 + 10^7
   { commission: 0.01, potentialMultiplier: 13 },
 ] as const;
 
@@ -44,7 +45,10 @@ function syncMatrixMoney(deck: HTMLElement): void {
     const metaValue = card.querySelector<HTMLElement>('.cypheir-meta-cluster .meta-v');
     if (metaValue && index > 0 && index < cards.length - 1) {
       const potential = commissionValue * tier.potentialMultiplier;
-      metaValue.textContent = `${money(potential)} USDT`;
+      // millions in short form so the card stays one line: $66.6M USDT
+      metaValue.textContent = potential >= 1_000_000
+        ? `$${(potential / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 2 })}M USDT`
+        : `${money(potential)} USDT`;
     }
 
     card.style.setProperty('--matrix-package-price', String(packagePrice));

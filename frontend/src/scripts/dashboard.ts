@@ -13,6 +13,7 @@ import {
   getPendingReferral,
   countUp,
   initOffscreenPause,
+  enableTouchPress,
   BSC_CHAIN_ID,
 } from './core.ts';
 import {
@@ -76,6 +77,7 @@ const LEVEL_MATRIX: LevelMatrixRow[] = [
 document.addEventListener('DOMContentLoaded', async () => {
   initDvLogos(); // animated DAOVAULT logo: preloader, header, footer
   initOffscreenPause(); // looping CSS animations pause off screen
+  enableTouchPress(); // smooth card press feedback on phones (iOS needs a touch listener)
   initReferralCapture();
   // the DAOvault mark forms while the wallet is checked; a calm galaxy once the member is in
   const scene = init3DScene('vault');

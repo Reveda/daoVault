@@ -21,7 +21,7 @@ export const RANKS = [
   { rank: 2, name: "Builder", volume: 50, rewardUsd: 250 },
   { rank: 3, name: "Leader", volume: 100, rewardUsd: 500 },
   { rank: 4, name: "Elite Leader", volume: 200, rewardUsd: 1_000 },
-  { rank: 5, name: "Executive", volume: 350, rewardUsd: 2_500 },
+  { rank: 5, name: "Executive", volume: 375, rewardUsd: 2_500 }, // owner, 2026-10-09: 375 per side (plan image said 350)
   { rank: 6, name: "Crown Executive", volume: 1_000, rewardUsd: 5_000 },
   { rank: 7, name: "Crown Director", volume: 3_000, rewardUsd: 10_000 },
   { rank: 8, name: "Ambassador", volume: 7_000, rewardUsd: 20_000 },

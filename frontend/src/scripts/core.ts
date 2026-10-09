@@ -77,7 +77,12 @@ export function bootPreloader(onComplete?: () => void): void {
       if (bar) bar.style.width = pct + '%';
     }
     if (pct >= 100) {
-      if (loader) loader.classList.add('ready');
+      if (loader) {
+        loader.classList.add('ready');
+        // once the 0.6s fade is over, take the splash out of the page: hidden, its logo
+        // kept 5 animations running for the whole visit (wasted work on every frame)
+        window.setTimeout(() => loader.remove(), 800);
+      }
       document.body.classList.add('ready');
       // heavy setup (scroll animations etc.) runs in its own task once the splash fade has
       // started, not inside this frame (it stalled the splash exit for ~240ms). The hero
@@ -163,6 +168,26 @@ export function initScrollReveal(): void {
  * Pauses the looping CSS animations of sections that are off screen (.is-offscreen,
  * see the Performance block in main.css). Saves battery and keeps scrolling smooth.
  */
+/** Cards that glow gold when touched (main.css .tap-glow). */
+const TAP_GLOW_CARDS = '.compare-matrix tbody tr, .glass, .metric-card, .calc-stat, .step-card, .reward-box, .crypto-exchange-card';
+
+/**
+ * Touch feedback. iOS Safari only applies :active (the card press in main.css) when the page
+ * has a touchstart listener. A touched card also gets .tap-glow for ~0.65s, so even a quick
+ * tap shows a gold glow that then fades out (:active alone lasts only while the finger is
+ * down). Passive: it never delays scrolling.
+ */
+export function enableTouchPress(): void {
+  const timers = new WeakMap<Element, number>();
+  document.addEventListener('touchstart', (e) => {
+    const card = (e.target as Element | null)?.closest?.(TAP_GLOW_CARDS);
+    if (!card) return;
+    card.classList.add('tap-glow');
+    window.clearTimeout(timers.get(card));
+    timers.set(card, window.setTimeout(() => card.classList.remove('tap-glow'), 650));
+  }, { passive: true });
+}
+
 export function initOffscreenPause(): void {
   if (!('IntersectionObserver' in window)) return;
   const io = new IntersectionObserver((entries) => {
