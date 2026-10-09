@@ -56,6 +56,23 @@ export class UsersService {
       throw error;
     }
   }
+
+  /**
+   * Latest invite link wins (owner, 2026-10-09): until the wallet pays, the invite code it
+   * opened most recently is its sponsor, saved here so a change of browser or wallet app
+   * keeps it. Activated wallets keep their real upline and are left untouched. The code
+   * must belong to a registered wallet and cannot be the wallet's own code.
+   */
+  async savePendingSponsor(walletAddress: string, sponsorCode: string) {
+    const code = sponsorCode.trim().toUpperCase();
+    const me = await this.register(walletAddress);
+    if (me.activated) return { pendingSponsorCode: null, activated: true };
+    const fail = (message: string, statusCode: number) => Object.assign(new Error(message), { statusCode });
+    if (code === me.referralCode) throw fail("That is your own invite code.", 400);
+    if (!(await usersRepository.codeExists(code))) throw fail("Invite code not found.", 404);
+    await usersRepository.setPendingSponsor(me.walletAddress, code);
+    return { pendingSponsorCode: code, activated: false };
+  }
 }
 
 export const usersService = new UsersService();

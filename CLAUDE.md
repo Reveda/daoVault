@@ -12,7 +12,10 @@ Web3 referral/affiliate reward dApp on **BNB Smart Chain (BEP-20)**. Users conne
   other legs combined (UI: "Other Leg") (Starter 25 = 25 + 25 = 50 total); matchedVolume = min(power, other). Replaced the old split rule
   (V/2 + V/2). Single source: backend/src/modules/plan/plan.ts.
 - Earnings cap 25x ($7,500) of level income per package (was 10x; rank rewards outside it); 5% withdrawal fee.
-- Referral: `?ref=CODE` saved to `localStorage['daovault_pending_ref']`. Codes are `DV` + first 6 hex chars of wallet (longer if taken; the server value wins).
+- Referral: `?ref=CODE` saved to `localStorage['daovault_pending_ref']`; on the next dashboard visit of an unpaid wallet it is saved on the
+  server (POST /users/pending-sponsor -> users.pending_sponsor_code) and the browser copy dropped. LATEST invite link
+  opened before paying wins (owner, 2026-10-09); activation pays with that sponsor from any browser. The contract still
+  requires an ACTIVATED sponsor (open owner decision: allow unactivated parents, commission option A/B). Codes are `DV` + first 6 hex chars of wallet (longer if taken; the server value wins).
 
 ## Layout
 ```

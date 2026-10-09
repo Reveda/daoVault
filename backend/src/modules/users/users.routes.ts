@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { getSponsorByCode, getUserProfile, registerWallet } from "./users.controller.js";
+import { getSponsorByCode, getUserProfile, registerWallet, savePendingSponsor } from "./users.controller.js";
 import { validateRequest } from "../../middlewares/validateRequest.js";
 import { requireSelfOrAdmin } from "../../middlewares/auth.js";
 import { z } from "zod";
@@ -19,6 +19,17 @@ usersRouter.post(
   validateRequest({ body: z.object({ walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address") }) }),
   requireSelfOrAdmin("body"),
   registerWallet,
+);
+
+// latest invite link opened before paying = sponsor, kept on the server (any browser can pay)
+usersRouter.post(
+  "/pending-sponsor",
+  validateRequest({ body: z.object({
+    walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address"),
+    sponsorCode: z.string().regex(/^DV[A-Fa-f0-9]{6,14}$/, "Invalid referral code"),
+  }) }),
+  requireSelfOrAdmin("body"),
+  savePendingSponsor,
 );
 
 usersRouter.get(

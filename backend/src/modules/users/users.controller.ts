@@ -19,6 +19,15 @@ export const registerWallet: RequestHandler = async (req, res, next) => {
   }
 };
 
+export const savePendingSponsor: RequestHandler = async (req, res, next) => {
+  try {
+    const data = await usersService.savePendingSponsor(String(req.body.walletAddress), String(req.body.sponsorCode));
+    res.json({ success: true, data });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getSponsorByCode: RequestHandler = async (req, res, next) => {
   try {
     const data = await usersService.getSponsorByCode(String(req.params.code));

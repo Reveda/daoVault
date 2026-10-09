@@ -2,6 +2,8 @@ export type DashboardData = {
   walletAddress: string;
   referralCode: string;
   sponsorCode: string | null;
+  /** before payment: the latest invite code opened, saved on the server (null once activated) */
+  pendingSponsorCode: string | null;
   activeDirects: number;
   levelsUnlocked: number;
   currentRank: number;
@@ -120,6 +122,11 @@ export function getLevelMembers(walletAddress: string, level: number, page: numb
 /** First dashboard visit: reserves the wallet's permanent referral code (no payment needed; idempotent). */
 export function registerWallet(walletAddress: string, token: string): Promise<{ walletAddress: string; referralCode: string; activated: boolean }> {
   return post('/users/register', { walletAddress }, token);
+}
+
+/** Latest invite link wins: saves the code as this unpaid wallet's sponsor (any browser can then pay). */
+export function savePendingSponsor(walletAddress: string, sponsorCode: string, token: string): Promise<{ pendingSponsorCode: string | null; activated: boolean }> {
+  return post('/users/pending-sponsor', { walletAddress, sponsorCode }, token);
 }
 
 /** Invite code -> sponsor wallet (404 when the code is unknown or not activated). */

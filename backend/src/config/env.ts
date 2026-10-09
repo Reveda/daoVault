@@ -18,7 +18,8 @@ const envSchema = z.object({
   API_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   API_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(120),
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
-  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+  // 60 = 30 sign-ins per IP per 15 min (each sign-in is challenge + verify; owner, 2026-10-09)
+  AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(60),
   FINANCIAL_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   FINANCIAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   LOG_REQUESTS: z.coerce.boolean().default(true),

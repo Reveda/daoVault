@@ -30,6 +30,7 @@ import {
   ApiError,
   getDashboardData,
   getSponsorByCode,
+  savePendingSponsor,
   registerWallet,
   getWithdrawals,
   requestWithdrawal,
@@ -175,6 +176,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         showToast('Activate your wallet to unlock your dashboard.', true);
         break;
       }
+      if (error instanceof ApiError && error.status === 429) {
+        // rate limited (too many sign-ins from this network): say so, not "server down"
+        showToast(error.message, true);
+        serverDown = true;
+        break;
+      }
       const retryable = !(error instanceof ApiError) || error.status >= 500;
       if (retryable && attempt < 12) {
         if (attempt === 0) showToast('Waking up the DAOvault server, one moment...');
@@ -196,8 +203,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   const hasLiveData = dashboardData !== null;
   scene?.setScene('dash');
 
+  // Latest invite link wins (owner, 2026-10-09): the code this browser captured becomes the
+  // server-side sponsor of this unpaid wallet, so it can pay from any browser or wallet app.
+  // The browser copy is then dropped, so an older link left in another browser can never
+  // overwrite a newer one.
+  if (dashboardData && !pkg) {
+    const ref = getPendingReferral().replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    if (ref && ref !== dashboardData.referralCode && ref !== dashboardData.pendingSponsorCode) {
+      try {
+        dashboardData.pendingSponsorCode = (await savePendingSponsor(account, ref, token)).pendingSponsorCode;
+        clearPendingReferral();
+      } catch (error) {
+        if (error instanceof ApiError && error.status < 500) {
+          clearPendingReferral();
+          showToast(`Invite code ${ref} was not found. Check your invite link.`, true);
+        }
+      }
+    } else if (ref) {
+      clearPendingReferral(); // own code, or already saved on the server
+    }
+  }
+
   initReferralLink(account, dashboardData, serverDown);
-  initActivation(account, Boolean(pkg), serverDown);
+  initActivation(account, Boolean(pkg), serverDown, dashboardData?.pendingSponsorCode ?? getPendingReferral());
   updateOverviewMetrics(activeDirects, totalEarned, capEarned, maxCap, dashboardData?.currentRank, pkg?.status);
   updateMemberDetails(dashboardData, Boolean(pkg), capEarned, maxCap);
 
@@ -225,7 +253,7 @@ function initDashboardNavigation(): void {
   });
 }
 
-function initActivation(account: string, activated: boolean, serverDown = false): void {
+function initActivation(account: string, activated: boolean, serverDown = false, sponsorCode = ''): void {
   const card = document.getElementById('activationCard');
   const button = document.getElementById('dashActivateBtn') as HTMLButtonElement | null;
   const status = document.getElementById('activationStatus');
@@ -243,8 +271,9 @@ function initActivation(account: string, activated: boolean, serverDown = false)
     if (status) status.textContent = 'Payment contract is not configured yet.';
     return;
   }
-  const code = getPendingReferral();
-  if (status) status.textContent = code ? `Invited by ${code.replace(/[^A-Za-z0-9]/g, '')} · one-time $300 USDT` : 'Joining without a sponsor · one-time $300 USDT';
+  const code = sponsorCode.replace(/[^A-Za-z0-9]/g, '');
+  // the member sees whose team they join before paying
+  if (status) status.textContent = code ? `You are joining under ${code} · one-time $300 USDT` : 'Joining without a sponsor · one-time $300 USDT';
   button.addEventListener('click', async () => {
     button.disabled = true;
     try {
@@ -386,7 +415,8 @@ function initReferralLink(account: string, data: DashboardData | null, serverDow
   // work once the wallet is activated (the contract accepts activated sponsors only)
   const activated = Boolean(data?.packages?.length);
   // the member's own invite code is never their sponsor (they opened their own link)
-  let pendingRef = getPendingReferral().replace(/[^A-Za-z0-9]/g, '');
+  // before payment the sponsor is the latest invite saved on the server (browser copy if offline)
+  let pendingRef = (data?.pendingSponsorCode ?? getPendingReferral()).replace(/[^A-Za-z0-9]/g, '');
   if (data && pendingRef === refCode) { clearPendingReferral(); pendingRef = ''; }
   if (sponsorTag) {
     // before activation the sponsor is still the invite code this visitor arrived with

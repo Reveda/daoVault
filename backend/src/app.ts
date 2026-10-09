@@ -41,6 +41,12 @@ app.get("/", (_req, res) => {
   res.json({ name: "DAOvault AI API", version: "0.1.0", docs: "API is under construction" });
 });
 
+// API answers hold private member data and pass through the frontend's rewrite proxy:
+// never stored by the browser or any cache in between
+app.use(env.API_PREFIX, (_req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 app.use(`${env.API_PREFIX}/health`, healthRouter);
 app.use(apiRateLimiter);
 app.use(`${env.API_PREFIX}/users`, usersRouter);

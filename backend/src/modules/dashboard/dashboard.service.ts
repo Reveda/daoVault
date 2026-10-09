@@ -31,6 +31,8 @@ export class DashboardService {
       walletAddress: user.walletAddress,
       referralCode: user.referralCode,
       sponsorCode: user.upline?.referralCode ?? null,
+      // before payment: the latest invite code opened (users.savePendingSponsor)
+      pendingSponsorCode: user.packages.length ? null : user.pendingSponsorCode ?? null,
       activeDirects: user.activeDirectsCount,
       levelsUnlocked: unlockedLevels(user.activeDirectsCount),
       currentRank: user.currentRank,

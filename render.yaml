@@ -35,7 +35,7 @@ services:
       - key: AUTH_RATE_LIMIT_WINDOW_MS
         value: 900000
       - key: AUTH_RATE_LIMIT_MAX
-        value: 20
+        value: 60
       - key: FINANCIAL_RATE_LIMIT_WINDOW_MS
         value: 60000
       - key: FINANCIAL_RATE_LIMIT_MAX

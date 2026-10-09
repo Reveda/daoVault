@@ -34,6 +34,10 @@ model User {
   currentRank        Int            @default(0) @map("current_rank")
   /// activated packages anywhere below this member (1 DAO = 1 package); own package not included
   teamVolume         Int            @default(0) @map("team_volume")
+  /// invite code of the LATEST referral link this wallet opened before paying (owner, 2026-10-09).
+  /// Saved on the server so the member can pay from any browser or wallet app; the real
+  /// upline link is still made at activation, from the sponsor in the on-chain payment.
+  pendingSponsorCode String?        @map("pending_sponsor_code") @db.VarChar(16)
   createdAt          DateTime       @default(now()) @map("created_at")
   upline             User?          @relation("UserUpline", fields: [uplineId], references: [id])
   downline            User[]        @relation("UserUpline")
