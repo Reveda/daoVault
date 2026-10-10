@@ -34,7 +34,6 @@ if (typeof window !== 'undefined') {
     const { info, provider } = event.detail || {};
     if (info && provider) {
       discoveredWallets.set(info.uuid, { info, provider });
-      console.log(`[DAOvault Wallet TS] Discovered wallet: ${info.name}`);
       window.dispatchEvent(new CustomEvent('daovault:walletsUpdated'));
     }
   });
@@ -183,7 +182,6 @@ export async function ensureBSCNetwork(provider: any): Promise<void> {
     const chainId = parseInt(chainIdHex, 16);
 
     if (chainId !== BSC_CHAIN_ID) {
-      console.log(`[DAOvault] Wrong chain (${chainId}), requesting switch to BSC (${BSC_CHAIN_ID})...`);
       try {
         await provider.request({
           method: 'wallet_switchEthereumChain',

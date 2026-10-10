@@ -17,7 +17,6 @@ export function initReferralCapture(): void {
     if (ref && ref.trim()) {
       const cleanRef = ref.trim().toUpperCase();
       localStorage.setItem('daovault_pending_ref', cleanRef);
-      console.log('[DAOvault] Referral code captured:', cleanRef);
     }
   } catch (e) {
     console.warn('[DAOvault] LocalStorage inaccessible for referral:', e);

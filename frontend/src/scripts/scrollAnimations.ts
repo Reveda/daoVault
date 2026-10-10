@@ -432,5 +432,4 @@ export function initScrollAnimations(): void {
     ScrollTrigger.refresh();
   }, 350);
 
-  console.log('[DAOvault] Dynamic Section Scroll Animations Active on All Sections ✓');
 }

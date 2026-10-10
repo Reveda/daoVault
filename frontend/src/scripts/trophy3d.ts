@@ -67,7 +67,14 @@ function glowTexture(): THREE.CanvasTexture {
   return tex;
 }
 
-function buildApexTrophy(): void {
+/** let the browser paint and respond between the heavy build steps */
+const yieldTask = () => new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+
+/**
+ * Builds the trophy in three short tasks (renderer, reflections, geometry) instead of one
+ * long one: Chrome flagged the single 124ms task ("'requestIdleCallback' handler took").
+ */
+async function buildApexTrophy(): Promise<void> {
   const stage = document.getElementById('trophyVisual');
   const slot = document.getElementById('trophyLottie');
   if (!stage || !slot) return;
@@ -92,6 +99,7 @@ function buildApexTrophy(): void {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
+  await yieldTask();
 
   const scene = new THREE.Scene();
   if (lite) {
@@ -104,6 +112,7 @@ function buildApexTrophy(): void {
     const pmrem = new THREE.PMREMGenerator(renderer);
     scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
   }
+  await yieldTask();
 
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 100);
   camera.position.set(0, 0.6, 8.0);
@@ -205,6 +214,7 @@ function buildApexTrophy(): void {
   base.add(plaqueLogo);
   trophy.add(base);
   trophy.position.y = -0.15;
+  await yieldTask();
 
   // DV coins: a ring of coins orbiting the trophy + a fountain of coins popping out of the cup.
   // Both are InstancedMeshes (one draw call each), so this stays light on phones.
@@ -435,15 +445,15 @@ export function initApexTrophy(): void {
   // loop still only runs while the trophy is visible.
   if (LITE) {
     const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
-    if (idle) idle(() => buildApexTrophy(), { timeout: 1200 }); else window.setTimeout(buildApexTrophy, 300);
+    if (idle) idle(() => void buildApexTrophy().catch(() => {}), { timeout: 1200 }); else window.setTimeout(() => void buildApexTrophy().catch(() => {}), 300);
     return;
   }
-  if (!('IntersectionObserver' in window)) { buildApexTrophy(); return; }
+  if (!('IntersectionObserver' in window)) { void buildApexTrophy().catch(() => {}); return; }
   const io = new IntersectionObserver(([entry]) => {
     if (!entry.isIntersecting) return;
     io.disconnect();
     const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
-    if (idle) idle(() => buildApexTrophy(), { timeout: 600 }); else window.setTimeout(buildApexTrophy, 0);
+    if (idle) idle(() => void buildApexTrophy().catch(() => {}), { timeout: 600 }); else window.setTimeout(() => void buildApexTrophy().catch(() => {}), 0);
   }, { rootMargin: '600px 0px' });
   io.observe(stage);
 }

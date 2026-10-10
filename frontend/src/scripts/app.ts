@@ -67,13 +67,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   showLaunchNotice('landing', 'We’ll be live soon',
     'DAOVAULT is getting ready to launch on BNB Smart Chain. Connect your wallet now to reserve your permanent referral link. Activations open at launch.');
 
-  bootPreloader(() => {
-    initScrollReveal(); // fallback IntersectionObserver for [data-reveal] without GSAP
-    initCircuitSpine();
-    initTrophyBoom();
-    // GSAP ScrollTrigger — cinematic per-section scroll animations
-    initScrollAnimations();
-  });
+  // after the splash: the heavy setup as separate small tasks (one long task made Chrome
+  // report "'setTimeout' handler took 108ms" and held the main thread)
+  bootPreloader(() => runInSteps([
+    initScrollReveal, // fallback IntersectionObserver for [data-reveal] without GSAP
+    initCircuitSpine,
+    initTrophyBoom,
+    initScrollAnimations, // GSAP ScrollTrigger — cinematic per-section scroll animations
+  ]));
 
   const header = document.querySelector('.top-header');
   window.addEventListener('scroll', () => {
@@ -777,4 +778,14 @@ function checkInviteCode(): void {
       }
     },
   );
+}
+
+/** Runs each setup step in its own task, so the browser can paint and respond in between. */
+function runInSteps(steps: Array<() => void>): void {
+  const next = (i: number) => {
+    if (i >= steps.length) return;
+    steps[i]();
+    window.setTimeout(() => next(i + 1), 0);
+  };
+  next(0);
 }

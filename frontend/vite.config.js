@@ -9,6 +9,8 @@ export const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'uns
 
 export default defineConfig({
   root: '.',
+  // production: no console.log / info / debug in the shipped code (warn and error stay)
+  esbuild: { pure: ['console.log', 'console.info', 'console.debug'] },
   build: {
     // hashed build files get their own folder so the host can cache them for a year
     // (render.yaml headers); public/assets (logo images, video) keeps short caching
