@@ -1,7 +1,7 @@
 import { Contract, ZeroAddress, parseUnits } from 'ethers';
 import { BSC_CHAIN_ID, showToast } from './core.ts';
 import { getActiveProvider, getCurrentAccount, getSignerFor, requireBSCNetwork } from './wallet.ts';
-import { ApiError, getSponsorByCode, verifyActivation } from './api.ts';
+import { ApiError, getSponsorByCode, verifyActivation, verifyTopUp } from './api.ts';
 
 const PENDING_TX_KEY = 'daovault_pending_activation_tx';
 
@@ -19,6 +19,7 @@ const PAYMENT_ABI = [
   'function usdt() view returns (address)',
   'function activationAmount() view returns (uint256)',
   'function activate(address sponsor)',
+  'function topUp()',
   'function isActivated(address user) view returns (bool)',
 ];
 
@@ -59,15 +60,20 @@ export async function resolveSponsor(code: string, self: string): Promise<{ wall
 
 /** A paid activation whose backend check failed (network etc.) is retried on the next visit. */
 export async function retryPendingActivation(walletAddress: string): Promise<boolean> {
-  let saved: { hash: string; wallet: string; sponsor: string } | null = null;
+  let saved: { hash: string; wallet: string; sponsor?: string; kind?: 'topup' } | null = null;
   try { saved = JSON.parse(localStorage.getItem(PENDING_TX_KEY) || 'null'); } catch { /* ignore */ }
   if (!saved || saved.wallet !== walletAddress.toLowerCase()) return false;
-  await verifyActivation({ walletAddress, transactionHash: saved.hash, sponsorAddress: saved.sponsor });
+  if (saved.kind === 'topup') await verifyTopUp({ walletAddress, transactionHash: saved.hash });
+  else await verifyActivation({ walletAddress, transactionHash: saved.hash, sponsorAddress: saved.sponsor ?? ZeroAddress });
   try { localStorage.removeItem(PENDING_TX_KEY); } catch { /* ignore */ }
   return true;
 }
 
-export async function activateWallet(sponsorAddress = ZeroAddress): Promise<string> {
+/**
+ * Shared checks before any $300 payment: payments allowed, contracts configured, wallet on
+ * our BSC network, and the deployed contract's token and amount match this build.
+ */
+async function preparePayment() {
   if (REAL_PAYMENTS_LOCKED) throw new Error(REAL_PAYMENTS_LOCKED_MSG);
   if (!isPaymentConfigured()) {
     throw new Error('Payment contract is not configured. Add VITE_PAYMENT_CONTRACT_ADDRESS and VITE_USDT_CONTRACT_ADDRESS.');
@@ -94,15 +100,24 @@ export async function activateWallet(sponsorAddress = ZeroAddress): Promise<stri
     throw new Error('Configured activation amount does not match the deployed payment contract.');
   }
 
-  const alreadyActivated = await payment.isActivated(walletAddress);
-  if (alreadyActivated) throw new Error('This wallet is already activated.');
+  return { walletAddress, token, payment, contractAmount };
+}
 
+/** USDT approval for exactly one payment, if the current one is not enough. */
+async function approveOnePayment(token: Contract, walletAddress: string, contractAmount: bigint): Promise<void> {
   const allowance = await token.allowance(walletAddress, PAYMENT_ADDRESS);
   if (allowance < contractAmount) {
-    showToast('Approve the activation amount in your wallet...');
+    showToast('Approve the $300 in your wallet...');
     const approval = await token.approve(PAYMENT_ADDRESS, contractAmount);
     await approval.wait();
   }
+}
+
+export async function activateWallet(sponsorAddress = ZeroAddress): Promise<string> {
+  const { walletAddress, token, payment, contractAmount } = await preparePayment();
+  const alreadyActivated = await payment.isActivated(walletAddress);
+  if (alreadyActivated) throw new Error('This wallet is already activated.');
+  await approveOnePayment(token, walletAddress, contractAmount);
 
   showToast('Confirm activation payment in your wallet...');
   const activation = await payment.activate(isAddress(sponsorAddress) ? sponsorAddress : ZeroAddress);
@@ -113,4 +128,23 @@ export async function activateWallet(sponsorAddress = ZeroAddress): Promise<stri
   await verifyActivation({ walletAddress, transactionHash: activation.hash, sponsorAddress: sponsor });
   try { localStorage.removeItem(PENDING_TX_KEY); } catch { /* ignore */ }
   return activation.hash;
+}
+
+/**
+ * Re-entry (owner, 2026-10-10): once every package has reached its cap, the member buys a new
+ * $300 package from the same wallet (same ID, same team). The contract only takes the payment;
+ * the backend verifies the ToppedUp event and adds the package. A failed backend check is
+ * retried on the next visit (retryPendingActivation).
+ */
+export async function topUpWallet(): Promise<string> {
+  const { walletAddress, token, payment, contractAmount } = await preparePayment();
+  if (!(await payment.isActivated(walletAddress))) throw new Error('Activate this wallet before a top-up.');
+  await approveOnePayment(token, walletAddress, contractAmount);
+  showToast('Confirm the $300 top-up in your wallet...');
+  const topUp = await payment.topUp();
+  await topUp.wait();
+  try { localStorage.setItem(PENDING_TX_KEY, JSON.stringify({ hash: topUp.hash, wallet: walletAddress.toLowerCase(), kind: 'topup' })); } catch { /* ignore */ }
+  await verifyTopUp({ walletAddress, transactionHash: topUp.hash });
+  try { localStorage.removeItem(PENDING_TX_KEY); } catch { /* ignore */ }
+  return topUp.hash;
 }

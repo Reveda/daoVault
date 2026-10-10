@@ -8,7 +8,8 @@
  *    after Log out, or when the wallet changes.
  */
 import { ApiError, getAuthChallenge, logoutAuthSession, refreshAuthSession, verifyAuthSignature } from './api.ts';
-import { getActiveProvider, getSignerFor } from './wallet.ts';
+import { hexlify, toUtf8Bytes } from 'ethers';
+import { getActiveProvider } from './wallet.ts';
 import { showToast } from './core.ts';
 
 type Access = { wallet: string; token: string; expiresAt: number };
@@ -82,8 +83,9 @@ export function signIn(wallet: string): Promise<string> {
     if (!provider) throw new Error('Reconnect your wallet to sign in.');
     const { message } = await getAuthChallenge(wallet);
     showToast('Sign the message in your wallet (free, no gas)...');
-    const signer = await getSignerFor(provider, wallet);
-    const signature = await signer.signMessage(message);
+    // straight personal_sign: signing a message needs no network, so a pending "switch to
+    // BSC" prompt (autoReconnect) can never break it the way an ethers provider would
+    const signature: string = await provider.request({ method: 'personal_sign', params: [hexlify(toUtf8Bytes(message)), wallet] });
     const session = await verifyAuthSignature(wallet, signature);
     return remember(wallet, session.token, session.expiresAt);
   })();

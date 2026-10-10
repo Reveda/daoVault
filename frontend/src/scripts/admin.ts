@@ -1,7 +1,9 @@
 /**
- * DAOvault admin: withdrawal queue. Access = wallet listed in ADMIN_WALLETS on the
- * backend + a fresh wallet signature. Payouts are sent by the admin from the treasury
- * wallet; the backend accepts "paid" only after it finds that USDT transfer on-chain.
+ * DAOvault admin = the company's Command Center (owner, 2026-10-10): overview KPIs, charts of
+ * the business (adminCharts.ts), how the system works with live numbers, and the withdrawal
+ * queue. Access = wallet listed in ADMIN_WALLETS on the backend + a wallet signature.
+ * Payouts are sent by the admin from the treasury wallet; the backend accepts "paid" only
+ * after it finds that USDT transfer on-chain. Background: the landing particle scene.
  */
 import { BSC_CHAIN_ID, formatAddress, showToast } from './core.ts';
 import { autoReconnect, connectWithProvider, getInstalledWallets } from './wallet.ts';
@@ -11,11 +13,16 @@ import {
   approveWithdrawal,
   completeWithdrawal,
   getAdminStats,
+  getAdminAnalytics,
   getAdminWithdrawals,
   rejectWithdrawal,
   type Withdrawal,
 } from './api.ts';
 import { initDvLogos } from './dvLogo.ts';
+import { renderCompanyOverview } from './companyOverview.ts';
+import { renderAdminCharts, renderTracking } from './adminCharts.ts';
+import { init3DScene } from './scene.ts';
+import { pageCount, renderPager } from './pager.ts';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
 const usd = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -26,6 +33,7 @@ const esc = (s: string) => s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`)
 let adminWallet = '';
 const token = () => sessionFor(adminWallet);
 let status: Withdrawal['status'] = 'PENDING';
+let listPage = 1;
 
 const HELP: Record<Withdrawal['status'], string> = {
   PENDING: 'Check the member, then Approve (or Reject with a reason: the amount returns to their balance).',
@@ -58,31 +66,31 @@ async function signIn(): Promise<void> {
   $('adminSignIn')!.hidden = true;
   $('adminLocked')!.hidden = true;
   $('adminApp')!.hidden = false;
-  $('adminState')!.textContent = '• Signed in as admin';
+  $('adminState')!.textContent = `• Signed in as admin · ${formatAddress(wallet)}`;
+  $('adminHeroActions')!.hidden = false;
+  $('adminToDash')!.hidden = false;
   await loadList();
 }
 
+/** KPIs + charts + live numbers (stats and analytics in parallel) */
 async function loadStats(): Promise<void> {
-  const s = await getAdminStats(await token());
-  const pending = s.withdrawals.PENDING;
-  const approved = s.withdrawals.PROCESSING;
-  const tile = (label: string, value: string, note = '') =>
-    `<div class="glass metric-card"><div class="metric-top"><span class="metric-label mono">${label}</span></div><div class="metric-val">${value}</div><div class="metric-footer mono">${note}</div></div>`;
-  $('adminStats')!.innerHTML = [
-    tile('Members', s.members.toLocaleString(), `${s.packages.toLocaleString()} packages · ${usd(s.volumeUsd)}`),
-    tile('Level income', usd(s.levelCommissionsUsd), 'credited to members'),
-    tile('Rank rewards', usd(s.rankRewardsUsd), 'credited to members'),
-    tile('To pay', usd((pending?.netUsd ?? 0) + (approved?.netUsd ?? 0)), `${pending?.count ?? 0} pending · ${approved?.count ?? 0} approved`),
-    s.payout
-      ? tile('Instant payout float', s.payout.error ? 'Unreadable' : usd(s.payout.floatUsd ?? 0), s.payout.error ?? `${s.payout.paused ? 'PAUSED · ' : ''}max ${usd(s.payout.maxPerClaimUsd ?? 0)} each · ${usd(s.payout.dailyLimitUsd ?? 0)} / day`)
-      : tile('Instant payouts', 'Off', 'every withdrawal is reviewed here'),
-  ].join('');
+  const session = await token();
+  const [stats, analytics] = await Promise.all([getAdminStats(session), getAdminAnalytics(session)]);
+  renderCompanyOverview($('adminStats')!, stats);
+  renderAdminCharts(stats, analytics);
+  renderTracking(analytics);
 }
 
-async function loadList(): Promise<void> {
+/** withdrawal queue, 20 per page */
+async function loadList(page = listPage): Promise<void> {
+  listPage = page;
   $('adminHelp')!.textContent = HELP[status];
-  const items = await getAdminWithdrawals(await token(), status);
+  const res = await getAdminWithdrawals(await token(), status, page);
+  const items = res.items;
   const list = $('adminList')!;
+  renderPager($('adminPager'), res.page, pageCount(res.total, res.pageSize), (p) => {
+    loadList(p).catch((error) => showToast(error instanceof Error ? error.message : 'Could not load.', true));
+  });
   if (!items.length) { list.innerHTML = '<p class="admin-empty">Nothing here.</p>'; return; }
   list.innerHTML = items.map((w) => `
     <article class="admin-item" data-id="${w.id}">
@@ -140,14 +148,32 @@ async function act(item: HTMLElement, action: string, button: HTMLButtonElement)
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // a connected wallet signs in by itself (sent here from the dashboard: the refresh cookie
+  // gives a session without a new signature); otherwise the button does it
+  if (localStorage.getItem('daovault_connected_account')) {
+    signIn().catch(() => { /* not signed in yet: the "Connect & sign in" button stays */ });
+  }
   initDvLogos(); // animated DAOVAULT logo: preloader, header, footer
+  init3DScene('admin'); // gold particles + lightning, like the landing page
+  $('adminRefresh')?.addEventListener('click', async (e) => {
+    const button = e.currentTarget as HTMLButtonElement;
+    button.disabled = true;
+    try {
+      await Promise.all([loadStats(), loadList()]);
+      showToast('Updated.');
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Could not refresh.', true);
+    } finally {
+      button.disabled = false;
+    }
+  });
   $('adminSignIn')?.addEventListener('click', () => {
     signIn().catch((error) => showToast(error instanceof Error ? error.message : 'Sign-in failed.', true));
   });
   document.querySelectorAll<HTMLButtonElement>('.admin-tabs button').forEach((tab) => tab.addEventListener('click', () => {
     document.querySelectorAll('.admin-tabs button').forEach((t) => t.classList.toggle('is-active', t === tab));
     status = tab.dataset.status as Withdrawal['status'];
-    loadList().catch((error) => showToast(error instanceof Error ? error.message : 'Could not load.', true));
+    loadList(1).catch((error) => showToast(error instanceof Error ? error.message : 'Could not load.', true));
   }));
   $('adminList')?.addEventListener('click', (e) => {
     const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-act]');

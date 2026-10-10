@@ -193,14 +193,22 @@ export class WithdrawalsService {
 
   // ── admin ────────────────────────────────────────────────────────────
 
-  async list(status?: WithdrawalStatus) {
-    const items = await prisma.withdrawal.findMany({
-      where: status ? { status } : {},
-      orderBy: { createdAt: "asc" },
-      take: 200,
-      include: { user: { select: { walletAddress: true, referralCode: true } } },
-    });
-    return items.map((w) => ({ ...view(w), voucher: null, referralCode: w.user.referralCode }));
+  /** Admin queue, 20 per page. Open requests oldest first (first come, first served); paid and rejected newest first. */
+  async list(status?: WithdrawalStatus, page = 1) {
+    const pageSize = 20;
+    const where = status ? { status } : {};
+    const open = status === "PENDING" || status === "PROCESSING";
+    const [total, items] = await Promise.all([
+      prisma.withdrawal.count({ where }),
+      prisma.withdrawal.findMany({
+        where,
+        orderBy: { createdAt: open ? "asc" : "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        include: { user: { select: { walletAddress: true, referralCode: true } } },
+      }),
+    ]);
+    return { total, page, pageSize, items: items.map((w) => ({ ...view(w), voucher: null, referralCode: w.user.referralCode })) };
   }
 
   private async transition(id: string, from: WithdrawalStatus[], data: Prisma.WithdrawalUpdateInput) {
@@ -260,23 +268,57 @@ export class WithdrawalsService {
     }
   }
 
+  /**
+   * Company overview (owner, 2026-10-10): the admin = company wallet sees the whole business in
+   * one place (admin panel and the company's own dashboard). Money in = every package paid
+   * on-chain ($300 each, top-ups included); credited = level commissions + rank rewards owed to
+   * members; withdrawals by status; what members can still withdraw; fees; payments over time.
+   */
   async stats() {
-    const [members, packages, levelPaid, rankPaid, byStatus, payout] = await Promise.all([
+    const day = new Date(Date.now() - 86_400_000);
+    const week = new Date(Date.now() - 7 * 86_400_000);
+    const [registered, members, packages, activePackages, cappedPackages, levelPaid, rankPaid, byStatus, payments24h, payments7d, payout] = await Promise.all([
+      prisma.user.count(),
       // members = activated wallets; dashboard visitors without a package only hold a code
       prisma.user.count({ where: { packages: { some: {} } } }),
       prisma.package.count(),
+      prisma.package.count({ where: { status: "ACTIVE" } }),
+      prisma.package.count({ where: { status: "CAPPED" } }),
       prisma.earning.aggregate({ where: { type: "LEVEL_COMMISSION" }, _sum: { amountUsd: true } }),
       prisma.earning.aggregate({ where: { type: "RANK_REWARD" }, _sum: { amountUsd: true } }),
-      prisma.withdrawal.groupBy({ by: ["status"], _count: { _all: true }, _sum: { netAmount: true } }),
+      prisma.withdrawal.groupBy({ by: ["status"], _count: { _all: true }, _sum: { grossAmount: true, feeAmount: true, netAmount: true } }),
+      prisma.package.count({ where: { createdAt: { gte: day } } }),
+      prisma.package.count({ where: { createdAt: { gte: week } } }),
       payoutContractStatus(),
     ]);
+    const sum = (status: WithdrawalStatus, field: "grossAmount" | "feeAmount" | "netAmount") =>
+      toCents(String(byStatus.find((b) => b.status === status)?._sum[field] ?? 0));
+    const volumeCents = packages * toCents(env.ACTIVATION_AMOUNT_USDT);
+    const levelCents = toCents(String(levelPaid._sum.amountUsd ?? 0));
+    const rankCents = toCents(String(rankPaid._sum.amountUsd ?? 0));
+    const creditedCents = levelCents + rankCents;
+    // requested (not rejected) withdrawals use up a member's balance; the rest can still be withdrawn
+    const requestedCents = sum("PENDING", "grossAmount") + sum("PROCESSING", "grossAmount") + sum("COMPLETED", "grossAmount");
+    const feesCents = sum("COMPLETED", "feeAmount");
     return {
+      registered,
       members,
       packages,
-      volumeUsd: packages * env.ACTIVATION_AMOUNT_USDT,
-      levelCommissionsUsd: Number(levelPaid._sum.amountUsd ?? 0),
-      rankRewardsUsd: Number(rankPaid._sum.amountUsd ?? 0),
-      withdrawals: Object.fromEntries(byStatus.map((s) => [s.status, { count: s._count._all, netUsd: Number(s._sum.netAmount ?? 0) }])),
+      topUps: Math.max(0, packages - members),
+      activePackages,
+      cappedPackages,
+      payments24h,
+      payments7d,
+      volumeUsd: fromCents(volumeCents),
+      levelCommissionsUsd: fromCents(levelCents),
+      rankRewardsUsd: fromCents(rankCents),
+      creditedUsd: fromCents(creditedCents),
+      paidOutUsd: fromCents(sum("COMPLETED", "netAmount")),
+      feesUsd: fromCents(feesCents),
+      memberBalancesUsd: fromCents(Math.max(0, creditedCents - requestedCents)),
+      // what the company keeps if every credited dollar is withdrawn (fees stay with it)
+      companyNetUsd: fromCents(volumeCents - creditedCents + feesCents),
+      withdrawals: Object.fromEntries(byStatus.map((b) => [b.status, { count: b._count._all, netUsd: Number(b._sum.netAmount ?? 0) }])),
       payout,
     };
   }

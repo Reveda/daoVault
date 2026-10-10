@@ -5,6 +5,7 @@ import { financialRateLimiter } from "../../middlewares/rateLimiter.js";
 import { validateRequest } from "../../middlewares/validateRequest.js";
 import { requireAdmin, requireAuth } from "../../middlewares/auth.js";
 import { withdrawalsService } from "./withdrawals.service.js";
+import { adminAnalytics } from "./analytics.js";
 
 /** Member side: /withdrawals (signed-in wallet only) */
 export const withdrawalsRouter = Router();
@@ -45,11 +46,18 @@ adminRouter.get("/stats", async (_req, res, next) => {
   } catch (error) { next(error); }
 });
 
+// charts of the admin dashboard (analytics.ts)
+adminRouter.get("/analytics", async (_req, res, next) => {
+  try {
+    res.json({ success: true, data: await adminAnalytics() });
+  } catch (error) { next(error); }
+});
+
 adminRouter.get("/withdrawals", validateRequest({
-  query: z.object({ status: z.enum(WithdrawalStatus).optional() }),
+  query: z.object({ status: z.enum(WithdrawalStatus).optional(), page: z.coerce.number().int().min(1).max(100_000).optional() }),
 }), async (req, res, next) => {
   try {
-    res.json({ success: true, data: await withdrawalsService.list(req.query.status as WithdrawalStatus | undefined) });
+    res.json({ success: true, data: await withdrawalsService.list(req.query.status as WithdrawalStatus | undefined, Number(req.query.page ?? 1)) });
   } catch (error) { next(error); }
 });
 

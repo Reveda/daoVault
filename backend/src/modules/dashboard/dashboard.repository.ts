@@ -4,7 +4,7 @@ export const dashboardRepository = {
   findUserDashboard(walletAddress: string) {
     return prisma.user.findUnique({
       where: { walletAddress },
-      include: { packages: true, upline: { select: { referralCode: true } } },
+      include: { packages: { orderBy: { createdAt: "asc" } }, upline: { select: { referralCode: true } } },
     });
   },
 

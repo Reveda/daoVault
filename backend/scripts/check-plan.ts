@@ -6,8 +6,10 @@
 import "dotenv/config";
 import { randomBytes } from "node:crypto";
 import { PrismaClient, type Prisma } from "@prisma/client";
-import { processActivation } from "../src/modules/activation/activation.engine.js";
+import { processActivation, processTopUp } from "../src/modules/activation/activation.engine.js";
 import { rankForLegs, summarizeLegs, withdrawalSplit } from "../src/modules/plan/plan.js";
+import { env } from "../src/config/env.js";
+import { balanceOf } from "../src/modules/withdrawals/withdrawals.service.js";
 
 const prisma = new PrismaClient();
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -135,6 +137,86 @@ try {
     check("outside cap: a CAPPED member still gets the Starter $150 rank reward", qRewards.length === 1 && Number(qRewards[0].amountUsd) === 150);
     check("outside cap: the capped member gets no more level income", qLevel === 0);
     check("outside cap: the rank reward does not use up the 25x cap", Number((await pkgOf(Q)).totalEarned) === 7500);
+
+    // ── every level pays its exact share: L1 $30, L2 $15, L3–4 $9, L5–7 $6, L8–20 $3 = $120 (40%) ──
+    const chainUp: string[] = [];
+    for (let i = 0; i < 20; i++) { const w = wallet(); await activate(w, chainUp[i - 1] ?? ZERO); chainUp.push(w); }
+    // 15 directs each: every level open (the directs themselves are not needed for the payout maths)
+    await tx.user.updateMany({ where: { walletAddress: { in: chainUp } }, data: { activeDirectsCount: 15 } });
+    const rDeep = await activate(wallet(), chainUp[19]);
+    const expected = [30, 15, 9, 9, 6, 6, 6, ...Array(13).fill(3)];
+    const paidByLevel = expected.map((_, i) => rDeep.commissions.find((c) => c.level === i + 1 && c.wallet === chainUp[19 - i])?.amountUsd ?? 0);
+    check("20 levels: each upline is paid its exact share", paidByLevel.every((v, i) => v === expected[i]), paidByLevel.join(","));
+    check("20 levels: the total is $120 = 40% of $300", paidByLevel.reduce((s, v) => s + v, 0) === 120);
+
+    // ── rank rewards beyond Starter: Builder needs 50 + 50 and pays $300 on top of Starter's $150 ──
+    const RB = wallet(); await activate(RB);
+    for (let leg = 0; leg < 2; leg++) {
+      let parent = RB;
+      for (let i = 0; i < 50; i++) { const w = wallet(); await activate(w, parent); parent = w; }
+    }
+    const rbRewards = (await tx.earning.findMany({ where: { recipient: { walletAddress: RB }, type: "RANK_REWARD" }, orderBy: { level: "asc" } })).map((e) => Number(e.amountUsd));
+    check("rank: 50 + 50 reaches Builder and pays Starter $150 + Builder $300, once each", (await userOf(RB)).currentRank === 2 && rbRewards.join(",") === "150,300", rbRewards.join(","));
+
+    // ── withdrawals use up the balance exactly ──
+    const rbUser = await userOf(RB);
+    const before = await balanceOf(tx, rbUser.id);
+    await tx.withdrawal.create({ data: { userId: rbUser.id, grossAmount: 100, feeAmount: 5, netAmount: 95, destinationWallet: RB } });
+    const after = await balanceOf(tx, rbUser.id);
+    check("withdrawal: a $100 request takes exactly $100 off the available balance", before.availableCents - after.availableCents === 10_000 && after.pendingCents === 10_000, `${before.availableCents} -> ${after.availableCents}`);
+
+    // ── confirmed rule (owner, 2026-10-10): top-up / re-entry after the cap ──
+    const topUp = (w: string, hash = txHash()) => processTopUp(tx, { walletAddress: w, transactionHash: hash, amountUsd: 300 });
+    const S = wallet(), T = wallet();
+    await activate(S); await activate(T, S);
+    const tPkg1 = await pkgOf(T);
+    await tx.package.update({ where: { id: tPkg1.id }, data: { totalEarned: 7500, status: "CAPPED" } });
+    const sDirects = (await userOf(S)).activeDirectsCount, sVolume = (await userOf(S)).teamVolume;
+    const tHash = txHash();
+    const rTop = await topUp(T, tHash);
+    const tPkgs = await tx.package.findMany({ where: { user: { walletAddress: T } }, orderBy: { createdAt: "asc" } });
+    check("top-up: a capped member gets a new ACTIVE package with its own $7,500 cap", tPkgs.length === 2 && tPkgs[1].status === "ACTIVE" && Number(tPkgs[1].maxCapLimit) === 7500);
+    check("top-up: the sponsor is paid the L1 $30 again", rTop.commissions.some((c) => c.wallet === S && c.level === 1 && c.amountUsd === 30));
+    check("top-up: the sponsor gains no new direct, but +1 team volume (1 DAO)", (await userOf(S)).activeDirectsCount === sDirects && (await userOf(S)).teamVolume === sVolume + 1);
+    check("top-up: same transaction twice is processed once", (await topUp(T, tHash)).alreadyProcessed);
+    const rJoin = await activate(wallet(), T);
+    const tNew = await tx.package.findUnique({ where: { id: tPkgs[1].id } });
+    check("top-up: new income goes into the new package", rJoin.commissions.some((c) => c.wallet === T && c.amountUsd === 30) && Number(tNew!.totalEarned) === 30);
+    let noPkg = false;
+    try { await topUp(wallet()); } catch { noPkg = true; }
+    check("top-up: refused for a wallet that never activated", noPkg);
+    // an early top-up waits in line; a share that overflows the old cap spills into it
+    const U = wallet(), V = wallet();
+    await activate(U); await activate(V, U);
+    const vPkg1 = await pkgOf(V);
+    await tx.package.update({ where: { id: vPkg1.id }, data: { totalEarned: 7490 } });
+    await topUp(V);
+    const rSpill = await activate(wallet(), V);
+    const vPkgs = await tx.package.findMany({ where: { user: { walletAddress: V } }, orderBy: { createdAt: "asc" } });
+    check("top-up: $30 splits $10 into the old package (now CAPPED) + $20 into the next",
+      rSpill.commissions.some((c) => c.wallet === V && c.amountUsd === 30) && vPkgs[0].status === "CAPPED" && Number(vPkgs[0].totalEarned) === 7500 && Number(vPkgs[1].totalEarned) === 20,
+      `${vPkgs.map((p) => `${p.status}:${p.totalEarned}`).join(" / ")}`);
+
+    // ── confirmed rule (owner, 2026-10-09): the company wallet is the ROOT ──
+    // it sponsors without paying, gains directs and team volume, but never earns
+    const ROOT = wallet();
+    const savedRoot = env.COMPANY_WALLET_ADDRESS;
+    env.COMPANY_WALLET_ADDRESS = ROOT;
+    const M1 = wallet();
+    const rM1 = await activate(M1, ROOT); // no root record yet: the engine creates it
+    const root = await userOf(ROOT);
+    check("root: a member joins under the company root without the root paying", rM1.sponsorLinked && (await userOf(M1)).uplineId === root.id);
+    check("root: the root has no package and gets no level commission", !(await tx.package.findFirst({ where: { userId: root.id } })) && !rM1.commissions.some((c) => c.wallet === ROOT));
+    check("root: its share is skipped (stays in the treasury)", rM1.skipped.some((s) => s.wallet === ROOT && s.reason === "no_package"));
+    check("root: counts the active direct", root.activeDirectsCount === 1);
+    for (let leg = 0; leg < 2; leg++) {
+      let parent = leg === 0 ? M1 : ROOT;
+      for (let i = leg === 0 ? 1 : 0; i < 25; i++) { const w = wallet(); await activate(w, parent); parent = w; }
+    }
+    const rootAfter = await userOf(ROOT);
+    const rootRewards = await tx.earning.count({ where: { recipientId: root.id } });
+    check("root: reaches Starter on 25 + 25 but is paid no rank reward", rootAfter.currentRank === 1 && rootRewards === 0, `rank ${rootAfter.currentRank}, earnings ${rootRewards}`);
+    env.COMPANY_WALLET_ADDRESS = savedRoot;
 
     throw new Rollback();
   }, { timeout: 180_000, maxWait: 20_000 });

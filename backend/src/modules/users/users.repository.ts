@@ -1,4 +1,5 @@
 import { prisma } from "../../config/prisma.js";
+import { rootWallet } from "../../config/root.js";
 
 export const usersRepository = {
   findByWallet(walletAddress: string) {
@@ -32,9 +33,11 @@ export const usersRepository = {
   },
 
   /** Sponsor lookup for invite links: only activated members can sponsor. */
+  /** an activated member's code, or the company root's (it sponsors without a package) */
   findSponsorByCode(referralCode: string) {
+    const root = rootWallet();
     return prisma.user.findFirst({
-      where: { referralCode, packages: { some: {} } },
+      where: { referralCode, OR: [{ packages: { some: {} } }, ...(root ? [{ walletAddress: root }] : [])] },
       select: { walletAddress: true, referralCode: true },
     });
   },

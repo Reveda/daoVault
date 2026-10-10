@@ -61,6 +61,8 @@ export const SCENE_STATES: Record<string, SceneState> = {
   // dashboard: the logo forms while the wallet is checked, then calm dust
   vault:   { shape: 'logo', x: 0,     y: 0.05, s: 1.1,  op: 0.9,  storm: 1.0, mop: 0.7 },
   dash:    { shape: 'dust', x: 0,     y: 0,    s: 1,    op: 0.28, storm: 0.2, mop: 0.22 },
+  // admin Command Center: livelier dust and lightning behind the charts
+  admin:   { shape: 'dust', x: 0,     y: 0,    s: 1,    op: 0.42, storm: 0.6, mop: 0.3 },
 };
 
 /** Natural motion per shape: continuous spin, or a gentle sway for flat shapes. */

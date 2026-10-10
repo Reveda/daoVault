@@ -1,7 +1,7 @@
 /**
  * Dashboard level modal (owner, 2026-10-09): tap a row of the 20-Level Downline and a modal
  * lists everyone who joined at that level - DV code, short wallet, who sponsored them and
- * when they activated - 50 at a time with "Load more". Phones get a bottom sheet.
+ * when they activated - 50 at a time with "Load more". Centred on every screen (phones too).
  * Closes with the X, a tap outside the card or Escape; focus returns to the row.
  */
 import { getLevelMembers, type LevelMembers } from './api.ts';

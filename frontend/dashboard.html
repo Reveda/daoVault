@@ -59,6 +59,7 @@
         <div class="wallet-menu-panel" role="menu" hidden>
           <button type="button" role="menuitem" id="walletCopyBtn">Copy address</button>
           <a role="menuitem" id="walletScanLink" href="https://bscscan.com" target="_blank" rel="noopener">View on BscScan &nearr;</a>
+          <a role="menuitem" id="walletAdminLink" href="admin.html" hidden>Admin panel &rarr;</a>
           <button type="button" role="menuitem" class="is-danger" id="dashLogoutBtn">Log out</button>
         </div>
       </div>
@@ -81,6 +82,19 @@
           <a class="dash-chip dash-chip--proof" id="dashActivationTx" href="#" target="_blank" rel="noopener" hidden>Activation on BscScan &#8599;</a>
         </div>
       </div>
+
+      <!-- Company overview: only for the admin = company wallet (companyOverview.ts, same as the admin panel) -->
+      <section class="glass rewards-card company-card" id="companySection" hidden>
+        <div class="rank-list-head">
+          <div>
+            <span class="mono rewards-tag">COMPANY</span>
+            <h3>Company <span class="grad-text">Overview</span></h3>
+            <p>The whole business at a glance. Withdrawal approvals are in the admin panel.</p>
+          </div>
+          <a class="btn btn-grad" href="admin.html">Open admin panel &rarr;</a>
+        </div>
+        <div class="metrics-grid co-grid" id="companyStats"></div>
+      </section>
 
       <!-- 4 Overview Metric Cards -->
       <div class="metrics-grid">
@@ -220,7 +234,7 @@
       <div class="glass ref-box-card activation-card" id="activationCard" style="margin-top: 2rem;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
           <div>
-            <h3 style="font-size: 1.2rem; margin-bottom: 0.2rem;">Activate your DAOvault ID</h3>
+            <h3 id="activationTitle" style="font-size: 1.2rem; margin-bottom: 0.2rem;">Activate your DAOvault ID</h3>
             <p id="activationStatus" style="color: var(--text-muted); font-size: 0.85rem;">Payment contract configuration is required.</p>
           </div>
           <button class="btn btn-grad" id="dashActivateBtn" type="button">Approve &amp; Activate $300</button>

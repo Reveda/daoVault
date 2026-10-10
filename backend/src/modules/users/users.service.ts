@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { serializable } from "../../config/transaction.js";
 import { uniqueReferralCode } from "../activation/activation.engine.js";
 import { usersRepository } from "./users.repository.js";
+import { isRootWallet } from "../../config/root.js";
 
 export class UsersService {
   async getPublicProfile(walletAddress: string) {
@@ -34,7 +35,7 @@ export class UsersService {
   async register(walletAddress: string) {
     const wallet = walletAddress.toLowerCase();
     const view = (u: { walletAddress: string; referralCode: string; _count: { packages: number } }) =>
-      ({ walletAddress: u.walletAddress, referralCode: u.referralCode, activated: u._count.packages > 0 });
+      ({ walletAddress: u.walletAddress, referralCode: u.referralCode, activated: u._count.packages > 0 || isRootWallet(u.walletAddress) });
 
     const existing = await usersRepository.findWithPackageCount(wallet);
     if (existing) return view(existing);

@@ -33,3 +33,130 @@
 @media (max-width: 760px) {
   .admin-item { grid-template-columns: 1fr; }
 }
+
+/* ══ Admin dashboard: Command Center (owner, 2026-10-10) ═══════════════════════
+   Landing-style particle + lightning scene behind (sceneCanvas), drifting gold particles in
+   every section (.fx-particles, CSS only), charts in the gold theme (adminCharts.ts). */
+.admin-page .dash-shell { position: relative; z-index: 1; }
+.admin-page .scene-canvas { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+/* drifting gold particles: two layers of dots moving up at different speeds */
+.fx-particles, .fx-particles::after {
+  position: absolute; inset: 0; pointer-events: none; border-radius: inherit; z-index: 0;
+  background-image:
+    radial-gradient(1.6px 1.6px at 12% 18%, rgba(245, 215, 110, 0.9), transparent 70%),
+    radial-gradient(1.2px 1.2px at 32% 64%, rgba(212, 175, 55, 0.8), transparent 70%),
+    radial-gradient(2px 2px at 58% 28%, rgba(255, 236, 170, 0.85), transparent 70%),
+    radial-gradient(1.3px 1.3px at 78% 72%, rgba(212, 175, 55, 0.75), transparent 70%),
+    radial-gradient(1.7px 1.7px at 90% 14%, rgba(245, 215, 110, 0.8), transparent 70%),
+    radial-gradient(1.1px 1.1px at 44% 90%, rgba(255, 236, 170, 0.7), transparent 70%);
+  background-size: 340px 340px;
+  animation: fxDrift 26s linear infinite;
+  opacity: 0.5;
+}
+.fx-particles { overflow: hidden; }
+.fx-particles::after { content: ""; background-size: 220px 220px; animation-duration: 17s; opacity: 0.6; }
+@keyframes fxDrift { to { background-position: 0 -340px; } }
+html.lite .fx-particles, html.lite .fx-particles::after { animation: none; }
+@media (prefers-reduced-motion: reduce) { .fx-particles, .fx-particles::after { animation: none; } }
+
+.ad-hero, .ad-section, .ad-section-card { position: relative; }
+.ad-hero > :not(.fx-particles), .ad-section > :not(.fx-particles), .ad-section-card > :not(.fx-particles) { position: relative; z-index: 1; }
+.ad-hero { padding: 2.2rem 0 1.6rem; }
+.ad-title { font-size: clamp(2rem, 4.4vw, 3.2rem); line-height: 1.05; margin: 0.3rem 0 0.6rem; }
+.ad-sub { color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; max-width: 62ch; }
+.ad-hero-actions { display: flex; align-items: center; gap: 0.8rem; flex-wrap: wrap; margin-top: 1.1rem; }
+.ad-hero-actions[hidden], .admin-to-dash[hidden] { display: none; }
+.ad-chip { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.85rem; border-radius: 999px; font-size: 0.72rem; color: var(--gold); border: 1px solid rgba(212, 175, 55, 0.4); background: rgba(212, 175, 55, 0.08); }
+.ad-live { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); animation: adPulse 2s infinite; }
+@keyframes adPulse { 70% { box-shadow: 0 0 0 9px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+.ad-refresh { padding: 0.5rem 1rem; font-size: 0.8rem; }
+
+.ad-section { margin: 0 0 2.6rem; padding: 1.6rem; border-radius: 24px; border: 1px solid rgba(212, 175, 55, 0.14); background: linear-gradient(160deg, rgba(212, 175, 55, 0.05), rgba(0, 0, 0, 0.25)); }
+.ad-section-head { margin-bottom: 1.3rem; }
+.ad-section-head h2 { font-size: clamp(1.4rem, 2.8vw, 2rem); margin: 0.35rem 0; }
+
+/* charts */
+.ad-charts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1.1rem; }
+.ad-wide { grid-column: span 2; }
+.chart-card {
+  position: relative; display: flex; flex-direction: column; gap: 0.7rem; padding: 1.2rem 1.2rem 1rem; border-radius: 20px; min-width: 0;
+  border: 1px solid rgba(212, 175, 55, 0.22); transition: border-color 0.3s, box-shadow 0.3s;
+  background: radial-gradient(120% 80% at 0% 0%, rgba(212, 175, 55, 0.1), transparent 55%), rgba(10, 10, 10, 0.78);
+}
+/* electric edge running round the card on hover */
+@property --ad-a { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+.chart-card::before {
+  content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none; opacity: 0; padding: 1px;
+  background: conic-gradient(from var(--ad-a), transparent 0 70%, rgba(245, 215, 110, 0.9) 80%, transparent 90%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude;
+  transition: opacity 0.3s;
+}
+.chart-card:hover { border-color: rgba(212, 175, 55, 0.55); box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(212, 175, 55, 0.12); }
+.chart-card:hover::before { opacity: 1; animation: adSpin 3s linear infinite; }
+@keyframes adSpin { to { --ad-a: 360deg; } }
+.chart-card header { display: grid; gap: 0.2rem; }
+.chart-card h3 { font-size: 1.05rem; margin: 0; }
+.chart-card header span { font-size: 0.68rem; color: var(--text-dim); }
+.chart-box { position: relative; height: 240px; }
+.chart-box.tall { height: 300px; }
+/* no data yet: a small corner badge; the chart itself stays visible with its zeros */
+/* a pill between the heading and the chart (flex order), never over the title */
+.chart-card header { order: 0; }
+.chart-card .chart-empty { order: 1; }
+.chart-card .chart-box { order: 2; }
+.chart-empty { display: none; align-self: flex-start; font-size: 0.64rem; line-height: 1.4; color: var(--text-muted); padding: 0.25rem 0.65rem; border-radius: 999px; border: 1px dashed rgba(212, 175, 55, 0.35); background: rgba(0, 0, 0, 0.45); }
+.chart-card.is-empty .chart-empty { display: block; }
+
+/* top earners */
+.te-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55rem; }
+.te-row { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 0.7rem; padding: 0.65rem 0.8rem; border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.16); background: rgba(0, 0, 0, 0.3); animation: lvIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; animation-delay: calc(var(--i, 0) * 60ms); }
+.te-pos { width: 30px; height: 30px; display: grid; place-items: center; border-radius: 9px; font-size: 0.75rem; font-weight: 700; color: #120d02; background: var(--grad-gold); }
+.te-code { color: var(--gold); font-weight: 700; }
+.te-meta { font-size: 0.66rem; color: var(--text-dim); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.te-usd { font-family: var(--font-heading); color: #fff; }
+.te-empty { font-size: 0.78rem; color: var(--text-muted); padding: 1rem; text-align: center; border: 1px dashed rgba(212, 175, 55, 0.3); border-radius: 12px; }
+
+/* how it works */
+.ad-flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.ad-flow li { position: relative; display: grid; gap: 0.45rem; align-content: start; padding: 1.2rem; border-radius: 18px; border: 1px solid rgba(212, 175, 55, 0.2); }
+.ad-flow li b { font-family: "JetBrains Mono", monospace; font-size: 0.75rem; color: #120d02; background: var(--grad-gold); justify-self: start; padding: 0.15rem 0.5rem; border-radius: 6px; }
+.ad-flow li h4 { font-size: 1.05rem; margin: 0.2rem 0 0; }
+.ad-flow li p { font-size: 0.84rem; color: var(--text-muted); line-height: 1.6; }
+.ad-flow li span { font-size: 0.74rem; color: var(--text-dim); }
+.ad-flow li em { font-style: normal; color: var(--gold); font-weight: 700; }
+.ad-flow li.ad-flow-net { border-color: rgba(16, 185, 129, 0.45); }
+.ad-flow li.ad-flow-net em { color: var(--green); font-size: 1.4rem; font-family: var(--font-heading); }
+
+@media (max-width: 1080px) {
+  .ad-charts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ad-flow { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 680px) {
+  .ad-section { padding: 1rem; border-radius: 18px; margin-bottom: 1.8rem; }
+  .ad-charts, .ad-flow { grid-template-columns: 1fr; }
+  .ad-wide { grid-column: auto; }
+  .chart-box { height: 220px; }
+  .chart-box.tall { height: 240px; }
+  .te-row { grid-template-columns: auto auto 1fr; }
+  .te-usd { grid-column: 3; justify-self: end; }
+  .te-meta { grid-column: 1 / -1; }
+}
+
+/* header: buttons hidden after sign-in stay hidden (.btn sets display) */
+.admin-page .top-bar .btn[hidden], .admin-page .dash-user-badge[hidden] { display: none !important; }
+@media (max-width: 480px) {
+  .admin-page .admin-to-dash { padding: 0.45rem 0.7rem; font-size: 0.72rem; }
+  /* the address is in the "Signed in as admin" line on phones: room for the buttons */
+  .admin-page #adminWallet { display: none !important; }
+  .admin-page .dash-head-actions { gap: 0.4rem; }
+}
+
+/* ── pager (pager.ts) ── */
+.pager { display: flex; align-items: center; justify-content: center; gap: 0.8rem; margin-top: 1rem; }
+.pager[hidden] { display: none; }
+.pg-btn { padding: 0.45rem 0.9rem; border-radius: 999px; font-size: 0.74rem; color: var(--gold); background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.4); cursor: pointer; transition: background 0.2s, color 0.2s; }
+.pg-btn:hover:not(:disabled) { background: var(--grad-gold); color: #120d02; }
+.pg-btn:disabled { opacity: 0.35; cursor: default; }
+.pg-info { font-size: 0.74rem; color: var(--text-muted); }
+.pg-info b { color: #fff; }

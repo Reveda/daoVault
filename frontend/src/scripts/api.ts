@@ -4,6 +4,10 @@ export type DashboardData = {
   sponsorCode: string | null;
   /** before payment: the latest invite code opened, saved on the server (null once activated) */
   pendingSponsorCode: string | null;
+  /** company root (treasury): active without paying, anyone joins under it, earns nothing itself */
+  isRoot?: boolean;
+  /** ADMIN_WALLETS (the company wallet): show the company overview */
+  isAdmin?: boolean;
   activeDirects: number;
   levelsUnlocked: number;
   currentRank: number;
@@ -24,6 +28,11 @@ export type DashboardData = {
     activationTxHash?: string;
     status: string;
   }>;
+  /** the package earning now: the oldest still ACTIVE, else the latest */
+  currentPackage: DashboardData['packages'][number] | null;
+  packageCount: number;
+  /** every package reached its cap: offer a $300 top-up (re-entry) */
+  canTopUp: boolean;
   levels: Array<{ level: number; pct: number; reqDirects: number; unlocked: boolean; members: number; earnedUsd: number }>;
   recentEarnings: Array<{ type: 'LEVEL_COMMISSION' | 'RANK_REWARD'; level: number | null; amountUsd: number; from: string; at: string }>;
 };
@@ -143,6 +152,11 @@ export type ActivationVerification = {
   sponsorLinked: boolean;
 };
 
+/** Re-entry: the backend checks the ToppedUp on-chain, then adds the new $300 package. */
+export function verifyTopUp(payload: { walletAddress: string; transactionHash: string }): Promise<ActivationVerification> {
+  return post('/activation/topup/verify', payload);
+}
+
 export function verifyActivation(payload: {
   walletAddress: string;
   transactionHash: string;
@@ -170,17 +184,41 @@ export const confirmWithdrawal = (token: string, id: string, txHash: string) => 
 
 // ── admin ──
 export type AdminStats = {
+  registered: number;
   members: number;
   packages: number;
+  topUps: number;
+  activePackages: number;
+  cappedPackages: number;
+  payments24h: number;
+  payments7d: number;
   volumeUsd: number;
   levelCommissionsUsd: number;
   rankRewardsUsd: number;
+  creditedUsd: number;
+  paidOutUsd: number;
+  feesUsd: number;
+  memberBalancesUsd: number;
+  companyNetUsd: number;
   withdrawals: Partial<Record<Withdrawal['status'], { count: number; netUsd: number }>>;
   payout: { contract: string; paused?: boolean; maxPerClaimUsd?: number; dailyLimitUsd?: number; floatUsd?: number; error?: string } | null;
 };
 export const getAdminStats = (token: string) => request<AdminStats>('/admin/stats', { token });
-export const getAdminWithdrawals = (token: string, status?: Withdrawal['status']) =>
-  request<Withdrawal[]>(`/admin/withdrawals${status ? `?status=${status}` : ''}`, { token });
+/** Charts of the admin dashboard: 30-day series and splits (GET /admin/analytics). */
+export type AdminAnalytics = {
+  days: number;
+  /** treasury on the first day of the window (deposits − payouts before it) */
+  openingTreasuryUsd: number;
+  series: Array<{ day: string; activations: number; topups: number; moneyInUsd: number; levelUsd: number; rankUsd: number; paidOutUsd: number; newWallets: number }>;
+  commissionsByLevel: Array<{ level: number; usd: number; count: number }>;
+  membersByRank: Array<{ rank: number; name: string; members: number }>;
+  treeByDepth: Array<{ depth: number; members: number }>;
+  topEarners: Array<{ code: string; earnedUsd: number; rank: number; directs: number; team: number }>;
+};
+export const getAdminAnalytics = (token: string) => request<AdminAnalytics>('/admin/analytics', { token });
+/** admin withdrawal queue, 20 per page */
+export const getAdminWithdrawals = (token: string, status: Withdrawal['status'], page = 1) =>
+  request<{ total: number; page: number; pageSize: number; items: Withdrawal[] }>(`/admin/withdrawals?status=${status}&page=${page}`, { token });
 export const approveWithdrawal = (token: string, id: string) => post<Withdrawal>(`/admin/withdrawals/${id}/approve`, {}, token);
 export const rejectWithdrawal = (token: string, id: string, reason: string) => post<Withdrawal>(`/admin/withdrawals/${id}/reject`, { reason }, token);
 export const completeWithdrawal = (token: string, id: string, payoutTxHash: string) =>

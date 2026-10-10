@@ -284,6 +284,20 @@ export function disconnectWallet(): void {
 }
 
 /**
+ * Opening the site in a wallet that sits on another network (Ethereum, or BSC Mainnet on the
+ * testnet build): ask to switch to ours (adding it if the wallet lacks it). Once per tab and
+ * without blocking the page; payments and payouts still enforce it (requireBSCNetwork).
+ */
+async function askNetworkOnce(provider: any): Promise<void> {
+  try {
+    if (parseInt(await provider.request({ method: 'eth_chainId' }), 16) === BSC_CHAIN_ID) return;
+    if (sessionStorage.getItem('dv_net_asked')) return;
+    sessionStorage.setItem('dv_net_asked', '1');
+  } catch { /* storage blocked or no chain id: still try once */ }
+  await ensureBSCNetwork(provider);
+}
+
+/**
  * Check if a session is already cached
  */
 export async function autoReconnect(): Promise<string | null> {
@@ -306,6 +320,7 @@ export async function autoReconnect(): Promise<string | null> {
         activeProvider = wallet.provider;
         currentAccount = match.toLowerCase();
         wireProviderEvents(wallet.provider);
+        void askNetworkOnce(wallet.provider);
         return currentAccount;
       }
     } catch (e) {
@@ -325,6 +340,7 @@ export async function autoReconnect(): Promise<string | null> {
         currentAccount = accounts[0].toLowerCase();
         localStorage.setItem('daovault_connected_account', currentAccount);
         wireProviderEvents(activeProvider);
+        void askNetworkOnce(activeProvider);
         return currentAccount;
       }
     } catch (e) {

@@ -3,6 +3,7 @@
 Web3 referral/affiliate reward dApp on **BNB Smart Chain (BEP-20)**. Users connect a wallet, pay a fixed **$300 USDT** activation via a smart contract, and earn from referrals. Full business spec: `project.md`. Contract deploy/test guide: `smartcontract-payment.md`. Read those only when the task needs plan details.
 **Build status, decisions, setup:** `document.md` (keep it updated when features land).
 **Deploy runbook (Render, contracts, every env value, testnet + mainnet):** `DEPLOYMENT.md` (update addresses there when contracts deploy).
+**Testnet step by step (owner, Hinglish; status, wallets, faucets, Render values, test flow):** `TESTNET-SETUP.md`.
 **Design/UX reference:** TPR World (tprworld.org). Its full code teardown (design tokens, sections, 3D scene, wallet flow, API, what not to copy) is in `tpr-reference.md`. Read it for UI, wallet or dashboard work instead of re-fetching the site.
 
 ## Business rules (summary)
@@ -15,12 +16,16 @@ Web3 referral/affiliate reward dApp on **BNB Smart Chain (BEP-20)**. Users conne
 - Referral: `?ref=CODE` saved to `localStorage['daovault_pending_ref']`; on the next dashboard visit of an unpaid wallet it is saved on the
   server (POST /users/pending-sponsor -> users.pending_sponsor_code) and the browser copy dropped. LATEST invite link
   opened before paying wins (owner, 2026-10-09); activation pays with that sponsor from any browser. The contract still
-  requires an ACTIVATED sponsor (open owner decision: allow unactivated parents, commission option A/B). Codes are `DV` + first 6 hex chars of wallet (longer if taken; the server value wins).
+  requires an ACTIVATED sponsor (owner, 2026-10-09: keep it; an unactivated parent cannot sponsor yet). Codes are `DV` + first 6 hex chars of wallet (longer if taken; the server value wins).
 
 ## Layout
 ```
 contracts/DAOvaultActivation.sol   Solidity 0.8.20. activate(sponsor) pulls USDT via transferFrom -> immutable treasury,
-                                   emits Activated(user, sponsor, amount, timestamp). Sponsor must be activated. Commissions are off-chain.
+                                   emits Activated(user, sponsor, amount, timestamp). Sponsor must be activated OR the treasury.
+                                   Treasury = company ROOT (owner, 2026-10-09): never pays (TreasuryIsRoot), isActivated() true.
+                                   Backend config/root.ts (COMPANY_WALLET_ADDRESS = treasury): root record made at server start,
+                                   sponsors without a package, gets directs/volume/rank but NO commissions or rank rewards
+                                   (shares stay in the treasury); dashboard isRoot -> "Company root ID". Commissions are off-chain.
 backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 + PostgreSQL + zod 4 + ethers 6. Port 5000.
   src/app.ts               middleware + router mounting (prefix /api/v1)
   src/config/env.ts        zod-validated env (contract addrs optional)
@@ -30,6 +35,9 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
     dashboard   GET  /dashboard/:walletAddress   (JWT, own wallet or admin: requireSelfOrAdmin; 403 otherwise)
                 GET  /dashboard/:walletAddress/levels/:level?page=  (members exactly N levels down: DV code, short
                 wallet, sponsor code, joined date; 50/page) -> frontend levelModal.ts (tap a 20-Level Downline row)
+    activation  POST /activation/topup/verify (re-entry, owner 2026-10-10: contract topUp() -> ToppedUp; processTopUp adds a
+                package with its own 25x cap, uplines paid the 20 levels again, +1 DAO volume, no new direct. Commissions fill
+                the OLDEST ACTIVE package and spill into the next; dashboard currentPackage/canTopUp -> "Top-up $300" card)
     activation  POST /activation/verify  (verifies tx + Activated event on-chain, then activation.engine.ts processActivation:
                 directs, 20-level commissions w/ unlock + 25x cap, team volume, 50:50 ranks + rank rewards; serializable tx)
     users       GET  /users/referral/:code  (invite code -> sponsor wallet)
@@ -55,7 +63,16 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
 frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-web, vanta, ethers 6. Port 3000, proxies /api -> :5000.
   index.html -> src/scripts/app.ts        landing page (3D scene, rank cards, wallet picker)
   dashboard.html -> src/scripts/dashboard.ts  user dashboard (live API data, legs, income, withdraw w/ wallet sign-in)
-  admin.html -> src/scripts/admin.ts      withdrawal queue for ADMIN_WALLETS
+  admin.html -> src/scripts/admin.ts      Company Command Center for ADMIN_WALLETS (= company wallet): landing particle scene
+                                          (state "admin"), .fx-particles per section, KPI cards with icon badges
+                                          (companyOverview.ts, also on the company dashboard), 4 panel charts + 7 charts
+                                          (adminCharts.ts, Chart.js, admin bundle only), treasury ledger, "How it works",
+                                          withdrawal queue. Data: GET /admin/stats + /admin/analytics (withdrawals/analytics.ts).
+                                          Pagination (pager.ts): withdrawals 20/page (server), ledger 10/page, top earners
+                                          5/page (top 50). Zeros stay visible (line at $0, bar stubs, grey ring).
+                                          Admin wallet login: dashboard.ts sends an isAdmin vault to admin.html (unless
+                                          ?view=member, the admin's "My dashboard" link); admin.html signs in by itself
+                                          when a wallet is connected (refresh cookie: no new signature).
   session.ts: member sign-in (signIn / requireSession: decline -> "Sign in to open your vault" gate). Access token in
            memory only (no localStorage/sessionStorage); missing/expiring -> POST /auth/refresh with the cookie; sign
            again only when that fails. logout() deletes the refresh token. Dashboard, level modal, register and
@@ -119,6 +136,8 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   checked before isMetaMask (Trust/SafePal/OKX/Binance/Coinbase also set it). Mobile app links add dv_connect=1 and
   app.ts autoConnectFromWalletApp() connects inside the wallet app. api.ts wakeBackend() pings /health on landing
   load + every 10 min (Render free plan sleeps the API).
+  wallet.ts: connect and autoReconnect ask the wallet to switch to the build's chain (adding BSC Testnet/Mainnet if missing),
+  once per tab, non-blocking (askNetworkOnce). Sign-in uses raw personal_sign (chain-free), so a pending switch never breaks it.
   wallet.ts autoReconnect() waits for EIP-6963 announcements and tries every wallet (else the dashboard bounced to
   the landing page on refresh). On phones it falls back to eth_requestAccounts (Trust returns [] from eth_accounts
   after a load, which caused a landing<->dashboard reload loop). A connected wallet on the landing page is sent to
@@ -137,7 +156,7 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
 - No git repo, no test suite yet.
 
 ## Not built yet
-Package re-entry/top-up after the cap (contract allows one activation per wallet), recovery of sponsor links lost when a
+Recovery of sponsor links lost when a
 sponsor's activation never reached the backend. See document.md section 4.
 
 ## Rules

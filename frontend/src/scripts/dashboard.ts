@@ -30,6 +30,7 @@ import {
   ApiError,
   getDashboardData,
   getSponsorByCode,
+  getAdminStats,
   savePendingSponsor,
   registerWallet,
   getWithdrawals,
@@ -39,7 +40,7 @@ import {
   type WithdrawalSummary,
   type Withdrawal,
 } from './api.ts';
-import { activateWallet, isPaymentConfigured, resolveSponsor, retryPendingActivation, REAL_PAYMENTS_LOCKED, REAL_PAYMENTS_LOCKED_MSG } from './payment.ts';
+import { activateWallet, isPaymentConfigured, resolveSponsor, retryPendingActivation, topUpWallet, REAL_PAYMENTS_LOCKED, REAL_PAYMENTS_LOCKED_MSG } from './payment.ts';
 import {
   prepareDashboardReveal,
   revealDashboard,
@@ -52,6 +53,7 @@ import { renderRewardVaults, initWalletMenu, RANK_TIERS } from './rewardVaults.t
 import { initDvLogos } from './dvLogo.ts';
 import { openLevelModal } from './levelModal.ts';
 import { renderRankProgress } from './rankProgress.ts';
+import { renderCompanyOverview } from './companyOverview.ts';
 import { clearSession, logout, requireSession, savedSession, signIn } from './session.ts';
 
 // 20-Level Matrix Specification with strict LevelMatrixRow interface
@@ -195,7 +197,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  const pkg = dashboardData?.packages?.[0];
+  // the admin (= company) wallet belongs in the admin panel (owner, 2026-10-10); its own member
+  // view stays reachable from there with ?view=member
+  if (dashboardData?.isAdmin && new URLSearchParams(window.location.search).get('view') !== 'member') {
+    window.location.replace('admin.html');
+    return;
+  }
+
+  // the package earning now (top-ups wait in line behind a package still under its cap)
+  const pkg = dashboardData?.currentPackage ?? dashboardData?.packages?.[0];
   const totalEarned = toNumber(dashboardData?.totalEarned, 0);
   const capEarned = toNumber(pkg?.totalEarned, 0); // level income only: rank rewards sit outside the 25x cap
   const activeDirects = dashboardData?.activeDirects ?? 0;
@@ -207,7 +217,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // server-side sponsor of this unpaid wallet, so it can pay from any browser or wallet app.
   // The browser copy is then dropped, so an older link left in another browser can never
   // overwrite a newer one.
-  if (dashboardData && !pkg) {
+  const isRoot = Boolean(dashboardData?.isRoot);
+  if (dashboardData && !pkg && !isRoot) {
     const ref = getPendingReferral().replace(/[^A-Za-z0-9]/g, '').toUpperCase();
     if (ref && ref !== dashboardData.referralCode && ref !== dashboardData.pendingSponsorCode) {
       try {
@@ -224,10 +235,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  // admin = company wallet: the company overview (same data as the admin panel) + menu link
+  if (dashboardData?.isAdmin) {
+    const link = document.getElementById('walletAdminLink');
+    if (link) link.hidden = false;
+    getAdminStats(token).then((stats) => {
+      const section = document.getElementById('companySection');
+      const grid = document.getElementById('companyStats');
+      if (!section || !grid) return;
+      renderCompanyOverview(grid, stats);
+      section.hidden = false;
+    }).catch(() => { /* not an admin any more, or the server is busy: the member view still works */ });
+  }
+
   initReferralLink(account, dashboardData, serverDown);
-  initActivation(account, Boolean(pkg), serverDown, dashboardData?.pendingSponsorCode ?? getPendingReferral());
+  initActivation(account, Boolean(pkg) || isRoot, serverDown, dashboardData?.pendingSponsorCode ?? getPendingReferral(),
+    Boolean(dashboardData?.canTopUp), dashboardData?.packageCount ?? 0);
   updateOverviewMetrics(activeDirects, totalEarned, capEarned, maxCap, dashboardData?.currentRank, pkg?.status);
-  updateMemberDetails(dashboardData, Boolean(pkg), capEarned, maxCap);
+  updateMemberDetails(dashboardData, Boolean(pkg) || isRoot, capEarned, maxCap);
 
   // 7. 25x capping gauge
   initCapMeter(capEarned, maxCap);
@@ -253,14 +278,24 @@ function initDashboardNavigation(): void {
   });
 }
 
-function initActivation(account: string, activated: boolean, serverDown = false, sponsorCode = ''): void {
+/**
+ * The $300 card: activation for a new wallet, or a top-up (re-entry, owner 2026-10-10) once
+ * every package of an active member has reached its 25x cap. Hidden otherwise.
+ */
+function initActivation(account: string, activated: boolean, serverDown = false, sponsorCode = '', canTopUp = false, packageCount = 0): void {
   const card = document.getElementById('activationCard');
   const button = document.getElementById('dashActivateBtn') as HTMLButtonElement | null;
   const status = document.getElementById('activationStatus');
+  const topUp = activated && canTopUp;
   // without the server we cannot tell an activated member from a new one: never offer
   // the $300 payment on a guess
-  if (activated || serverDown) { card?.setAttribute('hidden', ''); return; }
+  if ((activated && !topUp) || serverDown) { card?.setAttribute('hidden', ''); return; }
   if (!button) return;
+  if (topUp) {
+    const title = document.getElementById('activationTitle');
+    if (title) title.textContent = 'Cap reached: top up to keep earning';
+    button.textContent = 'Approve & Top-up $300';
+  }
   if (REAL_PAYMENTS_LOCKED) {
     button.disabled = true;
     if (status) status.textContent = REAL_PAYMENTS_LOCKED_MSG;
@@ -273,15 +308,18 @@ function initActivation(account: string, activated: boolean, serverDown = false,
   }
   const code = sponsorCode.replace(/[^A-Za-z0-9]/g, '');
   // the member sees whose team they join before paying
-  if (status) status.textContent = code ? `You are joining under ${code} · one-time $300 USDT` : 'Joining without a sponsor · one-time $300 USDT';
+  if (status) {
+    status.textContent = topUp
+      ? `${packageCount > 1 ? `All ${packageCount} packages` : 'Your package'} reached the 25× cap ($7,500 each). A new $300 package restarts your level income: same ID, same team.`
+      : code ? `You are joining under ${code} · one-time $300 USDT` : 'Joining without a sponsor · one-time $300 USDT';
+  }
   button.addEventListener('click', async () => {
     button.disabled = true;
     try {
       // invite code -> sponsor wallet, checked before any payment
-      const sponsor = await resolveSponsor(code, account);
-      const txHash = await activateWallet(sponsor.wallet);
+      const txHash = topUp ? await topUpWallet() : await activateWallet((await resolveSponsor(code, account)).wallet);
       if (status) status.textContent = `Confirmed: ${txHash.slice(0, 10)}...`;
-      showToast('Activation verified on-chain. Refreshing dashboard...');
+      showToast(`${topUp ? 'Top-up' : 'Activation'} verified on-chain. Refreshing dashboard...`);
       document.getElementById('activationCard')?.classList.add('fx-celebrate');
       celebrate(button);
       window.setTimeout(() => window.location.reload(), 1800);
@@ -315,7 +353,7 @@ function updateOverviewMetrics(activeDirects: number, totalEarned: number, capEa
   }
   if (capStatusEl) {
     const capped = status === 'CAPPED';
-    capStatusEl.textContent = capped ? '• Cap reached: re-entry needed' : maxCap > 0 ? '• Active package' : '• No live package';
+    capStatusEl.textContent = capped ? '• Cap reached: top up $300 to keep earning' : maxCap > 0 ? '• Active package' : '• No live package';
     capStatusEl.style.color = capped ? 'var(--red)' : maxCap > 0 ? 'var(--green)' : 'var(--text-muted)';
   }
   if (rankEl) rankEl.textContent = typeof rank === 'number' && rank > 0 ? (RANK_TIERS[rank - 1]?.name ?? `Rank ${rank}`) : 'Unranked';
@@ -326,7 +364,7 @@ function updateMemberDetails(data: DashboardData | null, active: boolean, capEar
   const net = BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BSC Mainnet';
   const tag = document.getElementById('dashMemberTag');
   if (tag) {
-    tag.textContent = active ? `• Active member · ${net}` : data ? `• Not activated yet · ${net}` : `• Wallet connected · ${net}`;
+    tag.textContent = data?.isRoot ? `• Company root ID · ${net}` : active ? `• Active member · ${net}` : data ? `• Not activated yet · ${net}` : `• Wallet connected · ${net}`;
     tag.classList.toggle('is-active', active);
   }
   // the member's own proof: their $300 activation transaction on BscScan (public chain data)
@@ -342,7 +380,7 @@ function updateMemberDetails(data: DashboardData | null, active: boolean, capEar
   set('metricDirectsNote', unlocked >= 20 ? 'All 20 levels unlocked' : `Levels unlocked: ${unlocked} / 20`);
   set('metricEarnedNote', cap > 0
     ? `Level $${(data?.levelIncomeUsd ?? 0).toLocaleString()} · Rank $${(data?.rankRewardsUsd ?? 0).toLocaleString()} · ${formatUsd(Math.max(cap - capEarned, 0))} to cap`
-    : 'Activate the $300 package to start earning');
+    : data?.isRoot ? 'Company root: its commission shares stay in the treasury' : 'Activate the $300 package to start earning');
   const next = RANK_TIERS[data?.currentRank ?? 0];
   set('metricRankNote', next ? `Next: ${next.name} at ${next.volume.toLocaleString()} DAO` : 'Top rank reached');
 }
@@ -413,7 +451,7 @@ function initReferralLink(account: string, data: DashboardData | null, serverDow
   if (idEl) idEl.textContent = data ? refCode : '–';
   // every wallet gets its permanent link on its first visit; invites through it only
   // work once the wallet is activated (the contract accepts activated sponsors only)
-  const activated = Boolean(data?.packages?.length);
+  const activated = Boolean(data?.packages?.length) || Boolean(data?.isRoot); // the root sponsors without paying
   // the member's own invite code is never their sponsor (they opened their own link)
   // before payment the sponsor is the latest invite saved on the server (browser copy if offline)
   let pendingRef = (data?.pendingSponsorCode ?? getPendingReferral()).replace(/[^A-Za-z0-9]/g, '');
