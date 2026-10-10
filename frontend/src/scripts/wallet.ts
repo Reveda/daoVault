@@ -63,11 +63,12 @@ export function getInstalledWallets(): WalletOption[] {
   injectedProviders().forEach((p: any) => {
     if (!seenProviders.has(p)) {
       seenProviders.add(p);
-      // brand flags first: Trust, SafePal, Binance, OKX and Coinbase also set isMetaMask
-      // for compatibility, so checking MetaMask first mislabelled them
+      // brand flags first: Trust, SafePal, TokenPocket, Binance, OKX and Coinbase also set
+      // isMetaMask for compatibility, so checking MetaMask first mislabelled them
       let name = 'Browser Wallet';
       if (p.isTrust || p.isTrustWallet) name = 'Trust Wallet';
       else if (p.isSafePal) name = 'SafePal';
+      else if (p.isTokenPocket) name = 'TokenPocket';
       else if (p.isBinance || p.isBinanceChain) name = 'Binance Wallet';
       else if (p.isOkxWallet || p.isOKExWallet) name = 'OKX Wallet';
       else if (p.isCoinbaseWallet) name = 'Coinbase Wallet';
@@ -95,6 +96,7 @@ function injectedProviders(): any[] {
     asProvider(w.trustwallet) || asProvider(w.trustwallet?.ethereum),
     asProvider(w.binancew3w?.ethereum),
     asProvider(w.okxwallet),
+    asProvider(w.safepalProvider), // SafePal's documented EVM provider
   ].filter(asProvider);
 }
 

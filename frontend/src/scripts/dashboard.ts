@@ -526,7 +526,7 @@ function renderLevelTable(data: DashboardData | null): void {
     const live = data?.levels[idx];
     const isUnlocked = live ? live.unlocked : false;
     const tr = document.createElement('tr');
-    tr.className = 'lvl-row';
+    tr.className = isUnlocked ? 'lvl-row' : 'lvl-row is-locked';
     tr.style.setProperty('--i', String(idx));
     tr.innerHTML = `
       <td><strong>Level ${row.level}</strong></td>
@@ -537,11 +537,12 @@ function renderLevelTable(data: DashboardData | null): void {
           ${isUnlocked ? '✓ Unlocked' : '🔒 Locked'}
         </span>
       </td>
-      <td><span class="lvl-members">${(live?.members ?? 0).toLocaleString()} <i aria-hidden="true">&rsaquo;</i></span></td>
+      <td><span class="lvl-members">${(live?.members ?? 0).toLocaleString()}${isUnlocked ? ' <i aria-hidden="true">&rsaquo;</i>' : ''}</span></td>
       <td><strong>${formatUsd(live?.earnedUsd ?? 0)}</strong></td>
     `;
-    // tap a level: modal with everyone who joined at that level (levelModal.ts)
-    if (data) {
+    // tap an UNLOCKED level: modal with everyone who joined at that level (levelModal.ts).
+    // A locked level does not open (owner, 2026-10-10); it opens once its directs are reached.
+    if (data && isUnlocked) {
       tr.tabIndex = 0;
       tr.setAttribute('role', 'button');
       tr.setAttribute('aria-label', `Level ${row.level}: see who joined`);

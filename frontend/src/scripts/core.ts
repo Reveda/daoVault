@@ -290,24 +290,49 @@ export function showLaunchNotice(key: string, title: string, message: string): v
   wait();
 }
 
+const TOAST_MS = 4200;
+const TOAST_ICONS = {
+  ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 7v6.5M12 17.2v.1"/></svg>',
+};
+
+/**
+ * Top-right toast in the DAOvault theme (owner, 2026-10-10): dark card, gold (or red) accent,
+ * icon, title, message and a shrinking timer bar; tap / close to dismiss. The message is set
+ * as text, never HTML (wallet names come from browser extensions).
+ */
 export function showToast(message: string, isError: boolean = false): void {
   let toast = document.getElementById('web3Toast');
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'web3Toast';
     toast.className = 'toast-msg';
+    toast.setAttribute('role', 'status');
+    toast.setAttribute('aria-live', 'polite');
+    toast.innerHTML = `
+      <span class="toast-icon"></span>
+      <div class="toast-body"><strong class="toast-title"></strong><span class="toast-text"></span></div>
+      <button type="button" class="toast-close" aria-label="Close">&times;</button>
+      <i class="toast-timer"></i>`;
+    const hide = () => { clearTimeout(toastTimeout); toast?.classList.remove('show'); };
+    toast.querySelector('.toast-close')?.addEventListener('click', hide);
     document.body.appendChild(toast);
   }
 
-  const icon = isError ? '⚠️' : '✅';
-  toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
-  toast.style.borderColor = isError ? 'rgba(239, 68, 68, 0.6)' : 'rgba(255, 196, 0, 0.5)';
+  toast.classList.toggle('is-error', isError);
+  toast.querySelector('.toast-icon')!.innerHTML = isError ? TOAST_ICONS.error : TOAST_ICONS.ok;
+  toast.querySelector('.toast-title')!.textContent = isError ? 'Attention' : 'DAOvault';
+  toast.querySelector('.toast-text')!.textContent = message;
+
+  // restart the slide-in and the timer bar for every new message
+  toast.classList.remove('show');
+  void toast.offsetWidth;
   toast.classList.add('show');
 
   clearTimeout(toastTimeout);
   toastTimeout = setTimeout(() => {
     toast?.classList.remove('show');
-  }, 4200);
+  }, TOAST_MS);
 }
 
 /**

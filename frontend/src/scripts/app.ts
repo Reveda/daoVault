@@ -582,18 +582,19 @@ function renderWalletList(): void {
       webLink: 'https://trustwallet.com/',
     },
     {
-      id: 'okx',
-      name: 'OKX Wallet',
-      icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="#FFFFFF"><path d="M4 4h5v5H4V4zm11 0h5v5h-5V4zm-5.5 5.5h5v5h-5v-5zm-5.5 5.5h5v5H4v-5zm11 0h5v5h-5v-5z"/></svg>`,
-      appLink: (url) => `okx://wallet/dapp/url?dappUrl=${encodeURIComponent(url)}`,
-      webLink: 'https://www.okx.com/web3',
+      id: 'tokenpocket',
+      name: 'TokenPocket',
+      icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="#2980FE"/><path d="M6.5 7h7v3h-2v7h-3v-7h-2V7z" fill="#FFFFFF"/><path d="M14.5 7h1.2a3.3 3.3 0 010 6.6h-1.2V7z" fill="#FFFFFF" opacity="0.75"/></svg>`,
+      // official "open DApp" deeplink (help.tokenpocket.pro, Pull up wallet with DeepLink)
+      appLink: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url, chain: 'BSC', source: 'DAOvault' }))}`,
+      webLink: 'https://www.tokenpocket.pro/',
     },
     {
-      id: 'coinbase',
-      name: 'Coinbase Wallet',
-      icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="#0052FF"><circle cx="12" cy="12" r="10"/><rect x="8.5" y="8.5" width="7" height="7" rx="1.5" fill="#FFFFFF"/></svg>`,
-      appLink: (url) => `https://go.cb-w.com/dapp?cb_url=${encodeURIComponent(url)}`,
-      webLink: 'https://www.coinbase.com/wallet',
+      // SafePal documents no deeplink: on a phone the link is copied for its Browser tab
+      id: 'safepal',
+      name: 'SafePal',
+      icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="#4A21EF"/><path d="M15.8 6.5H9.6L7 10.2h6.2l-2.6 3.6h-3.4L5.6 16.5h6.2l2.6-3.7H8.2l2.6-3.6h3.4l1.6-2.7z" fill="#FFFFFF"/></svg>`,
+      webLink: 'https://www.safepal.com/download',
     },
   ];
 
@@ -638,6 +639,10 @@ function renderWalletList(): void {
           // (dv_connect flag, see autoConnectFromWalletApp). If the app does not open,
           // the visitor gets a hint and stays on this page.
           openWalletApp(opt, withConnectFlag(window.location.href));
+        } else if (mobile) {
+          // no app link (SafePal): copy the link for the wallet app's own browser
+          try { await navigator.clipboard.writeText(withConnectFlag(window.location.href)); } catch { /* clipboard blocked */ }
+          showToast(`Link copied. Open ${opt.name}, go to its Browser and paste the link.`, true);
         } else {
           showToast(`Please install ${opt.name} or open inside wallet app browser.`, true);
         }
@@ -661,7 +666,7 @@ function renderWalletList(): void {
       <strong>Other Wallet</strong>
     </div>
     <div class="wallet-opt-right">
-      <span class="wallet-badge" style="background: rgba(34, 211, 238, 0.15); color: var(--cyan); border-color: rgba(34, 211, 238, 0.3);">Any EVM wallet</span>
+      <span class="wallet-badge is-any">Any EVM wallet</span>
       <span class="wallet-opt-arrow">&rarr;</span>
     </div>
   `;

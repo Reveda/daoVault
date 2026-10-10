@@ -2936,32 +2936,107 @@ h1, h2, h3, h4, h5, h6 {
   display: none !important;
 }
 
-/* Web3 Toast */
+/* Web3 Toast (core.ts showToast): top right, DAOvault dark + gold (owner 2026-10-10) */
 .toast-msg {
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
-  background: rgba(13, 11, 46, 0.95);
-  border: 1px solid var(--border-glow);
-  backdrop-filter: var(--glass-blur);
-  padding: 0.9rem 1.4rem;
-  border-radius: var(--radius-md);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.7);
+  top: calc(5.25rem + env(safe-area-inset-top, 0px));
+  right: 1.1rem;
+  width: min(380px, calc(100vw - 2rem));
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 0.75rem;
-  font-size: 0.9rem;
+  padding: 0.85rem 0.85rem 0.95rem 0.95rem;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(212, 175, 55, 0.14), transparent 55%),
+    linear-gradient(180deg, #1e1d23 0%, #141318 100%);
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  border-left: 3px solid var(--gold);
+  border-radius: 14px;
+  box-shadow: 0 18px 45px -12px rgba(0, 0, 0, 0.8), 0 0 28px -10px rgba(212, 175, 55, 0.35);
   color: #ffffff;
   z-index: 99999;
-  transform: translateY(100px);
+  overflow: hidden;
   opacity: 0;
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  pointer-events: none;
+  visibility: hidden;
+  transform: translateX(calc(100% + 1.5rem));
+  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, visibility 0.45s;
 }
+.toast-msg.show { opacity: 1; visibility: visible; transform: none; }
+.toast-msg.is-error {
+  border-color: rgba(239, 68, 68, 0.45);
+  border-left-color: #ef4444;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(239, 68, 68, 0.14), transparent 55%),
+    linear-gradient(180deg, #1e1d23 0%, #141318 100%);
+  box-shadow: 0 18px 45px -12px rgba(0, 0, 0, 0.8), 0 0 28px -10px rgba(239, 68, 68, 0.35);
+}
+.toast-icon {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #1a1404;
+  background: linear-gradient(135deg, #f5d77a, #d4af37);
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.45);
+}
+.toast-icon svg { width: 16px; height: 16px; }
+.toast-msg.is-error .toast-icon { color: #ffffff; background: linear-gradient(135deg, #f87171, #dc2626); box-shadow: 0 0 14px rgba(239, 68, 68, 0.45); }
+.toast-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; padding-top: 0.05rem; }
+.toast-title {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.toast-msg.is-error .toast-title { color: #f87171; }
+.toast-text { font-size: 0.86rem; line-height: 1.45; color: #e6e7eb; overflow-wrap: anywhere; }
+.toast-close {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  margin: -0.15rem -0.15rem 0 0;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #c9cdd6;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+}
+.toast-close:hover { border-color: var(--gold); color: #ffffff; }
+.toast-timer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #f5d77a, #d4af37);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.toast-msg.is-error .toast-timer { background: linear-gradient(90deg, #f87171, #dc2626); }
+.toast-msg.show .toast-timer { animation: toastTimer 4.2s linear forwards; }
+@keyframes toastTimer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
-.toast-msg.show {
-  transform: translateY(0);
-  opacity: 1;
+@media (max-width: 600px) {
+  .toast-msg {
+    top: calc(4.6rem + env(safe-area-inset-top, 0px));
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+    padding: 0.75rem 0.75rem 0.85rem 0.85rem;
+    transform: translateY(calc(-100% - 1.5rem));
+  }
+  .toast-text { font-size: 0.82rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-msg { transition: opacity 0.2s ease, visibility 0.2s; transform: none; }
+  .toast-msg.show .toast-timer { animation: none; }
 }
 
 /* one-time "We'll be live soon" popup (core.ts showLaunchNotice) */
@@ -7009,3 +7084,59 @@ html.lite .hw-wallet { animation: none; filter: none; }
 .vc-check-row input:focus-visible { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.18); }
 .vc-check-row .vc-btn { cursor: pointer; font-family: inherit; }
 .vc-check small { font-size: 0.76rem; color: var(--text-muted); }
+
+/* ==========================================================================
+   Connect Wallet modal (owner 2026-10-10): our dark + gold theme, lifted to a warm
+   charcoal with clearer rows and a softer backdrop. Larger, readable rows on phones.
+   ========================================================================== */
+#walletModal.modal-overlay { background: rgba(5, 5, 8, 0.62); }
+#walletModal .wallet-dialog-box {
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(212, 175, 55, 0.16), transparent 60%),
+    linear-gradient(180deg, #1e1d23 0%, #141318 100%) !important;
+  border: 1px solid rgba(212, 175, 55, 0.5) !important;
+  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.85), 0 0 40px -12px rgba(212, 175, 55, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  scrollbar-color: rgba(212, 175, 55, 0.4) transparent;
+}
+#walletModal .wallet-dialog-box::before,
+#walletModal .card-beam-glow { display: none; }
+#walletModal .wallet-box-sub { color: #b9bdc8; }
+#walletModal .wallet-opt {
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  color: #ffffff;
+}
+#walletModal .wallet-opt:hover {
+  background: rgba(212, 175, 55, 0.12);
+  border-color: rgba(212, 175, 55, 0.75);
+  box-shadow: 0 10px 26px -12px rgba(212, 175, 55, 0.5);
+  transform: translateX(3px);
+}
+#walletModal .wallet-opt:focus-visible { outline: 2px solid #d4af37; outline-offset: 2px; }
+#walletModal .wallet-opt-icon { background: rgba(255, 255, 255, 0.09); border-color: rgba(255, 255, 255, 0.15); }
+#walletModal .wallet-badge { background: rgba(255, 255, 255, 0.08); color: #c9cdd6; border-color: rgba(255, 255, 255, 0.16); }
+#walletModal .wallet-badge.installed { background: rgba(16, 185, 129, 0.18); color: #34d399; border-color: rgba(16, 185, 129, 0.45); }
+#walletModal .wallet-badge.is-any { background: rgba(34, 211, 238, 0.14); color: #67e8f9; border-color: rgba(34, 211, 238, 0.35); }
+#walletModal .wallet-opt-arrow { color: #9aa0ad; }
+#walletModal .wallet-opt:hover .wallet-opt-arrow { color: #d4af37; }
+#walletModal .wallet-dialog-foot { border-top-color: rgba(255, 255, 255, 0.1); color: #a3a8b5; }
+#walletModal .modal-close { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.16); color: #e5e7eb; }
+#walletModal .modal-close:hover { border-color: #d4af37; color: #ffffff; }
+
+@media (max-width: 600px) {
+  #walletModal .wallet-dialog-box { padding: 1.1rem 0.9rem 0.85rem !important; }
+  #walletModal .wallet-dialog-box h3 { font-size: 1.3rem; }
+  #walletModal .wallet-box-sub { font-size: 0.8rem; max-width: 34ch; }
+  #walletModal .wallet-box-badge { font-size: 0.64rem; }
+  #walletModal .wallet-pick-list { gap: 0.45rem; }
+  #walletModal .wallet-opt { min-height: 3.1rem; padding: 0.6rem 0.75rem; border-radius: 12px; }
+  #walletModal .wallet-opt-left { gap: 0.65rem; }
+  #walletModal .wallet-opt-icon { width: 32px; height: 32px; }
+  #walletModal .wallet-opt strong { font-size: 0.88rem; }
+  #walletModal .wallet-badge { font-size: 0.62rem; padding: 0.18rem 0.45rem; }
+  #walletModal .wallet-dialog-foot { font-size: 0.64rem; }
+}
+@media (max-width: 360px) {
+  #walletModal .wallet-opt strong { font-size: 0.82rem; }
+}
