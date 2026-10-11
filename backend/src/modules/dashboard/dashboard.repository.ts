@@ -31,8 +31,20 @@ export const dashboardRepository = {
   directLegs(userId: string) {
     return prisma.user.findMany({
       where: { uplineId: userId },
-      select: { teamVolume: true, _count: { select: { packages: true } } },
+      select: { id: true, teamVolume: true, _count: { select: { packages: true } } },
     });
+  },
+
+  /** members in each direct's leg (the direct + everyone below them, all depths), by direct id */
+  async membersPerLeg(userId: string) {
+    const rows = await prisma.$queryRaw<Array<{ leg: string; members: bigint }>>`
+      WITH RECURSIVE tree(id, leg) AS (
+        SELECT id, id FROM users WHERE upline_id = ${userId}::uuid
+        UNION ALL
+        SELECT u.id, t.leg FROM users u JOIN tree t ON u.upline_id = t.id
+      )
+      SELECT leg::text AS leg, COUNT(*)::bigint AS members FROM tree GROUP BY leg`;
+    return new Map(rows.map((r) => [r.leg, Number(r.members)]));
   },
 
   /**

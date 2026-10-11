@@ -99,6 +99,18 @@ export class WithdrawalsService {
     }
   }
 
+  /** Background worker: settle every member's open instant vouchers (claimed or expired). */
+  async reconcileAllOpen(): Promise<number> {
+    if (!instantPayoutsEnabled()) return 0;
+    const users = await prisma.withdrawal.findMany({
+      where: { status: WithdrawalStatus.PROCESSING, voucherId: { not: null } },
+      distinct: ["userId"],
+      select: { userId: true },
+    });
+    for (const { userId } of users) await this.reconcile(userId);
+    return users.length;
+  }
+
   async summary(wallet: string) {
     const user = await prisma.user.findUnique({ where: { walletAddress: wallet } });
     if (!user) throw httpError("No activated account for this wallet.", 404);

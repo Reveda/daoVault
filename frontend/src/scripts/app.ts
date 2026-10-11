@@ -63,9 +63,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.documentElement.style.setProperty('--cursor-y', `${e.clientY}px`);
   });
 
-  // pre-launch notice, once per browser
-  showLaunchNotice('landing', 'We’ll be live soon',
-    'DAOVAULT is getting ready to launch on BNB Smart Chain. Connect your wallet now to reserve your permanent referral link. Activations open at launch.');
+  // pre-launch notice on every visit until the launch moment (owner, 2026-10-11): short and
+  // simple; the date follows VITE_LAUNCH_DATE (shown in India time, e.g. "22 October")
+  if (Date.now() < launchDate().getTime()) {
+    const day = launchDate().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
+    showLaunchNotice('landing', `We go live on ${day}`,
+      'Until then, explore DAOVAULT: see how the 20 levels and 11 rank rewards work, and get ready to build your community.',
+      { everyVisit: true, kicker: null, button: 'Explore DAOVAULT' });
+  }
 
   // after the splash: the heavy setup as separate small tasks (one long task made Chrome
   // report "'setTimeout' handler took 108ms" and held the main thread)
@@ -442,9 +447,10 @@ function initMatrixCalculator(): void {
  * Override without a code change with VITE_LAUNCH_DATE (ISO 8601, e.g. 2026-10-22T00:00:00+05:30).
  */
 const LAUNCH_DATE = new Date(import.meta.env.VITE_LAUNCH_DATE || '2026-10-22T00:00:00+05:30');
+const launchDate = () => (Number.isNaN(LAUNCH_DATE.getTime()) ? new Date('2026-10-22T00:00:00+05:30') : LAUNCH_DATE);
 
 function initCountdown(): void {
-  const targetDate = Number.isNaN(LAUNCH_DATE.getTime()) ? new Date('2026-10-22T00:00:00+05:30') : LAUNCH_DATE;
+  const targetDate = launchDate();
 
   const daysEl = document.getElementById('cdDays');
   const hoursEl = document.getElementById('cdHours');

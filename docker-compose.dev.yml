@@ -1,0 +1,91 @@
+# Development in Docker (optional; plain `npm run dev` in backend/ and frontend/ still works as before).
+#
+#   docker compose -f docker-compose.dev.yml up --build        start (site http://localhost:3000)
+#   docker compose -f docker-compose.dev.yml down              stop (database kept)
+#   docker compose -f docker-compose.dev.yml up --build -V     after package.json changes (fresh node_modules)
+#
+# Code is mounted from this folder: save a file and the backend / website reload by themselves.
+# Uses its OWN Postgres (empty at first, kept in the `pgdata-dev` volume), not your local database.
+# backend/.env is read as usual (JWT_SECRET, chain, contracts); DATABASE_URL is replaced below.
+# Ports 3000 / 5000 are the same as `npm run dev`: run one of the two, not both.
+
+name: daovault-dev
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: daovault
+    ports:
+      - "127.0.0.1:5433:5432"   # host tools (Prisma Studio, pgAdmin) on localhost:5433
+    volumes:
+      - pgdata-dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d daovault"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      target: development
+    environment: &backend-env
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/daovault?schema=public
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: development
+      PORT: "5000"
+      FRONTEND_URL: http://localhost:3000
+      CHOKIDAR_USEPOLLING: "true"   # file events from a Windows folder do not reach the container
+    ports:
+      - "127.0.0.1:5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules           # the container's own Linux node_modules (not the Windows one)
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  # background jobs (src/worker.ts): chain indexer, voucher settlement, auth cleanup
+  worker:
+    build:
+      context: ./backend
+      target: development
+    command: ["npm", "run", "worker:dev"]
+    environment: *backend-env
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    environment:
+      DOCKER: "1"
+      API_PROXY_TARGET: http://backend:5000
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  pgdata-dev:

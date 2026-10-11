@@ -3024,15 +3024,26 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes toastTimer { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
 @media (max-width: 600px) {
+  /* phones (owner, 2026-10-11): a compact card in the top-right corner, like a native
+     notification: just under the status bar, small type, quick slide in from the right */
   .toast-msg {
-    top: calc(4.6rem + env(safe-area-inset-top, 0px));
-    right: 0.75rem;
-    left: 0.75rem;
+    top: calc(0.6rem + env(safe-area-inset-top, 0px));
+    right: 0.6rem;
+    left: auto;
     width: auto;
-    padding: 0.75rem 0.75rem 0.85rem 0.85rem;
-    transform: translateY(calc(-100% - 1.5rem));
+    max-width: min(300px, calc(100vw - 2.5rem));
+    gap: 0.55rem;
+    padding: 0.6rem 0.55rem 0.7rem 0.7rem;
+    border-radius: 12px;
+    transform: translateX(calc(100% + 1rem));
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease, visibility 0.3s;
   }
-  .toast-text { font-size: 0.82rem; }
+  .toast-icon { width: 24px; height: 24px; }
+  .toast-icon svg { width: 13px; height: 13px; }
+  .toast-body { gap: 0.1rem; }
+  .toast-title { font-size: 0.6rem; letter-spacing: 0.08em; }
+  .toast-text { font-size: 0.78rem; line-height: 1.4; }
+  .toast-close { width: 22px; height: 22px; font-size: 0.85rem; margin: -0.1rem -0.1rem 0 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .toast-msg { transition: opacity 0.2s ease, visibility 0.2s; transform: none; }
@@ -6910,6 +6921,13 @@ main {
 .is-offscreen *::after {
   animation-play-state: paused !important;
 }
+/* ...but one-shot entrance animations are never held at their invisible first frame: on phones
+   the observer can lag behind a fast scroll, and the dashboard's 20 level rows and reward boxes
+   stayed blank until it caught up (owner, 2026-10-11) */
+.is-offscreen .level-table .lvl-row,
+.is-offscreen .reward-box {
+  animation-play-state: running !important;
+}
 
 /* lite mode (html.lite: phones / low-power devices) */
 html.lite *,
@@ -7139,4 +7157,63 @@ html.lite .hw-wallet { animation: none; filter: none; }
 }
 @media (max-width: 360px) {
   #walletModal .wallet-opt strong { font-size: 0.82rem; }
+}
+
+/* ==========================================================================
+   Matrix level cards: arrival animation (owner 2026-10-11, matrixAutoDeck.ts revealCard).
+   When a card becomes active a light scans down it and its content drops in from the top,
+   piece by piece. `.mx-reveal` is removed after ~2.4s so the cards' own loops come back.
+   ========================================================================== */
+.matrix-stack-card { --mx-tone: 212, 175, 55; }
+.matrix-stack-card.tier-cyan { --mx-tone: 0, 240, 255; }
+.matrix-stack-card.tier-violet { --mx-tone: 168, 85, 247; }
+.matrix-stack-card.tier-blue { --mx-tone: 59, 130, 246; }
+.mx-scan {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 36%;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(var(--mx-tone), 0.1) 60%, rgba(var(--mx-tone), 0.5) 98%, transparent 100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .matrix-stack-card.mx-reveal .mx-scan { animation: mxScan 1.15s cubic-bezier(0.4, 0, 0.2, 1) both; }
+  .mx-reveal .cypheir-badge { animation: mxDrop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.15) both; }
+  .mx-reveal .cyber-icon-pod { animation: mxPop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) 0.08s both; }
+  .mx-reveal .cypheir-pct { animation: mxDrop 0.5s ease-out 0.16s both; }
+  .mx-reveal .cypheir-pill { animation: mxSlide 0.5s ease-out 0.24s both; }
+  .mx-reveal .cypheir-live-status { animation: mxDrop 0.45s ease-out 0.3s both; }
+  .mx-reveal .cypheir-title { animation: mxCurtain 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 0.36s both; }
+  .mx-reveal .cypheir-req-tag { animation: mxDrop 0.45s ease-out 0.46s both; }
+  .mx-reveal .cypheir-desc { animation: mxDrop 0.5s ease-out 0.54s both; }
+  .mx-reveal .matrix-cyber-meter { animation: mxDrop 0.5s ease-out 0.62s both; }
+  .mx-reveal .meter-fill { transform-origin: left center; animation: mxFill 0.9s cubic-bezier(0.3, 0.8, 0.2, 1) 0.8s both; }
+  .mx-reveal .meta-row { animation: mxSlide 0.45s ease-out 0.7s both; }
+  .mx-reveal .meta-row + .meta-row { animation-delay: 0.78s; }
+  .mx-reveal .cypheir-btn { animation: mxDrop 0.45s ease-out 0.86s both, mxGlow 1.1s ease-in-out 1.3s 1; }
+}
+
+@keyframes mxScan {
+  0% { transform: translateY(-100%); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { transform: translateY(280%); opacity: 0; }
+}
+@keyframes mxDrop { from { opacity: 0; transform: translateY(-18px); } to { opacity: 1; transform: none; } }
+@keyframes mxSlide { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes mxPop {
+  0% { opacity: 0; transform: translateY(-14px) scale(0.6) rotate(-25deg); }
+  70% { opacity: 1; transform: scale(1.08) rotate(4deg); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes mxCurtain {
+  from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(-10px); }
+  to { opacity: 1; clip-path: inset(0 0 0 0); transform: none; }
+}
+@keyframes mxFill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes mxGlow {
+  0%, 100% { box-shadow: none; }
+  50% { box-shadow: 0 0 0 1px rgba(var(--mx-tone), 0.6), 0 0 22px rgba(var(--mx-tone), 0.35); }
 }

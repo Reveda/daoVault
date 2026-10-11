@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- dark from the very first frame: before main.css / Google Fonts arrive the browser would
+       paint its default white for a moment (owner saw it behind the splash on slow loads) -->
+  <meta name="color-scheme" content="dark" />
+  <style>html,body{background:#050505;color:#fff}</style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin | DAOVAULT</title>
+  <title>Page not found | DAOVAULT</title>
   <meta name="theme-color" content="#050505" />
   <!-- lite mode (phones / low-power devices): lighter effects, set before first paint -->
   <script src="/boot.js"></script>
@@ -17,6 +21,16 @@
   <link rel="stylesheet" href="/src/styles/admin.css" />
 </head>
 <body class="dash-page admin-page">
+  <!-- Everyone who is not signed in as an admin wallet gets this (admin.ts decides; on the VPS
+       Nginx already answers 404 before this file is sent). Same text as public/404.html. -->
+  <main class="nf-page" id="notFound" hidden>
+    <p class="nf-code mono">404</p>
+    <h1>Page not found</h1>
+    <p>The page you are looking for does not exist or has moved.</p>
+    <a class="btn btn-grad" href="/">Go to home</a>
+  </main>
+
+  <div id="adminRoot" hidden>
   <!-- gold particle cloud + lightning, the same scene as the landing page (particleScene.ts) -->
   <canvas class="scene-canvas" id="sceneCanvas" aria-hidden="true"></canvas>
 
@@ -29,7 +43,6 @@
       <div class="dash-head-actions">
         <a class="btn btn-line admin-to-dash" id="adminToDash" href="dashboard.html?view=member" hidden>My dashboard</a>
         <span class="dash-user-badge mono" id="adminWallet" hidden></span>
-        <button class="btn btn-grad" id="adminSignIn" type="button">Connect &amp; sign in</button>
       </div>
     </div>
   </header>
@@ -39,18 +52,13 @@
       <!-- hero -->
       <section class="ad-hero">
         <div class="fx-particles" aria-hidden="true"></div>
-        <div class="mono dash-member-tag" id="adminState">&bull; Sign in with an admin wallet</div>
+        <div class="mono dash-member-tag" id="adminState">&bull; Admin</div>
         <h1 class="ad-title">Company <span class="grad-text">Command Center</span></h1>
         <p class="ad-sub">Every member, every dollar and every payout of DAOVAULT in one place: live from the database, money verified on BNB Smart Chain.</p>
         <div class="ad-hero-actions" id="adminHeroActions" hidden>
           <span class="ad-chip mono"><i class="ad-live"></i> Live · last 30 days</span>
           <button class="btn btn-line ad-refresh" id="adminRefresh" type="button">&#8635; Refresh</button>
         </div>
-      </section>
-
-      <section class="admin-locked glass" id="adminLocked">
-        <h3>Admin wallets only</h3>
-        <p>Connect a wallet listed in <code>ADMIN_WALLETS</code> on the backend and sign the login message. Signing costs no gas.</p>
       </section>
 
       <div id="adminApp" hidden>
@@ -208,6 +216,7 @@
       </div>
     </div>
   </main>
+  </div>
   <script type="module" src="/src/scripts/admin.ts"></script>
 </body>
 </html>

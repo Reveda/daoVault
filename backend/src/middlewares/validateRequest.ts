@@ -16,7 +16,11 @@ export const validateRequest = (schemas: RequestSchemas): RequestHandler => (req
 
   const failed = checks.find((result) => !result.success);
   if (failed && !failed.success) {
-    res.status(400).json({ success: false, error: failed.error.issues[0]?.message ?? "Invalid request" });
+    // our own short messages ("Invalid wallet address") stay; zod's built-in ones
+    // ("Invalid input: expected string, received undefined") describe the schema: generic text
+    const message = failed.error.issues[0]?.message ?? "";
+    const builtIn = /^(Invalid input|Too (small|big)|Unrecognized|Invalid (string|option|type|union|key|element|value))/.test(message);
+    res.status(400).json({ success: false, error: !message || builtIn ? "Invalid request." : message });
     return;
   }
 

@@ -56,6 +56,64 @@ function syncMatrixMoney(deck: HTMLElement): void {
 }
 
 /**
+ * Card arrival animation (owner, 2026-10-11): when a level card becomes the active one, a light
+ * scans down it and its content drops in from the top piece by piece (CSS `.mx-reveal` at the
+ * end of main.css); the % and the USDT amount count up. The class is removed afterwards so the
+ * cards' own looping animations come back. Replays on every change, both scroll directions.
+ */
+const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const REVEAL_MS = 2400;
+let deckSeen = false;
+let revealedTier = -1;
+const revealTimers = new WeakMap<HTMLElement, number>();
+
+/** Counts the first number in an element's text up from 0, keeping its prefix, suffix and decimals. */
+function countUpText(el: HTMLElement, duration = 700): void {
+  const finalText = el.dataset.mxFinal ?? el.textContent ?? '';
+  el.dataset.mxFinal = finalText;
+  const match = finalText.match(/[\d,]+(\.\d+)?/);
+  if (!match) return;
+  const target = Number(match[0].replace(/,/g, ''));
+  const decimals = match[1] ? match[1].length - 1 : 0;
+  const [before, after] = [finalText.slice(0, match.index), finalText.slice((match.index ?? 0) + match[0].length)];
+  const start = performance.now();
+  const step = (now: number) => {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - (1 - t) ** 3;
+    el.textContent = `${before}${(target * eased).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}${after}`;
+    if (t < 1) requestAnimationFrame(step);
+    else el.textContent = finalText;
+  };
+  requestAnimationFrame(step);
+}
+
+function revealCard(card: HTMLElement): void {
+  if (REDUCED_MOTION) return;
+  if (!card.querySelector('.mx-scan')) {
+    const scan = document.createElement('i');
+    scan.className = 'mx-scan';
+    scan.setAttribute('aria-hidden', 'true');
+    card.appendChild(scan);
+  }
+  window.clearTimeout(revealTimers.get(card));
+  card.classList.remove('mx-reveal');
+  void card.offsetWidth; // restart the CSS animations
+  card.classList.add('mx-reveal');
+  const pct = card.querySelector<HTMLElement>('.cypheir-pct');
+  const amount = card.querySelector<HTMLElement>('.cypheir-pill strong');
+  if (pct) countUpText(pct, 650);
+  if (amount) countUpText(amount, 900);
+  revealTimers.set(card, window.setTimeout(() => card.classList.remove('mx-reveal'), REVEAL_MS));
+}
+
+function revealActive(cards: NodeListOf<HTMLElement>): void {
+  if (!deckSeen || revealedTier === currentActiveTier) return;
+  revealedTier = currentActiveTier;
+  const card = cards[currentActiveTier];
+  if (card) revealCard(card);
+}
+
+/**
  * Updates UI indicators (tabs, dots, pipeline, cards) to match active tier
  */
 export function setActiveTier(index: number, smoothScroll = false): void {
@@ -71,6 +129,7 @@ export function setActiveTier(index: number, smoothScroll = false): void {
   cards.forEach((card, i) => {
     card.classList.toggle('active', i === currentActiveTier);
   });
+  revealActive(cards);
 
   // Update tabs
   tabs.forEach((tab, i) => {
@@ -111,6 +170,19 @@ export function initMatrixAutoDeck(): void {
 
   // Initial state: Tier 1 active
   setActiveTier(0, false);
+
+  // the first card plays its arrival animation when the deck comes on screen (not at page load)
+  if ('IntersectionObserver' in window) {
+    const seen = new IntersectionObserver((entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      seen.disconnect();
+      deckSeen = true;
+      revealActive(document.querySelectorAll<HTMLElement>('.matrix-stack-card'));
+      // the deck is very tall (spread cards + reserved space): watch its top reaching 70% of
+      // the screen, where the scroll deck starts (scrollAnimations 'top 72%'), not a share of it
+    }, { threshold: 0, rootMargin: '0px 0px -30% 0px' });
+    seen.observe(deck);
+  }
 
   // 1. Tab click listeners
   tabs.forEach((tab, idx) => {

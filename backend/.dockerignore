@@ -1,0 +1,7 @@
+# never send secrets or host builds into an image
+.env
+.env.*
+node_modules
+dist
+*.log
+README.md

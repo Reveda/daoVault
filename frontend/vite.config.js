@@ -7,6 +7,12 @@ import { defineConfig } from 'vite';
 // Not used by the dev server (Vite's HMR needs inline scripts).
 export const CSP = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: data:; connect-src 'self' https: wss:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'";
 
+// Docker dev (docker-compose.dev.yml sets DOCKER=1): listen on all interfaces, no browser,
+// polling (file events from a Windows folder do not reach the container) and the API at the
+// `backend` service. Plain `npm run dev` keeps the old behaviour (localhost, opens the browser).
+const IN_DOCKER = Boolean(process.env.DOCKER);
+const API_TARGET = process.env.API_PROXY_TARGET || 'http://localhost:5000';
+
 export default defineConfig({
   root: '.',
   // production: no console.log / info / debug in the shipped code (warn and error stay)
@@ -26,10 +32,12 @@ export default defineConfig({
   server: {
     port: 3000,
     strictPort: true,
-    open: true,
+    open: !IN_DOCKER,
+    host: IN_DOCKER ? true : undefined,
+    watch: IN_DOCKER ? { usePolling: true, interval: 300 } : undefined,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: API_TARGET,
         changeOrigin: true,
       },
     },
@@ -41,7 +49,7 @@ export default defineConfig({
     headers: { 'Content-Security-Policy': CSP.replace("connect-src 'self'", "connect-src 'self' http://localhost:5000") },
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: API_TARGET,
         changeOrigin: true,
       },
     },

@@ -14,19 +14,26 @@ export class DashboardService {
       throw error;
     }
 
-    const [byType, byLevel, recent, legs, perLevel, balance] = await Promise.all([
+    const [byType, byLevel, recent, legs, perLevel, perLeg, balance] = await Promise.all([
       dashboardRepository.earningsByType(user.id),
       dashboardRepository.earningsByLevel(user.id),
       dashboardRepository.recentEarnings(user.id),
       dashboardRepository.directLegs(user.id),
       dashboardRepository.membersPerLevel(user.id),
+      dashboardRepository.membersPerLeg(user.id),
       balanceOf(prisma, user.id),
     ]);
 
     const sumOf = (type: string) => Number(byType.find((t) => t.type === type)?._sum.amountUsd ?? 0);
     const levelIncomeUsd = sumOf("LEVEL_COMMISSION");
     const rankRewardsUsd = sumOf("RANK_REWARD");
-    const legSummary = summarizeLegs(legs.map((l) => l.teamVolume + l._count.packages)); // 1 DAO per package, top-ups included
+    const legVolumes = legs.map((l) => l.teamVolume + l._count.packages); // 1 DAO per package, top-ups included
+    const legSummary = summarizeLegs(legVolumes);
+    // members on each side (owner, 2026-10-11, All Ranks tree): the strong leg is the direct with the
+    // most DAO (summarizeLegs), the other side is every other direct's leg together
+    const strongIndex = legVolumes.length ? legVolumes.indexOf(Math.max(...legVolumes)) : -1;
+    const teamMembers = [...perLeg.values()].reduce((s, n) => s + n, 0);
+    const strongMembers = strongIndex >= 0 ? perLeg.get(legs[strongIndex].id) ?? 0 : 0;
     // the package earning now: the oldest still ACTIVE (top-ups wait in line), else the latest
     const currentPackage = user.packages.find((p) => p.status === "ACTIVE") ?? user.packages[user.packages.length - 1] ?? null;
     const isRoot = isRootWallet(user.walletAddress);
@@ -47,7 +54,7 @@ export class DashboardService {
       currentRank: user.currentRank,
       rankName: RANKS[user.currentRank - 1]?.name ?? null,
       teamVolume: user.teamVolume,
-      legs: { ...legSummary, count: legs.length },
+      legs: { ...legSummary, count: legs.length, powerMembers: strongMembers, otherMembers: teamMembers - strongMembers },
       nextRank: next
         ? {
           rank: next.rank,

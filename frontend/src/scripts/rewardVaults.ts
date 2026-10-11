@@ -96,11 +96,28 @@ export function initWalletMenu(wallet: string): void {
   const scan = document.getElementById('walletScanLink') as HTMLAnchorElement | null;
   if (scan) scan.href = `https://${BSC_CHAIN_ID === 97 ? 'testnet.' : ''}bscscan.com/address/${wallet}`;
 
+  const jumps = Array.from(panel.querySelectorAll<HTMLAnchorElement>('[data-jump]'));
+  const targetOf = (a: HTMLAnchorElement) => document.getElementById(a.hash.slice(1));
   const setOpen = (open: boolean) => {
+    // a shortcut shows only when its section is on this member's dashboard
+    if (open) jumps.forEach((a) => { const t = targetOf(a); a.hidden = !t || t.closest('[hidden]') !== null; });
     panel.hidden = !open;
     btn.setAttribute('aria-expanded', String(open));
     wrap.classList.toggle('is-open', open);
   };
+  // section shortcuts (owner, 2026-10-11): smooth scroll under the header, then a short gold flash
+  jumps.forEach((a) => a.addEventListener('click', (e) => {
+    const target = targetOf(a);
+    if (!target) return;
+    e.preventDefault();
+    setOpen(false);
+    target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+    target.classList.remove('jump-flash');
+    window.setTimeout(() => {
+      target.classList.add('jump-flash');
+      window.setTimeout(() => target.classList.remove('jump-flash'), 1400);
+    }, 450);
+  }));
   btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(panel.hidden); });
   document.addEventListener('click', (e) => { if (!wrap.contains(e.target as Node)) setOpen(false); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });

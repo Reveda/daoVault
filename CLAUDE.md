@@ -4,6 +4,11 @@ Web3 referral/affiliate reward dApp on **BNB Smart Chain (BEP-20)**. Users conne
 **Build status, decisions, setup:** `document.md` (keep it updated when features land).
 **Deploy runbook (Render, contracts, every env value, testnet + mainnet):** `DEPLOYMENT.md` (update addresses there when contracts deploy).
 **Testnet step by step (owner, Hinglish; status, wallets, faucets, Render values, test flow):** `TESTNET-SETUP.md`.
+**Owner's own Remix deploy of the 3 contracts (Hinglish, click by click):** `REMIX-DEPLOY.md`.
+**Mainnet (launch) Remix deploy + wallet-role scenarios (MetaMask/Trust/Ledger/Safe, deployer != treasury):** `PRODUCTION-REMIX-DEPLOY.md`.
+**Production hosting plan (owner, 2026-10-10): Hostinger VPS + Docker + Nginx + Cloudflare Tunnel, secrets, signer
+options (KMS / Docker signer / admin review), hardening, backups, emergency plan:** `PRODUCTION-SETUP.md`.
+GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it private); history had no secrets.
 **Design/UX reference:** TPR World (tprworld.org). Its full code teardown (design tokens, sections, 3D scene, wallet flow, API, what not to copy) is in `tpr-reference.md`. Read it for UI, wallet or dashboard work instead of re-fetching the site.
 
 ## Business rules (summary)
@@ -20,6 +25,8 @@ Web3 referral/affiliate reward dApp on **BNB Smart Chain (BEP-20)**. Users conne
 
 ## Layout
 ```
+contracts/production/              mainnet copies of DAOvaultActivation.sol + DAOvaultPayout.sol (no TestUSDT) + README
+                                   (values, SHA-256). Keep IDENTICAL to contracts/*.sol: re-copy after any contract fix.
 contracts/DAOvaultActivation.sol   Solidity 0.8.20. activate(sponsor) pulls USDT via transferFrom -> immutable treasury,
                                    emits Activated(user, sponsor, amount, timestamp). Sponsor must be activated OR the treasury.
                                    Treasury = company ROOT (owner, 2026-10-09): never pays (TreasuryIsRoot), isActivated() true.
@@ -78,7 +85,7 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
            again only when that fails. logout() deletes the refresh token. Dashboard, level modal, register and
            admin.ts all get tokens through signIn().
   CSP: no inline scripts (public/boot.js = html.lite + ?ref capture in <head>). Production CSP in render.yaml headers,
-           same string in vite.config.js (preview only); keep both in sync. Checked: zero violations on all pages.
+           same string in vite.config.js (preview only) and frontend/nginx/security-headers.conf (Docker); keep all 3 in sync. Checked: zero violations on all pages.
   scripts: core.ts (referral capture, preloader, countUp, reveal stagger, toast), wallet.ts (EIP-6963, BSC switch, reconnect),
            payment.ts (resolveSponsor, approve + activate + POST verify, retry pending), api.ts (backend calls),
            trophy3d.ts (our own three.js Apex trophy), walletDialog3D.ts, rankGameCard.ts (RANK_DATA), matrixAutoDeck.ts, scrollAnimations.ts (GSAP per section,
@@ -122,12 +129,20 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
     dashboardFx.ts    card cascade, rollNumber(), pointer spotlight, 3D metric icons, celebrate() confetti
     matrixDial.ts     #matrix "Explore Any Generation" interactive SVG vault dial (drives the hidden level pills;
                       app.ts autoplay steps a level every 2s while .matrix-calc-box is on screen)
+    rewardVaults.ts   wallet menu "Go to" shortcuts (data-jump: only Withdraw + Rewards, owner 2026-10-11; was also Rank, Invite,
+                      20 levels, Income; smooth scroll + .jump-flash; hidden sections left out). Owner 2026-10-11.
+                      Dashboard: is-offscreen never pauses .lvl-row / .reward-box entrances (rows went blank on fast phone scroll).
     rewardVaults.ts   dashboard #rewardsSection: 11 rank boxes (locked/ready/opened, opened state in localStorage only,
                       never a payout) + header #walletMenu (copy, BscScan, Log out = #dashLogoutBtn)
-    rankProgress.ts   dashboard #rankListSection "All Ranks": per rank Power Leg / Other Legs bars vs the DAO target
+    rankProgress.ts   dashboard #rankListSection "All Ranks": per rank a leg tree (owner 2026-10-11): YOU node, flowing
+                      arrows, Strong Leg (left) / Other Leg (right) progress rings; hover/tap = member count bubble
+                      (GET /dashboard legs.powerMembers / otherMembers, dashboard.repository membersPerLeg, all depths).
+                      Was: per rank Power Leg / Other Legs bars vs the DAO target
                       (each side, DAO only), reward, Achieved/In progress/Locked, All/Achieved/Pending
                       filter. Pure frontend from GET /dashboard legs + currentRank.
-    giftBox.ts        openGiftBox(): three.js surprise box overlay (drop, rattle, shake, lid burst, reward reveal); red box,
+    giftBox.ts        openGiftBox(): three.js surprise box overlay; owner 2026-10-11: packing intro (PACK_S 2.3s: body rises,
+                      ribbon wraps, lid lands, seals + bow pop; buttons after), gold portal rings + dust, energy from 4 sides
+                      + lightning while charging, shockwave on burst (animateVfx), soft-masked canvas edges. Was: (drop, rattle, shake, lid burst, reward reveal); red box,
                       white ribbon + bow, gold-rimmed DAOvault seal on all 4 sides; .gift-scroll keeps it on any screen height
   Landing nav: no Matrix/Dashboard items; li.nav-dash shows only with body.wallet-connected; landingFx initNavIndicator
   glides a highlight. MutationObservers must never react to their own writes (classList.add re-sets the attribute even
@@ -146,6 +161,25 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   phones; only a real switch reloads the dashboard. Dashboard data retries network/5xx ~1 min (Render waking).
   App links carry ?ref (wallet browsers have their own storage); Binance/OKX links use their official formats. Dashboard: header = logo + wallet menu only (owner removed the navbar); no link back to the landing page (only Log out); metric captions are data-driven.
   Preloader/footer use --bg-dark (#050505) like the landing page. The wallet modal card never tilts.
+  Wallet modal (owner 2026-10-10): MetaMask, Binance, Trust, TokenPocket (tpdapp:// deeplink), SafePal (no deeplink:
+  copies the link on phones; window.safepalProvider), Other; dark-gold lifted theme (#walletModal block, end of main.css).
+  core.ts showToast: top right below the header, dark-gold card, text-only message (never HTML), timer bar, close.
+  Phones (<=600px): compact 300px card in the top-right corner under the status bar, smaller type (owner 2026-10-11).
+  Admin page gate (owner 2026-10-11): admin.html shows "Page not found" (#notFound) to everyone but a signed-in admin;
+  admin.ts openIfAdmin uses session.ts silentSession (refresh cookie only, never a wallet prompt; no sign-in button,
+  admins sign in on the dashboard). Backend sets cookie dv_ag (signed JWT typ admin-gate, path /, Lax) for admin wallets on
+  every access token; GET /auth/admin-gate -> 204/401; Nginx auth_request on /admin.html, /admin, /static/admin-*
+  -> public/404.html. Unknown paths -> 404.html. Backend errors generic (errorHandler GENERIC, notFound "Not found.",
+  validateRequest hides zod built-in texts). Removed unused public/preview_*.html, logo animation page, lottie_page.html.
+  Background worker (owner 2026-10-11): backend/src/worker.ts (BullMQ 5 + ioredis on REDIS_URL, 1 copy): chain-indexer
+  (jobs/chainIndexer.ts: Activated/ToppedUp logs -> activationService.verify/verifyTopUp, cursor table chain_cursors,
+  INDEXER_START_BLOCK / INDEXER_RPC_URL: bnbchain/binance dataseeds refuse eth_getLogs, publicnode allows 5k blocks),
+  voucher-settle (withdrawalsService.reconcileAllOpen), auth-cleanup. Not on Render (paid worker); Docker service `worker`.
+  Dashboard 20-level rows open the level modal only when unlocked.
+  #matrix level cards (owner 2026-10-11): matrixAutoDeck.ts revealCard on every active-card change (after the deck
+  reaches 70% of the screen): .mx-scan light sweeps down, content drops in piece by piece, % and USDT count up; CSS
+  `.mx-reveal` block at the end of main.css, removed after 2.4s so the cards' own loops return; off for reduced motion.
+  Landing launch notice shows on every visit until VITE_LAUNCH_DATE ("We go live on 22 October"); dashboard one stays once.
   CSS for the motion layer is the last block of main.css and dashboard.css ("TPR motion layer").
   styles: src/styles/main.css (large, ~4.7k lines), dashboard.css
 ```
@@ -153,6 +187,14 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
 ## Commands
 - Backend: `cd backend; npm run dev` | `npm run typecheck` | `npx prisma migrate dev` | `npm run db:seed:local`
 - Frontend: `cd frontend; npm run dev` | `npm run build`
+- Docker (owner 2026-10-11; plain npm run dev unchanged): dev `docker compose -f docker-compose.dev.yml up --build`
+  (own Postgres on 5433, code mounted, vite.config.js DOCKER/API_PROXY_TARGET); prod `docker compose --env-file
+  .env.production -f docker-compose.prod.yml --profile tunnel up -d --build` (db, backend, web = Nginx in frontend/nginx/,
+  cloudflared, backup, redis). Scaling (owner 2026-10-11, 4-core VPS): backend deploy.replicas BACKEND_REPLICAS (default 3),
+  Nginx round robin via Docker DNS, REDIS_URL -> shared rate-limit store (config/redis.ts, rate-limit-redis; unset = memory),
+  Postgres tuned (shared_buffers 1GB, parallel 4), connection_limit=10 per copy. env.ts: empty optional values = unset.
+  Owner guide: DOCKER.md. Docker is NOT installed on the dev PC and nothing
+  builds the images yet: ci.yml + render.yaml stay Render-only until the owner moves to the VPS (owner 2026-10-11).
 - No git repo, no test suite yet.
 
 ## Not built yet

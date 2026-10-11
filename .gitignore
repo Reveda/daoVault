@@ -49,3 +49,6 @@ contracts/artifacts/
 contracts/cache/
 contracts/typechain-types/
 
+
+# Docker production database backups (on the VPS)
+backups/

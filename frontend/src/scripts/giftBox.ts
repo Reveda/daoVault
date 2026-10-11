@@ -1,7 +1,8 @@
 /**
  * DAOvault AI — Rank reward surprise box (TPR World's gift box, rebuilt for DAOvault)
  *
- * A red gift box with a white ribbon and the DAOvault seal on every side drops in and idles.
+ * A red gift box is packed in front of the member (body rises, ribbon wraps, lid lands, seals
+ * and bow pop) with the DAOvault seal on every side, then idles over a gold portal.
  * Opening it: it shakes harder and harder while gold light charges inside, the
  * lid blows off, beams and sparks burst out, coins rise, and the reward counts
  * up. A sealed (locked) box only rattles and says what unlocks it, with an
@@ -67,10 +68,16 @@ function makeBox(logo: THREE.Texture | null) {
   const gold = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.22, emissive: 0x5a3f06, emissiveIntensity: 0.25 });
   const box = new THREE.Group();
 
+  // parts the packing intro animates one by one (owner, 2026-10-11)
+  const parts = { bodyRibbons: [] as THREE.Object3D[], seals: [] as THREE.Object3D[], lidRibbons: [] as THREE.Object3D[], bow: [] as THREE.Object3D[] };
+
   const body = new THREE.Group();
   body.add(new THREE.Mesh(new RoundedBoxGeometry(2, 1.6, 2, 4, 0.07), red));
-  body.add(new THREE.Mesh(new THREE.BoxGeometry(2.03, 1.6, 0.34), ribbon));
-  body.add(new THREE.Mesh(new THREE.BoxGeometry(0.34, 1.6, 2.03), ribbon));
+  for (const geo of [new THREE.BoxGeometry(2.03, 1.6, 0.34), new THREE.BoxGeometry(0.34, 1.6, 2.03)]) {
+    const band = new THREE.Mesh(geo, ribbon);
+    body.add(band);
+    parts.bodyRibbons.push(band);
+  }
 
   // the DAOvault seal on every side, sitting on the ribbon
   const sealFace = new THREE.MeshBasicMaterial({ color: logo ? 0xffffff : 0x111111, map: logo });
@@ -85,6 +92,7 @@ function makeBox(logo: THREE.Texture | null) {
     rim.position.z = 1.04;
     side.add(face, rim);
     body.add(side);
+    parts.seals.push(face, rim);
   }
   body.position.y = -0.3;
   box.add(body);
@@ -94,8 +102,11 @@ function makeBox(logo: THREE.Texture | null) {
   const trim = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.05, 2.2), gold);
   trim.position.y = -0.17;
   lid.add(trim);
-  lid.add(new THREE.Mesh(new THREE.BoxGeometry(2.21, 0.43, 0.36), ribbon));
-  lid.add(new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.43, 2.21), ribbon));
+  for (const geo of [new THREE.BoxGeometry(2.21, 0.43, 0.36), new THREE.BoxGeometry(0.36, 0.43, 2.21)]) {
+    const band = new THREE.Mesh(geo, ribbon);
+    lid.add(band);
+    parts.lidRibbons.push(band);
+  }
 
   // bow: two loops, a knot and two tails resting on the lid
   const loopGeo = new THREE.TorusGeometry(0.34, 0.085, 14, 36);
@@ -108,15 +119,17 @@ function makeBox(logo: THREE.Texture | null) {
     tail.position.set(dir * 0.16, 0.235, 0.36);
     tail.rotation.y = -dir * 0.5;
     lid.add(loop, tail);
+    parts.bow.push(loop, tail);
   }
   const knot = new THREE.Mesh(new THREE.SphereGeometry(0.17, 20, 16), ribbon);
   knot.scale.set(1, 0.8, 0.9);
   knot.position.y = 0.32;
   lid.add(knot);
+  parts.bow.push(knot);
   lid.position.y = 0.72;
   box.add(lid);
 
-  return { box, body, lid, glow: { red, ribbon, gold } };
+  return { box, body, lid, parts, glow: { red, ribbon, gold } };
 }
 
 export function openGiftBox(opts: GiftBoxOptions): void {
@@ -248,7 +261,7 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   // the square logo inside the round seal: shrink it so its corners are not cut (the edge pixels are black)
   logo.repeat.set(1.3, 1.3);
   logo.offset.set(-0.15, -0.15);
-  const { box, lid, glow } = makeBox(logo);
+  const { box, body, lid, parts, glow } = makeBox(logo);
   scene.add(box);
 
   // burst pieces, hidden until the box opens
@@ -285,9 +298,222 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   beams.position.y = 0.3;
   scene.add(beams);
 
+  /* ---------- VFX (owner, 2026-10-11, TPR-style but in our gold): a portal under the box,
+     gold dust in the air, energy pouring in from four sides with lightning while it charges,
+     and a shockwave when the lid blows off */
+  const FLOOR = -1.15;
+  const additive = (color: number, opacity: number) => new THREE.MeshBasicMaterial({
+    color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
+  });
+  const glowTexture = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d')!;
+    const grad = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+    grad.addColorStop(0, 'rgba(255,226,140,1)');
+    grad.addColorStop(0.35, 'rgba(212,175,55,0.45)');
+    grad.addColorStop(1, 'rgba(212,175,55,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 128, 128);
+    return new THREE.CanvasTexture(c);
+  })();
+  cleanups.push(() => glowTexture.dispose());
+
+  // portal: glow pool + three rings + a dashed rune ring, turning in opposite directions
+  const portal = new THREE.Group();
+  portal.position.y = FLOOR;
+  const pool = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), new THREE.MeshBasicMaterial({
+    map: glowTexture, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false,
+  }));
+  pool.rotation.x = -Math.PI / 2;
+  portal.add(pool);
+  const portalRings = ([[1.22, 1.3, 0.85], [1.52, 1.56, 0.5], [1.84, 1.86, 0.32]] as const).map(([r1, r2, o]) => {
+    const ring = new THREE.Mesh(new THREE.RingGeometry(r1, r2, 96), additive(0xffc94a, o));
+    ring.rotation.x = -Math.PI / 2;
+    portal.add(ring);
+    return ring;
+  });
+  const runes = new THREE.Group();
+  for (let i = 0; i < 12; i++) {
+    const arc = new THREE.Mesh(new THREE.RingGeometry(2.02, 2.1, 8, 1, (i / 12) * Math.PI * 2, 0.32), additive(0xffe08a, 0.45));
+    arc.rotation.x = -Math.PI / 2;
+    runes.add(arc);
+  }
+  portal.add(runes);
+  scene.add(portal);
+
+  // gold dust drifting up around the box
+  const dustCount = 70;
+  const dustPos = new Float32Array(dustCount * 3);
+  const dustSeed = Array.from({ length: dustCount }, () => ({ a: Math.random() * Math.PI * 2, r: 1.1 + Math.random() * 1.6, y: Math.random() * 4, v: 0.25 + Math.random() * 0.45 }));
+  const dustGeo = new THREE.BufferGeometry();
+  dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
+  const dustMat = new THREE.PointsMaterial({ color: 0xffd76a, size: 0.05, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false });
+  scene.add(new THREE.Points(dustGeo, dustMat));
+
+  // energy from four sides: particles stream along curves into the box while it charges
+  const EMITTERS = [
+    new THREE.Vector3(-4.6, 2.2, 0.6), new THREE.Vector3(4.6, 2.2, 0.6),
+    new THREE.Vector3(-4.2, -1.6, 1.4), new THREE.Vector3(4.2, -1.6, 1.4),
+  ];
+  const CORE = new THREE.Vector3(0, 0.35, 0);
+  const PER_STREAM = 60;
+  const streamCount = EMITTERS.length * PER_STREAM;
+  const streamPos = new Float32Array(streamCount * 3);
+  const streamSeed = Array.from({ length: streamCount }, (_, i) => ({
+    side: Math.floor(i / PER_STREAM), t: Math.random(), v: 0.55 + Math.random() * 0.6,
+    swirl: (Math.random() - 0.5) * 2.4, lift: (Math.random() - 0.5) * 1.6,
+  }));
+  const streamGeo = new THREE.BufferGeometry();
+  streamGeo.setAttribute('position', new THREE.BufferAttribute(streamPos, 3));
+  const streamMat = new THREE.PointsMaterial({ color: 0xffe9a8, size: 0.09, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  const streams = new THREE.Points(streamGeo, streamMat);
+  scene.add(streams);
+  const bez = new THREE.Vector3();
+  const ctrl = new THREE.Vector3();
+
+  // lightning from the same four sides (jagged lines rebuilt a few times a second)
+  const BOLT_POINTS = 14;
+  const bolts = EMITTERS.map(() => {
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(BOLT_POINTS * 3), 3));
+    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    scene.add(line);
+    return line;
+  });
+  let boltAt = 0;
+  const rebuildBolts = () => {
+    bolts.forEach((line, s) => {
+      const from = EMITTERS[s];
+      const arr = (line.geometry.attributes.position as THREE.BufferAttribute).array as Float32Array;
+      for (let i = 0; i < BOLT_POINTS; i++) {
+        const k = i / (BOLT_POINTS - 1);
+        const jitter = i === 0 || i === BOLT_POINTS - 1 ? 0 : 0.35 * Math.sin(k * Math.PI);
+        arr[i * 3] = from.x + (CORE.x - from.x) * k + (Math.random() - 0.5) * jitter;
+        arr[i * 3 + 1] = from.y + (CORE.y + 0.4 - from.y) * k + (Math.random() - 0.5) * jitter;
+        arr[i * 3 + 2] = from.z + (CORE.z - from.z) * k + (Math.random() - 0.5) * jitter;
+      }
+      line.geometry.attributes.position.needsUpdate = true;
+    });
+  };
+
+  // shockwave when the lid blows off: one ring along the floor, one facing the camera
+  const floorWave = new THREE.Mesh(new THREE.RingGeometry(0.85, 1, 96), additive(0xfff1c1, 0));
+  floorWave.rotation.x = -Math.PI / 2;
+  floorWave.position.y = FLOOR + 0.02;
+  const airWave = new THREE.Mesh(new THREE.RingGeometry(0.92, 1, 96), additive(0xffd76a, 0));
+  airWave.position.set(0, 0.4, 0.4);
+  scene.add(floorWave, airWave);
+
+  /** portal, dust, energy, lightning and shockwave for this frame; charge 0..1 while shaking */
+  const animateVfx = (now: number, dt: number, charge: number, sinceBurst: number) => {
+    const spin = 0.25 + charge * 2.2;
+    portalRings.forEach((ring, i) => {
+      ring.rotation.z += dt * spin * (i % 2 ? -1 : 1) * (1 + i * 0.3);
+      (ring.material as THREE.MeshBasicMaterial).opacity = (0.32 + i * -0.06 + 0.25 * Math.sin(now / 420 + i)) * (1 + charge * 1.4);
+    });
+    runes.rotation.y -= dt * (0.15 + charge * 1.6);
+    (pool.material as THREE.MeshBasicMaterial).opacity = 0.45 + charge * 0.5 + 0.08 * Math.sin(now / 300);
+    pool.scale.setScalar(1 + charge * 0.25);
+
+    for (let i = 0; i < dustCount; i++) {
+      const d = dustSeed[i];
+      d.y += dt * d.v * (1 + charge * 3);
+      if (d.y > 4.2) d.y = 0;
+      const ang = d.a + now / 4000 * d.v;
+      dustPos[i * 3] = Math.cos(ang) * d.r;
+      dustPos[i * 3 + 1] = FLOOR + d.y;
+      dustPos[i * 3 + 2] = Math.sin(ang) * d.r;
+    }
+    dustGeo.attributes.position.needsUpdate = true;
+
+    const streaming = charge > 0 && sinceBurst < 0;
+    streamMat.opacity = streaming ? Math.min(1, charge * 2.2) : Math.max(0, streamMat.opacity - dt * 3);
+    if (streamMat.opacity > 0) {
+      for (let i = 0; i < streamCount; i++) {
+        const p = streamSeed[i];
+        p.t += dt * p.v * (0.6 + charge * 1.6);
+        if (p.t >= 1) p.t -= 1;
+        const from = EMITTERS[p.side];
+        ctrl.set((from.x + CORE.x) / 2 + p.swirl * 0.4, (from.y + CORE.y) / 2 + 1.2 + p.lift, (from.z + CORE.z) / 2 + p.swirl);
+        const e = p.t * p.t; // accelerates into the box
+        bez.copy(from).multiplyScalar((1 - e) * (1 - e)).addScaledVector(ctrl, 2 * (1 - e) * e).addScaledVector(CORE, e * e);
+        streamPos[i * 3] = bez.x;
+        streamPos[i * 3 + 1] = bez.y;
+        streamPos[i * 3 + 2] = bez.z;
+      }
+      streamGeo.attributes.position.needsUpdate = true;
+    }
+
+    const boltLevel = streaming && charge > 0.35 ? (charge - 0.35) / 0.65 : 0;
+    if (boltLevel > 0 && now - boltAt > 70) { rebuildBolts(); boltAt = now; }
+    bolts.forEach((line, s) => {
+      (line.material as THREE.LineBasicMaterial).opacity = boltLevel > 0 && Math.random() < 0.55 + boltLevel * 0.4 ? 0.4 + boltLevel * 0.6 : 0;
+      line.visible = boltLevel > 0 || s < 0;
+    });
+
+    if (sinceBurst >= 0) {
+      const k = Math.min(1, sinceBurst / 1.1);
+      floorWave.scale.setScalar(1 + k * 4.5);
+      (floorWave.material as THREE.MeshBasicMaterial).opacity = (1 - k) * 0.9;
+      airWave.scale.setScalar(0.6 + k * 4);
+      (airWave.material as THREE.MeshBasicMaterial).opacity = (1 - k) * 0.75;
+    }
+  };
+  let burstAt = -1;
+
   /* ---------- timeline */
-  type Phase = 'drop' | 'idle' | 'shake' | 'burst' | 'rattle';
-  let phase: Phase = 'drop';
+  type Phase = 'pack' | 'idle' | 'shake' | 'burst' | 'rattle';
+  let phase: Phase = 'pack';
+
+  /**
+   * Packing intro (owner, 2026-10-11): the box is wrapped in front of the member before it can
+   * be opened. Out of the portal the red body rises, the white ribbon wraps it, the lid lands
+   * with a bounce, the four DAOvault seals press on one by one and the bow pops, with a gold
+   * glint at the end. PACK_S seconds; the buttons appear afterwards.
+   */
+  const PACK_S = 2.3;
+  const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+  const span = (t: number, from: number, to: number) => clamp01((t - from) / (to - from));
+  const easeOutCubic = (v: number) => 1 - Math.pow(1 - v, 3);
+  const easeOutBounce = (v: number) => {
+    const n = 7.5625, d = 2.75;
+    if (v < 1 / d) return n * v * v;
+    if (v < 2 / d) return n * (v -= 1.5 / d) * v + 0.75;
+    if (v < 2.5 / d) return n * (v -= 2.25 / d) * v + 0.9375;
+    return n * (v -= 2.625 / d) * v + 0.984375;
+  };
+  const bowScale = parts.bow.map((p) => p.scale.clone());
+  const BODY_Y = body.position.y;
+  const LID_Y = lid.position.y;
+  const tiny = 0.0001;
+  const packFrame = (t: number) => {
+    // 1. the body rises out of the portal (bottom stays on the floor)
+    const rise = easeOutBack(span(t, 0, 0.6));
+    const sy = Math.max(tiny, rise);
+    body.scale.set(Math.max(tiny, 0.7 + 0.3 * rise), sy, Math.max(tiny, 0.7 + 0.3 * rise));
+    body.position.y = BODY_Y - 0.8 * (1 - sy);
+    // 2. the ribbon wraps it, top to bottom
+    const wrap = easeOutCubic(span(t, 0.5, 1.0));
+    parts.bodyRibbons.forEach((r, i) => { r.scale.y = Math.max(tiny, clamp01(wrap * 1.15 - i * 0.15)); r.position.y = 0.8 * (1 - r.scale.y); });
+    // 3. the lid lands with a bounce, its ribbon already on
+    const land = span(t, 0.95, 1.55);
+    lid.visible = t >= 0.95;
+    lid.position.y = LID_Y + 2.6 * (1 - easeOutBounce(land));
+    lid.rotation.y = (1 - land) * 0.6;
+    parts.lidRibbons.forEach((r) => { r.scale.x = r.scale.z = Math.max(tiny, easeOutCubic(span(t, 0.95, 1.35))); });
+    // 4. the seals press on one by one, then the bow pops
+    parts.seals.forEach((s, i) => s.scale.setScalar(Math.max(tiny, easeOutBack(span(t, 1.3 + Math.floor(i / 2) * 0.1, 1.6 + Math.floor(i / 2) * 0.1)))));
+    const pop = easeOutBack(span(t, 1.65, 2.05));
+    parts.bow.forEach((p, i) => p.scale.copy(bowScale[i]).multiplyScalar(Math.max(tiny, pop)));
+    // the box turns to the camera while it is wrapped; a gold glint when it is done
+    box.rotation.y = -0.9 * (1 - easeOutCubic(span(t, 0, PACK_S)));
+    box.position.y = 0;
+    const glint = span(t, 1.95, 2.3);
+    glow.gold.emissiveIntensity = 0.25 + Math.sin(glint * Math.PI) * 1.4;
+    glow.ribbon.emissiveIntensity = 0.14 + Math.sin(glint * Math.PI) * 0.5;
+  };
+  packFrame(0);
   let phaseStart = performance.now();
   const setPhase = (p: Phase) => { phase = p; phaseStart = performance.now(); };
   let lidVel = new THREE.Vector3();
@@ -301,6 +527,7 @@ export function openGiftBox(opts: GiftBoxOptions): void {
 
   const burst = () => {
     setPhase('burst');
+    burstAt = performance.now();
     el.classList.add('is-burst');
     lidVel = new THREE.Vector3((Math.random() - 0.5) * 2, 7.5, 2.2);
     lidSpin = (Math.random() < 0.5 ? -1 : 1) * 6;
@@ -332,11 +559,12 @@ export function openGiftBox(opts: GiftBoxOptions): void {
       note.textContent = `Unlocks at ${opts.requirement}.`;
       button('Preview the opening', 'btn-line', () => { reveal.hidden = true; el.classList.remove('is-locked-shake'); startOpening(true); });
       button('Got it', 'btn-grad', close);
-    }, 900);
+    }, PACK_S * 1000 + 250);
   } else if (opts.mode === 'opened') {
-    window.setTimeout(() => { if (alive) startOpening(false); }, 700);
+    window.setTimeout(() => { if (alive) startOpening(false); }, PACK_S * 1000 + 300);
   } else {
-    button('Open box', 'btn-grad', () => startOpening(false));
+    // the button appears once the box is packed
+    window.setTimeout(() => { if (alive) button('Open box', 'btn-grad', () => startOpening(false)); }, PACK_S * 1000);
   }
 
   let last = performance.now();
@@ -346,12 +574,12 @@ export function openGiftBox(opts: GiftBoxOptions): void {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     const t = (now - phaseStart) / 1000;
+    const charge = phase === 'shake' ? Math.min(1, t / 1.7) : phase === 'burst' ? 1 : 0;
+    animateVfx(now, dt, charge, burstAt < 0 ? -1 : (now - burstAt) / 1000);
 
-    if (phase === 'drop') {
-      const k = Math.min(1, t / 0.9);
-      box.position.y = 3.5 * (1 - easeOutBack(k));
-      box.rotation.y = -0.6 + 0.6 * k;
-      if (k >= 1) setPhase('idle');
+    if (phase === 'pack') {
+      packFrame(t);
+      if (t >= PACK_S) { packFrame(PACK_S); setPhase('idle'); }
     } else if (phase === 'idle' || phase === 'rattle') {
       box.position.y = Math.sin(now / 600) * 0.06;
       box.rotation.y += dt * 0.35;

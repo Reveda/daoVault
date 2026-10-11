@@ -1,0 +1,6 @@
+# never send secrets or host builds into an image (VITE_* come in as build args)
+.env
+.env.*
+node_modules
+dist
+*.log

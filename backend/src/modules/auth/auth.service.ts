@@ -153,6 +153,35 @@ export class AuthService {
     return { sub: decoded.sub, role: decoded.role };
   }
 
+  /**
+   * Admin page gate (owner, 2026-10-11): admin.html and its script exist only for admin wallets.
+   * Nginx asks GET /auth/admin-gate before serving them; the browser proves it with this signed
+   * cookie, given to admin wallets whenever they get an access token. It opens only the page:
+   * every admin API call still needs the access token. It has no `role`, so it is never
+   * accepted as an access token, and a stolen-token alarm (version bump) voids it too.
+   */
+  async issueAdminGate(walletAddress: string): Promise<RefreshCookie | null> {
+    if (!isAdminWallet(walletAddress)) return null;
+    const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_DAYS * 86_400_000);
+    const value = jwt.sign({ typ: "admin-gate", ver: await sessionVersion(walletAddress) }, env.JWT_SECRET, {
+      subject: walletAddress, expiresIn: env.REFRESH_TOKEN_DAYS * 86_400, algorithm: "HS256",
+    });
+    return { value, expiresAt };
+  }
+
+  async checkAdminGate(value: string | undefined): Promise<boolean> {
+    if (!value) return false;
+    try {
+      const decoded = jwt.verify(value, env.JWT_SECRET, { algorithms: ["HS256"] }) as jwt.JwtPayload;
+      return decoded.typ === "admin-gate"
+        && typeof decoded.sub === "string"
+        && isAdminWallet(decoded.sub)
+        && (typeof decoded.ver === "number" ? decoded.ver : 0) === (await sessionVersion(decoded.sub));
+    } catch {
+      return false;
+    }
+  }
+
   /** Ends every session of a wallet: refresh tokens deleted, access tokens voided. */
   async revokeAllSessions(walletAddress: string) {
     await prisma.$transaction([

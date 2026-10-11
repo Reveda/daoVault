@@ -13,7 +13,8 @@ export type DashboardData = {
   currentRank: number;
   rankName: string | null;
   teamVolume: number;
-  legs: { total: number; power: number; other: number; count: number };
+  /** DAO per side; powerMembers / otherMembers = activated members on each side (all depths) */
+  legs: { total: number; power: number; other: number; count: number; powerMembers?: number; otherMembers?: number };
   nextRank: { rank: number; name: string; volume: number; rewardUsd: number; countedVolume: number } | null;
   totalEarned: number | string;
   levelIncomeUsd: number;

@@ -1,5 +1,6 @@
 import type { RequestHandler } from "express";
 
-export const notFound: RequestHandler = (req, res) => {
-  res.status(404).json({ success: false, error: `Route not found: ${req.method} ${req.path}` });
+// never echo the method or path back: it only helps someone mapping the API
+export const notFound: RequestHandler = (_req, res) => {
+  res.status(404).json({ success: false, error: "Not found." });
 };

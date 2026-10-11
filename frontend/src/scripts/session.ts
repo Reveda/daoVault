@@ -69,6 +69,22 @@ async function refreshFor(wallet: string): Promise<string | null> {
   }
 }
 
+/**
+ * Session from the refresh cookie only: never a wallet prompt. admin.html uses it so a visitor
+ * who is not signed in as an admin sees a plain "page not found" and nothing else.
+ * null = no session; server errors (asleep / down) are thrown so the caller can retry.
+ */
+export async function silentSession(): Promise<{ wallet: string; role: 'member' | 'admin' } | null> {
+  try {
+    const session = await refreshAuthSession();
+    remember(session.walletAddress, session.token, session.expiresAt);
+    return { wallet: session.walletAddress.toLowerCase(), role: session.role };
+  } catch (error) {
+    if (error instanceof ApiError && error.status < 500) return null;
+    throw error;
+  }
+}
+
 /** Valid access token: memory, else the refresh cookie, else the wallet signs (no gas). */
 export function signIn(wallet: string): Promise<string> {
   const existing = savedSession(wallet);

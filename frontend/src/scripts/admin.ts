@@ -1,13 +1,13 @@
 /**
  * DAOvault admin = the company's Command Center (owner, 2026-10-10): overview KPIs, charts of
  * the business (adminCharts.ts), how the system works with live numbers, and the withdrawal
- * queue. Access = wallet listed in ADMIN_WALLETS on the backend + a wallet signature.
+ * queue. Access = wallet listed in ADMIN_WALLETS on the backend + a wallet signature (made on
+ * the dashboard). Everyone else gets "page not found" (openIfAdmin; Nginx too on the VPS).
  * Payouts are sent by the admin from the treasury wallet; the backend accepts "paid" only
  * after it finds that USDT transfer on-chain. Background: the landing particle scene.
  */
 import { BSC_CHAIN_ID, formatAddress, showToast } from './core.ts';
-import { autoReconnect, connectWithProvider, getInstalledWallets } from './wallet.ts';
-import { signIn as sessionFor } from './session.ts';
+import { signIn as sessionFor, silentSession } from './session.ts';
 import {
   ApiError,
   approveWithdrawal,
@@ -42,34 +42,47 @@ const HELP: Record<Withdrawal['status'], string> = {
   REJECTED: 'Rejected requests. The amount went back to the member balance.',
 };
 
-async function signIn(): Promise<void> {
-  let wallet = await autoReconnect();
-  if (!wallet) {
-    const [first] = getInstalledWallets();
-    if (!first) { showToast('Install or open a Web3 wallet to sign in.', true); return; }
-    wallet = await connectWithProvider(first.provider, first.name);
-  }
-  await sessionFor(wallet);
-  adminWallet = wallet;
-  try {
-    await loadStats(); // the server answers 403 unless this wallet is in ADMIN_WALLETS
-  } catch (error) {
-    if (error instanceof ApiError && error.status === 403) {
-      showToast('This wallet is not an admin.', true);
-      $('adminState')!.textContent = `• ${formatAddress(wallet)} is not an admin wallet`;
-      return;
+const wait = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+/**
+ * Admin page gate (owner, 2026-10-11): the page exists only for a signed-in admin wallet.
+ * Session from the refresh cookie only (silentSession): no wallet prompt, no "sign in" button,
+ * nothing that tells a visitor an admin area is here. Admins sign in on their dashboard, which
+ * sends them here. A sleeping / failing server is retried for about a minute (Render wakes up).
+ */
+async function openIfAdmin(): Promise<void> {
+  for (let attempt = 0; attempt < 7; attempt++) {
+    try {
+      const session = await silentSession();
+      if (!session || session.role !== 'admin') return showNotFound();
+      adminWallet = session.wallet;
+      await loadStats(); // the server answers 403 unless the wallet is in ADMIN_WALLETS
+      return revealAdmin();
+    } catch (error) {
+      if (error instanceof ApiError && error.status < 500) return showNotFound();
+      showNotFound(); // shown while waiting; replaced by the panel if a retry gets through
+      await wait(10_000);
     }
-    throw error;
   }
+}
+
+function showNotFound(): void {
+  $('notFound')!.hidden = false;
+}
+
+function revealAdmin(): void {
+  $('notFound')!.hidden = true;
+  $('adminRoot')!.hidden = false;
+  document.title = 'Admin | DAOVAULT';
+  initDvLogos(); // animated DAOVAULT logo: header, footer
+  init3DScene('admin'); // gold particles + lightning, like the landing page
   const badge = $('adminWallet');
-  if (badge) { badge.hidden = false; badge.textContent = formatAddress(wallet); }
-  $('adminSignIn')!.hidden = true;
-  $('adminLocked')!.hidden = true;
+  if (badge) { badge.hidden = false; badge.textContent = formatAddress(adminWallet); }
   $('adminApp')!.hidden = false;
-  $('adminState')!.textContent = `• Signed in as admin · ${formatAddress(wallet)}`;
+  $('adminState')!.textContent = `• Signed in as admin · ${formatAddress(adminWallet)}`;
   $('adminHeroActions')!.hidden = false;
   $('adminToDash')!.hidden = false;
-  await loadList();
+  loadList().catch((error) => showToast(error instanceof Error ? error.message : 'Could not load.', true));
 }
 
 /** KPIs + charts + live numbers (stats and analytics in parallel) */
@@ -148,13 +161,7 @@ async function act(item: HTMLElement, action: string, button: HTMLButtonElement)
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  // a connected wallet signs in by itself (sent here from the dashboard: the refresh cookie
-  // gives a session without a new signature); otherwise the button does it
-  if (localStorage.getItem('daovault_connected_account')) {
-    signIn().catch(() => { /* not signed in yet: the "Connect & sign in" button stays */ });
-  }
-  initDvLogos(); // animated DAOVAULT logo: preloader, header, footer
-  init3DScene('admin'); // gold particles + lightning, like the landing page
+  openIfAdmin().catch(() => showNotFound());
   $('adminRefresh')?.addEventListener('click', async (e) => {
     const button = e.currentTarget as HTMLButtonElement;
     button.disabled = true;
@@ -166,9 +173,6 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       button.disabled = false;
     }
-  });
-  $('adminSignIn')?.addEventListener('click', () => {
-    signIn().catch((error) => showToast(error instanceof Error ? error.message : 'Sign-in failed.', true));
   });
   document.querySelectorAll<HTMLButtonElement>('.admin-tabs button').forEach((tab) => tab.addEventListener('click', () => {
     document.querySelectorAll('.admin-tabs button').forEach((t) => t.classList.toggle('is-active', t === tab));

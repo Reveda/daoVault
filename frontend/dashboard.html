@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- dark from the very first frame: before main.css / Google Fonts arrive the browser would
+       paint its default white for a moment (owner saw it behind the splash on slow loads) -->
+  <meta name="color-scheme" content="dark" />
+  <style>html,body{background:#050505;color:#fff}</style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard | DAOVAULT</title>
   <meta name="theme-color" content="#050505" />
@@ -49,7 +53,7 @@
 
 
       <div class="dash-head-actions">
-      <!-- wallet chip with a menu: copy address, BscScan, log out -->
+      <!-- wallet chip with a menu: section shortcuts, copy address, BscScan, log out -->
       <div class="wallet-menu" id="walletMenu">
         <button class="dash-user-badge mono wallet-menu-btn" id="walletMenuBtn" type="button" aria-haspopup="menu" aria-expanded="false">
           <span class="wallet-status-dot"></span>
@@ -57,6 +61,11 @@
           <span class="wallet-caret" aria-hidden="true"></span>
         </button>
         <div class="wallet-menu-panel" role="menu" hidden>
+          <!-- shortcuts: scroll to a section (rewardVaults.ts initWalletMenu; hidden ones are left out) -->
+          <span class="wm-label mono" aria-hidden="true">Go to</span>
+          <a role="menuitem" href="#withdrawSection" data-jump>Withdraw</a>
+          <a role="menuitem" href="#rewardsSection" data-jump>Rewards</a>
+          <span class="wm-divider" aria-hidden="true"></span>
           <button type="button" role="menuitem" id="walletCopyBtn">Copy address</button>
           <a role="menuitem" id="walletScanLink" href="https://bscscan.com" target="_blank" rel="noopener">View on BscScan &nearr;</a>
           <a role="menuitem" id="walletAdminLink" href="admin.html" hidden>Admin panel &rarr;</a>
@@ -211,7 +220,7 @@
       </div>
 
       <!-- Affiliate Link Card -->
-      <div class="glass ref-box-card">
+      <div class="glass ref-box-card" id="inviteSection">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
           <div>
             <h3 style="font-size: 1.2rem; margin-bottom: 0.2rem;">Your Permanent Affiliate Link</h3>

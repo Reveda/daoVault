@@ -147,3 +147,12 @@ model RefreshToken {
   @@index([familyId])
   @@map("refresh_tokens")
 }
+
+/// Background worker (src/worker.ts): the last block whose contract events were processed, per stream.
+model ChainCursor {
+  name      String   @id @db.VarChar(64)
+  block     BigInt
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("chain_cursors")
+}

@@ -1348,3 +1348,124 @@ html.lite .sign-gate { backdrop-filter: none; -webkit-backdrop-filter: none; bac
   .co-badge { width: 40px; height: 40px; top: -14px; border-radius: 12px; }
   .co-badge svg { width: 20px; height: 20px; }
 }
+
+/* ==========================================================================
+   All Ranks: leg tree per rank (owner 2026-10-11, rankProgress.ts legTree).
+   YOU on top, flowing arrows down to the Strong Leg (left) and Other Leg (right) rings;
+   hover / focus / tap a ring for the members on that side. Theme: gold, green when done.
+   ========================================================================== */
+.ri-tree { position: relative; display: grid; justify-items: center; padding-top: 0.15rem; }
+.ri-root {
+  position: relative; z-index: 1; width: 38px; height: 38px; border-radius: 50%;
+  display: grid; place-items: center; color: #1a1404; background: var(--grad-gold);
+  box-shadow: 0 0 0 4px rgba(212, 175, 55, 0.12), 0 0 18px rgba(212, 175, 55, 0.45);
+}
+.ri-root svg { width: 18px; height: 18px; }
+.ri-root em {
+  position: absolute; top: 50%; left: calc(100% + 8px); transform: translateY(-50%);
+  font-style: normal; font-size: 0.58rem; letter-spacing: 0.16em; color: var(--gold);
+}
+.ri-links { display: block; width: 100%; height: 40px; margin-top: -1px; overflow: visible; }
+.ri-link {
+  fill: none; stroke: rgba(212, 175, 55, 0.6); stroke-width: 1.6; vector-effect: non-scaling-stroke;
+  stroke-dasharray: 4 5; animation: riFlow 1.1s linear infinite;
+}
+.ri-link.is-done { stroke: rgba(16, 185, 129, 0.75); }
+@keyframes riFlow { to { stroke-dashoffset: -18; } }
+
+.ri-legs { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+.ri-node {
+  position: relative; display: grid; justify-items: center; gap: 0.3rem; min-width: 0;
+  padding: 0.75rem 0.4rem 0.65rem; border-radius: 14px; cursor: pointer;
+  font: inherit; color: inherit; text-align: center;
+  background: rgba(0, 0, 0, 0.28); border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: border-color 0.25s ease, transform 0.25s ease, box-shadow 0.25s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+/* arrowhead where the flowing line meets the node */
+.ri-node::before {
+  content: ''; position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+  border: 6px solid transparent; border-bottom: 0; border-top-color: rgba(212, 175, 55, 0.85);
+}
+.ri-node.is-done::before { border-top-color: rgba(16, 185, 129, 0.9); }
+.ri-node:hover, .ri-node:focus-visible, .ri-node.is-tip {
+  outline: none; border-color: rgba(212, 175, 55, 0.6); transform: translateY(-2px);
+  box-shadow: 0 12px 26px -14px rgba(212, 175, 55, 0.55);
+}
+.ri-node.is-done:hover, .ri-node.is-done:focus-visible, .ri-node.is-done.is-tip { border-color: rgba(16, 185, 129, 0.6); }
+
+.ri-ring { position: relative; width: 64px; height: 64px; display: grid; place-items: center; }
+.ri-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ri-ring-track { fill: none; stroke: rgba(255, 255, 255, 0.08); stroke-width: 5; }
+.ri-ring-bar {
+  fill: none; stroke: #d4af37; stroke-width: 5; stroke-linecap: round;
+  stroke-dasharray: 163.36; stroke-dashoffset: 163.36;
+  filter: drop-shadow(0 0 4px rgba(212, 175, 55, 0.6));
+  transition: stroke-dashoffset 1.2s cubic-bezier(0.16, 1, 0.3, 1); transition-delay: calc(var(--i, 0) * 60ms);
+}
+.rank-list.is-in .ri-ring-bar { stroke-dashoffset: var(--off); }
+.ri-node.is-done .ri-ring-bar { stroke: #10b981; filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.6)); }
+.ri-ring b { position: relative; font-size: 1.05rem; color: #fff; }
+.ri-node-label { font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); }
+.ri-node-vals { font-size: 0.66rem; color: var(--text-dim); }
+
+/* member count: the node itself turns over to show it (owner 2026-10-11: a floating bubble
+   covered the YOU node and its text spilled out), so nothing outside the node is covered */
+.ri-tip {
+  position: absolute; inset: 0; z-index: 2; border-radius: inherit;
+  display: grid; align-content: center; justify-items: center; gap: 0.2rem; padding: 0.5rem 0.4rem;
+  text-align: center; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 0%, rgba(212, 175, 55, 0.18), transparent 60%), linear-gradient(180deg, #1e1d23, #141318);
+  opacity: 0; visibility: hidden; transform: perspective(500px) rotateX(-70deg); transform-origin: 50% 0;
+  transition: opacity 0.22s ease, transform 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.15), visibility 0.4s;
+}
+.ri-node > :not(.ri-tip) { transition: opacity 0.2s ease; }
+.ri-node:hover .ri-tip, .ri-node:focus-visible .ri-tip, .ri-node.is-tip .ri-tip { opacity: 1; visibility: visible; transform: none; }
+.ri-node:hover > :not(.ri-tip), .ri-node:focus-visible > :not(.ri-tip), .ri-node.is-tip > :not(.ri-tip) { opacity: 0.15; }
+.ri-tip-label { font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); }
+.ri-tip-count { display: flex; align-items: center; gap: 0.35rem; color: var(--gold); }
+.ri-tip-count svg { width: 18px; height: 18px; }
+.ri-tip-count b { font-size: 1.5rem; color: #fff; line-height: 1; }
+.ri-tip-text { font-size: 0.72rem; color: #e6e7eb; }
+.ri-tip-hint { font-size: 0.56rem; color: var(--text-dim); line-height: 1.3; max-width: 100%; overflow-wrap: anywhere; }
+.ri-node.is-done .ri-tip-label, .ri-node.is-done .ri-tip-count { color: var(--green); }
+
+@media (max-width: 600px) {
+  .ri-ring { width: 56px; height: 56px; }
+  .ri-ring b { font-size: 0.95rem; }
+  .ri-node { padding: 0.65rem 0.3rem 0.55rem; }
+  .ri-links { height: 34px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ri-link { animation: none; }
+  .ri-ring-bar { transition: none; }
+}
+
+/* gift box VFX (giftBox.ts): the energy streams, lightning and floor glow fade out at the
+   canvas edges instead of stopping on a hard line */
+.gift-canvas {
+  -webkit-mask-image: radial-gradient(ellipse 72% 70% at 50% 52%, #000 62%, transparent 100%);
+  mask-image: radial-gradient(ellipse 72% 70% at 50% 52%, #000 62%, transparent 100%);
+}
+
+/* wallet menu section shortcuts (rewardVaults.ts initWalletMenu, owner 2026-10-11) */
+.wallet-menu-panel .wm-label {
+  padding: 0.35rem 0.8rem 0.2rem; font-size: 0.6rem; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--gold); cursor: default;
+}
+.wallet-menu-panel .wm-label:hover { background: none; color: var(--gold); }
+.wallet-menu-panel [data-jump] { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.wallet-menu-panel [data-jump][hidden] { display: none; }
+.wallet-menu-panel .wm-divider { height: 1px; margin: 0.3rem 0.5rem; padding: 0; background: rgba(212, 175, 55, 0.22); cursor: default; }
+.wallet-menu-panel .wm-divider:hover { background: rgba(212, 175, 55, 0.22); }
+@media (max-width: 600px) {
+  .wallet-menu-panel { max-height: calc(100dvh - 90px); overflow-y: auto; }
+}
+/* the sections the shortcuts land on stop below the sticky header and glow for a moment */
+#withdrawSection, #rewardsSection, #rankListSection, #inviteSection, #levelsSection, #incomeCard { scroll-margin-top: 90px; }
+.jump-flash { animation: jumpFlash 1.4s ease-out; }
+@keyframes jumpFlash {
+  0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+  25% { box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.75), 0 0 40px rgba(212, 175, 55, 0.35); }
+  100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+}

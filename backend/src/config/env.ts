@@ -1,6 +1,11 @@
 import "dotenv/config";
 import { z } from "zod";
 
+// an empty value (`KEY=` in an env file) means "not set", not an invalid value
+const optional = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? undefined : v), schema.optional());
+const address = () => optional(z.string().regex(/^0x[a-fA-F0-9]{40}$/));
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(5000),
@@ -10,9 +15,9 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16),
   BSC_RPC_URL: z.string().url().default("https://bsc-dataseed.binance.org/"),
   BSC_CHAIN_ID: z.coerce.number().int().default(56),
-  PAYMENT_CONTRACT_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
-  USDT_CONTRACT_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
-  COMPANY_WALLET_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+  PAYMENT_CONTRACT_ADDRESS: address(),
+  USDT_CONTRACT_ADDRESS: address(),
+  COMPANY_WALLET_ADDRESS: address(),
   ACTIVATION_AMOUNT_USDT: z.coerce.number().positive().default(300),
   TRUST_PROXY: z.coerce.number().int().min(0).default(1),
   API_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
@@ -23,6 +28,16 @@ const envSchema = z.object({
   FINANCIAL_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
   FINANCIAL_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   LOG_REQUESTS: z.coerce.boolean().default(true),
+  /** Shared rate-limit counters when several API copies run (docker-compose.prod.yml). Empty = in-memory (one copy). */
+  REDIS_URL: optional(z.string().regex(/^rediss?:\/\//, "REDIS_URL must start with redis:// or rediss://")),
+  // background worker (src/worker.ts, BullMQ on REDIS_URL)
+  /** first block to read contract events from (the activation contract's deploy block); empty = from now on */
+  INDEXER_START_BLOCK: optional(z.coerce.number().int().min(0)),
+  /** RPC that answers eth_getLogs (BNB Chain's own public dataseed refuses it); empty = BSC_RPC_URL */
+  INDEXER_RPC_URL: optional(z.string().url()),
+  INDEXER_CONFIRMATIONS: z.coerce.number().int().min(0).max(100).default(3),
+  INDEXER_BLOCK_CHUNK: z.coerce.number().int().min(10).max(50_000).default(2_000),
+  INDEXER_INTERVAL_SECONDS: z.coerce.number().int().min(5).max(3_600).default(15),
   // wallet-signature login
   // access token (memory only, short) + refresh token (httpOnly cookie, rotated on every use)
   ACCESS_TOKEN_MINUTES: z.coerce.number().int().min(1).max(60).default(15),
@@ -33,9 +48,9 @@ const envSchema = z.object({
   WITHDRAWAL_MIN_USD: z.coerce.number().positive().default(10),
   WITHDRAWAL_FEE_PERCENT: z.coerce.number().min(0).max(50).default(5),
   // instant withdrawals (contracts/DAOvaultPayout.sol). Without these, withdrawals go to admin review.
-  PAYOUT_CONTRACT_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+  PAYOUT_CONTRACT_ADDRESS: address(),
   /** TESTNET ONLY: throwaway key that signs payout vouchers (holds no funds). Mainnet must use a KMS signer. */
-  PAYOUT_SIGNER_TESTNET_KEY: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "PAYOUT_SIGNER_TESTNET_KEY must be a 0x-prefixed 32-byte hex key").optional(),
+  PAYOUT_SIGNER_TESTNET_KEY: optional(z.string().regex(/^0x[a-fA-F0-9]{64}$/, "PAYOUT_SIGNER_TESTNET_KEY must be a 0x-prefixed 32-byte hex key")),
   PAYOUT_VOUCHER_MINUTES: z.coerce.number().int().min(2).max(60).default(15),
 }).superRefine((value, ctx) => {
   // project rule: no private keys in env on mainnet. The voucher signer key is a testnet-only exception.

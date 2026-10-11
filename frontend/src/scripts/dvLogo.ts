@@ -1,7 +1,7 @@
 /**
  * DAOvault AI — the animated DAOVAULT logo, everywhere.
  *
- * A port of public/DAOVault logo animation.html into a reusable component: the
+ * A port of the owner's logo animation page (public/DAOVault logo animation.html, removed 2026-10-11; in git history) into a reusable component: the
  * extruded gold DV emblem sways in 3D, a key slides in and turns, the vault door
  * opens on a glow and closes again (12s loop), and the DAOVault wordmark rises.
  *

@@ -160,3 +160,11 @@ html.lite .fx-particles, html.lite .fx-particles::after { animation: none; }
 .pg-btn:disabled { opacity: 0.35; cursor: default; }
 .pg-info { font-size: 0.74rem; color: var(--text-muted); }
 .pg-info b { color: #fff; }
+
+/* "Page not found" shown on admin.html to everyone who is not a signed-in admin (admin.ts
+   openIfAdmin). Same look as public/404.html. */
+.nf-page { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.9rem; padding: 2rem 1rem; text-align: center; background: radial-gradient(circle at 50% 40%, rgba(212, 175, 55, 0.08), transparent 45%), var(--bg-dark); }
+.nf-page[hidden] { display: none; }
+.nf-page .nf-code { -webkit-text-fill-color: transparent; margin: 0; font-size: clamp(4rem, 18vw, 7.5rem); font-weight: 700; line-height: 1; letter-spacing: 0.04em; background: linear-gradient(135deg, #f5d77a, #d4af37 55%, #a87a06); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.nf-page h1 { margin: 0; font-size: clamp(1.4rem, 5vw, 2rem); color: #fff; }
+.nf-page p { margin: 0 0 0.6rem; max-width: 34ch; color: #b9bdc8; line-height: 1.55; }

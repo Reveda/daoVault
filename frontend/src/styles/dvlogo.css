@@ -1,4 +1,4 @@
-/* Animated DAOVAULT logo (dvLogo.ts) — port of public/DAOVault logo animation.html.
+/* Animated DAOVAULT logo (dvLogo.ts) — port of the owner's logo animation (see dvLogo.ts).
    The scene is drawn at its design size (460px wide) and scaled to the host box. */
 .dvl {
   position: relative;

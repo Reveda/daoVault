@@ -199,7 +199,9 @@ export function initOffscreenPause(): void {
       const off = !e.isIntersecting;
       if (e.target.classList.contains('is-offscreen') !== off) e.target.classList.toggle('is-offscreen', off);
     });
-  }, { rootMargin: '250px 0px' });
+    // a whole screen of margin: a section is awake well before it scrolls in, even when the
+    // observer runs late during a fast phone scroll (sections showed blank for a moment)
+  }, { rootMargin: '100% 0px' });
   document.querySelectorAll('main > section, main > div > section, .dash-shell section, .main-footer').forEach((el) => io.observe(el));
 }
 
@@ -243,27 +245,37 @@ export function initCircuitSpine(): void {
  */
 let toastTimeout: any;
 /**
- * One-time "We'll be live soon" popup. Shown once per browser for each `key` (landing and
- * dashboard have their own), a moment after the splash screen. Closes with the button, a
- * click outside the card or Escape.
+ * "We'll be live soon" popup, a moment after the splash screen. By default once per browser
+ * for each `key` (landing and dashboard have their own); `everyVisit` shows it on every page
+ * load (landing, owner 2026-10-11). Closes with the button, a click outside the card or Escape.
  */
-export function showLaunchNotice(key: string, title: string, message: string): void {
+export function showLaunchNotice(
+  key: string,
+  title: string,
+  message: string,
+  options: { everyVisit?: boolean; button?: string; kicker?: string | null } = {},
+): void {
   const storageKey = `dv_launch_notice_${key}`;
-  try {
-    if (localStorage.getItem(storageKey)) return;
-  } catch { return; } // storage blocked: better no popup than one on every visit
+  if (!options.everyVisit) {
+    try {
+      if (localStorage.getItem(storageKey)) return;
+    } catch { return; } // storage blocked: better no popup than one on every visit
+  }
+  const kicker = options.kicker === undefined ? 'DAOVAULT · Launching soon' : options.kicker;
 
   const open = () => {
-    try { localStorage.setItem(storageKey, '1'); } catch { /* ignore */ }
+    if (!options.everyVisit) {
+      try { localStorage.setItem(storageKey, '1'); } catch { /* ignore */ }
+    }
     const overlay = document.createElement('div');
     overlay.className = 'launch-notice';
     overlay.innerHTML = `
       <div class="launch-notice-card" role="dialog" aria-modal="true" aria-labelledby="launchNoticeTitle">
         <img class="launch-notice-logo" src="/favicon.png" alt="" width="56" height="56" />
-        <span class="launch-notice-kicker mono">DAOVAULT · Launching soon</span>
+        ${kicker ? `<span class="launch-notice-kicker mono">${kicker}</span>` : ''}
         <h3 id="launchNoticeTitle">${title}</h3>
         <p>${message}</p>
-        <button type="button" class="btn btn-grad launch-notice-btn">Got it</button>
+        <button type="button" class="btn btn-grad launch-notice-btn">${options.button ?? 'Got it'}</button>
       </div>`;
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add('is-open'));

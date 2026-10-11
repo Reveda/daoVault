@@ -86,7 +86,7 @@ export function initHeroCore3D(): void {
 
 /**
  * Hero logo: the animated DAOVAULT logo (dvLogo.ts, a port of
- * public/DAOVault logo animation.html) replaces the old video in the brand lockup:
+ * the owner's logo animation, see dvLogo.ts) replaces the old video in the brand lockup:
  * the gold DV emblem sways in 3D, the key turns and the vault door opens on a loop.
  * It is pure CSS, so it can't fail to play; the modelled 3D vault stays hidden.
  */
