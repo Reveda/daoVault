@@ -409,6 +409,16 @@ export function initFaqAccordion(): void {
     const btn = item.querySelector<HTMLButtonElement>('.faq-question');
     if (!btn) return;
 
+    // the answer's content goes in one inner box: the CSS opens / closes it with a grid row (0fr -> 1fr),
+    // smooth both ways at any height (owner, 2026-10-12: max-height made the close jump)
+    const answer = item.querySelector<HTMLElement>('.faq-answer');
+    if (answer && !answer.querySelector(':scope > .faq-answer-inner')) {
+      const inner = document.createElement('div');
+      inner.className = 'faq-answer-inner';
+      while (answer.firstChild) inner.appendChild(answer.firstChild);
+      answer.appendChild(inner);
+    }
+
     btn.addEventListener('click', () => {
       const isCurrentlyOpen = item.classList.contains('is-open');
 
@@ -428,3 +438,55 @@ export function initFaqAccordion(): void {
   });
 }
 
+
+/**
+ * Mobile menu (owner, 2026-10-12): the hamburger next to Connect Wallet opens a dark-gold sheet
+ * under the header. Tapping a section closes it and scrolls there smoothly (below the fixed header);
+ * the section on screen is highlighted. Closes on the backdrop, Escape, or when the screen widens.
+ */
+export function initMobileNav(): void {
+  const toggle = document.getElementById('mnavToggle');
+  const panel = document.getElementById('mnavPanel');
+  if (!toggle || !panel) return;
+  const links = [...panel.querySelectorAll<HTMLAnchorElement>('a[data-mnav]')];
+
+  const setOpen = (open: boolean) => {
+    panel.classList.toggle('is-open', open);
+    toggle.classList.toggle('is-open', open);
+    document.body.classList.toggle('mnav-open', open);
+    toggle.setAttribute('aria-expanded', String(open));
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+    panel.setAttribute('aria-hidden', String(!open));
+    if (open) markActive();
+  };
+  const isOpen = () => panel.classList.contains('is-open');
+
+  // the section in the middle of the screen right now
+  const markActive = () => {
+    const mid = window.innerHeight * 0.4;
+    let current = '';
+    links.forEach((a) => {
+      const r = document.querySelector(a.hash)?.getBoundingClientRect();
+      if (r && r.top <= mid && r.bottom > mid) current = a.hash;
+    });
+    links.forEach((a) => a.classList.toggle('is-active', a.hash === current));
+  };
+
+  toggle.addEventListener('click', () => setOpen(!isOpen()));
+  panel.querySelectorAll('[data-mnav-close]').forEach((el) => el.addEventListener('click', () => setOpen(false)));
+  panel.querySelector('.mnav-cta')?.addEventListener('click', () => setOpen(false));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) setOpen(false); });
+  matchMedia('(min-width: 961px)').addEventListener('change', (e) => { if (e.matches) setOpen(false); });
+
+  links.forEach((a) => a.addEventListener('click', (e) => {
+    const target = document.querySelector<HTMLElement>(a.hash);
+    if (!target) return;
+    e.preventDefault();
+    setOpen(false);
+    const header = document.querySelector<HTMLElement>('.top-header')?.offsetHeight ?? 64;
+    const y = target.getBoundingClientRect().top + window.scrollY - header - 8;
+    // after the sheet starts closing, so the scroll and the close do not fight
+    window.setTimeout(() => window.scrollTo({ top: y, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }), 120);
+    history.replaceState(null, '', a.hash);
+  }));
+}

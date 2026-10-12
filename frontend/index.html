@@ -67,14 +67,37 @@
         </ul>
       </nav>
 
-      <div>
+      <div class="top-actions">
         <button class="btn btn-grad btn-wallet btn-wallet--nav" data-connect-trigger type="button">
           <span class="btn-wallet-icon" aria-hidden="true"><span class="hero-wallet" data-wallet-icon></span></span>
           <span class="btn-label">Connect Wallet</span>
         </button>
+        <!-- phones / tablets: menu button (landingFx.ts initMobileNav) -->
+        <button class="mnav-toggle" id="mnavToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mnavPanel">
+          <span></span><span></span><span></span>
+        </button>
       </div>
     </div>
   </header>
+
+  <!-- mobile menu: drops down under the header; a tap scrolls to the section and closes it -->
+  <div class="mnav" id="mnavPanel" aria-hidden="true">
+    <div class="mnav-backdrop" data-mnav-close></div>
+    <nav class="mnav-sheet" aria-label="Mobile menu">
+      <p class="mnav-kicker mono">EXPLORE DAOVAULT</p>
+      <ul class="mnav-list">
+          <li style="--i:0"><a href="#vision" data-mnav><span class="mnav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/></svg></span><span class="mnav-txt"><b>Vision</b><small>Why DAOVAULT</small></span><em class="mono">01</em></a></li>
+          <li style="--i:1"><a href="#ranks" data-mnav><span class="mnav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg></span><span class="mnav-txt"><b>Rank Rewards</b><small>11 ranks, $150 to $200,000</small></span><em class="mono">02</em></a></li>
+          <li style="--i:2"><a href="#matrix" data-mnav><span class="mnav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18M6 16V9M11 16V5M16 16v-6M21 16v-3"/></svg></span><span class="mnav-txt"><b>Level Plan</b><small>40% across 20 levels</small></span><em class="mono">03</em></a></li>
+          <li style="--i:3"><a href="#about" data-mnav><span class="mnav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7z"/></svg></span><span class="mnav-txt"><b>Ecosystem</b><small>Four rules that keep it fair</small></span><em class="mono">04</em></a></li>
+          <li style="--i:4"><a href="#how" data-mnav><span class="mnav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span><span class="mnav-txt"><b>How to Join</b><small>Five steps</small></span><em class="mono">05</em></a></li>
+          <li style="--i:5"><a href="#faq" data-mnav><span class="mnav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.01"/></svg></span><span class="mnav-txt"><b>FAQs</b><small>Straight answers</small></span><em class="mono">06</em></a></li>
+          <li class="nav-dash" style="--i:6"><a href="dashboard.html"><span class="mnav-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></span><span class="mnav-txt"><b>Dashboard</b><small>Your vault</small></span><em class="mono">&rarr;</em></a></li>
+      </ul>
+      <button class="btn btn-grad mnav-cta" data-connect-trigger type="button">Connect Wallet &amp; Join</button>
+      <p class="mnav-foot mono">BNB Smart Chain &middot; USDT (BEP-20)</p>
+    </nav>
+  </div>
 
   <main>
     <!-- Hero Section with 2-Column Responsive Web3 Architecture -->
@@ -211,17 +234,30 @@
               </div>
             </div>
 
-            <div class="crypto-exchange-card ex-card-3 glass-v2">
+            <!-- 25x Cap card replaced by the live pulse (owner, 2026-10-12). Kept for reference:
+              <div class="crypto-exchange-card ex-card-3 glass-v2">
+                <div class="ex-card-top">
+                  <span class="ex-pair mono"><i class="ex-dot violet"></i> EARNING CAP</span>
+                  <span class="ex-badge-violet mono">PER PACKAGE</span>
+                </div>
+                <div class="ex-card-val-row">
+                  <span class="ex-val text-violet">25&times; CAP</span>
+                  <span class="ex-sub mono">LEVEL INCOME</span>
+                </div>
+                <div class="ex-footer-meta mono">
+                  <span>Up to $7,500 per $300 package</span>
+                </div>
+              </div>
+            -->
+            <!-- Live on-chain pulse: real events only (liveActivity.ts + GET /activity/recent) and the live BSC block -->
+            <div class="crypto-exchange-card ex-card-3 glass-v2 live-pulse-card" id="livePulseCard">
               <div class="ex-card-top">
-                <span class="ex-pair mono"><i class="ex-dot violet"></i> EARNING CAP</span>
-                <span class="ex-badge-violet mono">PER PACKAGE</span>
+                <span class="ex-pair mono"><i class="ex-dot lp-live"></i> LIVE ON-CHAIN</span>
+                <span class="lp-block mono" title="Latest BNB Smart Chain block"><b id="lpBlock">#&hellip;</b></span>
               </div>
-              <div class="ex-card-val-row">
-                <span class="ex-val text-violet">25&times; CAP</span>
-                <span class="ex-sub mono">LEVEL INCOME</span>
-              </div>
+              <div class="lp-feed" id="lpFeed" aria-live="polite"></div>
               <div class="ex-footer-meta mono">
-                <span>Up to $7,500 per $300 package</span>
+                <span id="lpCount">Loading&hellip;</span><span>BSC</span>
               </div>
             </div>
 
@@ -243,22 +279,7 @@
       </div>
     </section>
  
-    <!-- Real-Time Decentralized On-Chain Activity Stream Pill (Centered Below Hero) -->
-    <div class="hero-bottom-stream-wrap" data-reveal>
-      <div class="wrap" style="display: flex; justify-content: center; align-items: center;">
-        <div class="live-activity-stream glass-v2" id="liveActivityStream" aria-label="Recent On-Chain Activity">
-          <div class="las-beacon">
-            <span class="las-dot"></span>
-            <span class="las-pulse"></span>
-          </div>
-          <span class="las-tag mono">LIVE ON-CHAIN PULSE</span>
-          <div class="las-divider"></div>
-          <div class="las-ticker" id="lasTicker">
-            <span class="las-placeholder mono">Connecting to BSC Mainnet feed...</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- the "Live on-chain pulse" strip that sat here is now the 3rd signal card below (owner, 2026-10-12) -->
 
     <!-- Dedicated protocol signal cards below the hero -->
     <section class="hero-metrics-section" id="heroMetrics" data-scene="metrics" aria-labelledby="heroMetricsTitle">
@@ -282,7 +303,7 @@
         <span class="ticker-item"><i class="ticker-dot"></i> Level Income: <b>40% Distribution (20 Levels)</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Earning Limit: <b>25&times; Max Cap ($7,500)</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Withdrawals: <b>Instant, 5% Fee</b></span>
-        <span class="ticker-item"><i class="ticker-dot"></i> Rank Pool: <b>Up to $200,000 Cash</b></span>
+        <span class="ticker-item"><i class="ticker-dot"></i> Rank Rewards: <b>Up to $200,000</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Blockchain: <b>BSC (BEP-20)</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Entry: <b>$300 Fixed</b></span>
         <span class="ticker-item"><i class="ticker-dot"></i> Rewards: <b>Performance-Based Only</b></span>
@@ -518,14 +539,16 @@
         </div>
 
         <!-- Interactive Leadership Rank Milestone Calculator -->
-        <div class="rank-calculator-card glass border-beam-card" id="rankCalcCard" data-reveal>
+        <div class="rank-calculator-card glass border-beam-card" id="rankCalcCard" data-scene="rankcalc" data-unfold>
+          <!-- the particle scene forms the vault dial behind this card, with lightning (particleScene.ts rankcalc) -->
+          <div class="scene-slot scene-slot--calc" aria-hidden="true"></div>
           <div class="card-beam-glow"></div>
           <div class="rcalc-head">
             <div class="rcalc-tag mono">
-              <span class="rcalc-dot"></span> INTERACTIVE MILESTONE CALCULATOR
+              <span class="rcalc-dot"></span> RANK CALCULATOR
             </div>
-            <h3>Estimate Your Leadership Rank &amp; Rewards</h3>
-            <p>Enter your expected team size or slide your projected DAO volume to instantly preview your unlocked leadership rank, instant cash reward, and 3D holographic crest.</p>
+            <h3>Estimate Your <span class="grad-text">Rank &amp; Reward</span></h3>
+            <p>Enter the team size you are aiming for, or set the DAO volume per side, to see which rank it reaches, its one-time reward and its crest.</p>
           </div>
 
           <div class="rcalc-body">
@@ -533,9 +556,9 @@
             <div class="rcalc-team-input-row">
               <div class="rcalc-input-meta">
                 <label for="rcalcTeamInput" class="rcalc-input-label mono">
-                  <span class="rcalc-pulse-dot"></span> ENTER YOUR EXPECTED TEAM SIZE:
+                  <span class="rcalc-pulse-dot"></span> YOUR TEAM SIZE
                 </label>
-                <span class="rcalc-input-hint mono">1 Active Member ($300) = 1 DAO &bull; Balanced 50:50 Strong &amp; Other Leg</span>
+                <span class="rcalc-input-hint mono">1 member ($300) = 1 DAO &bull; split evenly between Strong Leg and Other Leg</span>
               </div>
               <div class="rcalc-stepper-wrap">
                 <button type="button" class="rcalc-step-btn" id="rcalcStepMinus" aria-label="Decrease team size">&minus; 50</button>
@@ -549,7 +572,7 @@
 
             <!-- Preset Quick-Jump Buttons -->
             <div class="rcalc-presets">
-              <span class="rcalc-presets-lbl mono">QUICK TARGETS:</span>
+              <span class="rcalc-presets-lbl mono">QUICK TARGETS</span>
               <div class="rcalc-presets-btns">
                 <button class="rcalc-pill mono" type="button" data-rcalc-set="25">50 Team (Starter &bull; $150)</button>
                 <button class="rcalc-pill mono" type="button" data-rcalc-set="50">100 Team (Builder &bull; $300)</button>
@@ -564,7 +587,7 @@
             <!-- Interactive Slider -->
             <div class="rcalc-slider-wrap">
               <div class="rcalc-slider-meta mono">
-                <span>OR ADJUST DAO VOLUME PER LEG (50:50 MATCHED TARGET)</span>
+                <span>OR SET THE DAO ON EACH SIDE</span>
                 <span class="rcalc-current-val grad-text" id="rcalcSliderVal">25 DAO / side</span>
               </div>
               <input type="range" class="rcalc-slider" id="rcalcSlider" min="0" max="50000" step="25" value="25" aria-label="Simulate team DAO volume" />
@@ -584,24 +607,24 @@
             <div class="rcalc-results-grid">
               <div class="rcalc-stat rcalc-stat--rank glass-v2">
                 <div class="rcalc-crest-showcase">
-                  <div class="rcalc-crest-preview" id="rcalcCrestPreview" role="button" tabindex="0" title="Click to spin 3D rank crest 360°" aria-label="3D Rank Crest Hologram"></div>
+                  <div class="rcalc-crest-preview" id="rcalcCrestPreview" role="button" tabindex="0" title="Spin the rank crest" aria-label="3D Rank Crest Hologram"></div>
                   <div class="rcalc-rank-meta">
                     <span class="rcalc-stat-lbl mono">PROJECTED RANK</span>
                     <div class="rcalc-stat-title grad-text" id="rcalcProjectedRank">1. Starter</div>
-                    <span class="rcalc-stat-sub mono" id="rcalcRankTier">Rank 01 / 11 Qualified</span>
-                    <span class="rcalc-crest-hint mono">&bull; Click medal to spin 360&deg;</span>
+                    <span class="rcalc-stat-sub mono" id="rcalcRankTier">Rank 01 of 11</span>
+                    <span class="rcalc-crest-hint mono">Tap the crest to spin it</span>
                   </div>
                 </div>
               </div>
               <div class="rcalc-stat glass-v2">
-                <span class="rcalc-stat-lbl mono">ONE-TIME CASH REWARD</span>
-                <div class="rcalc-stat-title text-green" id="rcalcRewardVal">$150.00</div>
-                <span class="rcalc-stat-sub mono">Instant USDT Payout</span>
+                <span class="rcalc-stat-lbl mono">ONE-TIME REWARD</span>
+                <div class="rcalc-stat-title text-gold" id="rcalcRewardVal">$150.00</div>
+                <span class="rcalc-stat-sub mono">Paid once, to your balance</span>
               </div>
               <div class="rcalc-stat glass-v2">
-                <span class="rcalc-stat-lbl mono">CUMULATIVE RANK POOL</span>
+                <span class="rcalc-stat-lbl mono">TOTAL RANK REWARDS</span>
                 <div class="rcalc-stat-title text-gold" id="rcalcCumulativeVal">$150.00</div>
-                <span class="rcalc-stat-sub mono text-cyan" id="rcalcNextTarget">Next: Builder at 50 DAO</span>
+                <span class="rcalc-stat-sub mono" id="rcalcNextTarget">Next: Builder at 50 DAO</span>
               </div>
             </div>
           </div>
@@ -1048,14 +1071,16 @@
         </div>
 
         <!-- 🔄 25× Cap & Re-Topup Cycle Explainer -->
-        <div class="retopup-cycle-card glass border-beam-card" id="retopupCycleCard" data-reveal>
+        <div class="retopup-cycle-card glass border-beam-card" id="retopupCycleCard" data-scene="retopup" data-reveal>
+          <!-- the particle scene forms the DV mark behind this card, with lightning (particleScene.ts retopup) -->
+          <div class="scene-slot scene-slot--calc" aria-hidden="true"></div>
           <div class="card-beam-glow"></div>
           <div class="retopup-head">
             <div class="retopup-tag mono">
-              <span class="retopup-dot"></span> ZERO-LIABILITY SUSTAINABILITY ENGINE
+              <span class="retopup-dot"></span> 25&times; CAP &amp; TOP-UP
             </div>
-            <h3>What Happens When You Reach the 25&times; Cap ($7,500)?</h3>
-            <p>Every $300 package carries a strict 25&times; earning limit ($7,500). Once reached, you never lose your position or team &mdash; simply buy a fresh $300 package to unlock another $7,500 cycle indefinitely.</p>
+            <h3>What Happens at the <span class="grad-text">25&times; Cap</span> ($7,500)?</h3>
+            <p>Every $300 package earns up to 25&times; ($7,500) in level income. When it reaches the cap you keep your ID, your team and your rank: a new $300 top-up starts the next package.</p>
           </div>
 
           <!-- 4-Station Interactive Circular Flow -->
@@ -1081,7 +1106,7 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               </div>
               <h4>Earn Up to $7,500</h4>
-              <p>Collect $30, $15, $9, $6, and $3 across your 20-level network. 95% withdrawable instantly in USDT.</p>
+              <p>Earn $30, $15, $9, $6 and $3 per member across your 20 levels. Withdraw instantly in USDT (5% fee).</p>
               <div class="station-badge mono text-cyan">INCOME ACCUMULATION</div>
             </div>
 
@@ -1095,8 +1120,8 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               </div>
               <h4>25&times; Cap Reached</h4>
-              <p>Contract limits earnings to exactly $7,500. This mathematical ceiling keeps DAOVAULT permanently solvent.</p>
-              <div class="station-badge mono text-violet">SUSTAINABILITY SHIELD</div>
+              <p>Level income for that package stops at exactly $7,500. The cap keeps the plan balanced for every member.</p>
+              <div class="station-badge mono text-violet">CAP REACHED</div>
             </div>
 
             <!-- Directional Flow Arrow -->
@@ -1108,9 +1133,9 @@
               <div class="station-icon-wrap green-glow">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
               </div>
-              <h4>Manual $300 Re-Topup</h4>
-              <p>Buy a fresh $300 package from your wallet. Zero team loss: keep your exact same ID, team, and rank!</p>
-              <div class="station-badge mono text-green">SAME TEAM &bull; ZERO LOSS</div>
+              <h4>$300 Top-Up</h4>
+              <p>Buy a new $300 package from your wallet. Your ID, your team and your rank stay exactly the same.</p>
+              <div class="station-badge mono text-green">SAME ID &bull; SAME TEAM</div>
             </div>
           </div>
 
@@ -1119,15 +1144,15 @@
             <div class="retopup-sim-head">
               <div class="retopup-sim-status mono">
                 <span class="retopup-status-dot"></span>
-                <span id="retopupStatusPill">Cycle #1 Active &bull; Package: $300 Entry</span>
+                <span id="retopupStatusPill">Package #1 active &bull; $300 entry</span>
               </div>
-              <div class="retopup-cycle-badge mono" id="retopupCycleBadge">CYCLE #1</div>
+              <div class="retopup-cycle-badge mono" id="retopupCycleBadge">PACKAGE #1</div>
             </div>
 
             <!-- Progress Meter -->
             <div class="retopup-meter-wrap">
               <div class="retopup-meter-meta mono">
-                <span>CYCLE EARNINGS PROGRESS (25&times; LIMIT)</span>
+                <span>LEVEL INCOME ON THIS PACKAGE (25&times; CAP)</span>
                 <span class="retopup-meter-num grad-text" id="retopupMeterVal">$0 / $7,500 USDT</span>
               </div>
               <div class="retopup-meter-track">
@@ -1138,12 +1163,12 @@
             <!-- Cap Alert & Manual Re-topup Action Strip -->
             <div class="retopup-actions-row">
               <button type="button" class="btn retopup-test-btn" id="retopupSimulateBtn">
-                <span>Simulate $7,500 Cap Milestone &rarr;</span>
+                <span>See what happens at $7,500 &rarr;</span>
               </button>
               <div class="retopup-manual-prompt" id="retopupManualPrompt">
-                <span class="prompt-text mono">&check; 25&times; Complete! Buy fresh $300 package to continue:</span>
+                <span class="prompt-text mono">&check; Cap reached. Start the next package:</span>
                 <button type="button" class="btn btn-gold-sm" id="retopupManualBuyBtn">
-                  <span>Manual $300 Re-Topup (Start Next $7,500 Cycle) &rarr;</span>
+                  <span>$300 Top-Up (next $7,500 package) &rarr;</span>
                 </button>
               </div>
             </div>
@@ -1151,16 +1176,16 @@
             <!-- 3 Reassurance Pillars -->
             <div class="retopup-guarantee-grid">
               <div class="guarantee-item mono">
-                <span class="text-green">&check; 100% NON-CUSTODIAL</span>
-                <p>No automatic debits or hidden auto-pay. You choose when to top up directly from your wallet.</p>
+                <span class="text-green">&check; YOU DECIDE</span>
+                <p>Nothing is taken automatically. You choose when to top up, from your own wallet.</p>
               </div>
               <div class="guarantee-item mono">
-                <span class="text-gold">&check; PERPETUAL TEAM GENEALOGY</span>
-                <p>You never start over. Your entire 20-level organization and active directs stay linked to your ID.</p>
+                <span class="text-gold">&check; YOUR TEAM STAYS</span>
+                <p>You never start over: your 20 levels and your directs stay linked to your ID.</p>
               </div>
               <div class="guarantee-item mono">
-                <span class="text-cyan">&check; UNLIMITED CYCLES</span>
-                <p>Cycle #1, #2, #10... Leaders can repeat the 25&times; ($7,500) earning cycle infinitely.</p>
+                <span class="text-cyan">&check; REPEATABLE</span>
+                <p>Each top-up is a new package with its own 25&times; ($7,500) cap.</p>
               </div>
             </div>
           </div>
@@ -1229,12 +1254,12 @@
               <circle cx="470" cy="8" r="4" fill="#ffb800" class="beam-dot" />
             </svg>
           </div>
-          <p class="section-tag mono">FOUR PILLARS</p>
+          <p class="section-tag mono">HOW IT STAYS FAIR</p>
           <h2 class="section-title">
-            <span class="wm-line"><span>Engineered for <span class="grad-text">Long-Term Sustainability</span></span></span>
+            <span class="wm-line"><span>Four Rules That Keep It <span class="grad-text">Fair &amp; Balanced</span></span></span>
           </h2>
           <p class="section-sub">
-            Flip any card below to see the rule behind it and how it keeps DAOVAULT sustainable.
+            The same public rules apply to every member. Flip a card to see why each one is there.
           </p>
         </header>
 
@@ -1244,8 +1269,8 @@
             <div class="flip-card-inner">
               <div class="flip-card-front">
                 <div>
-                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">LAYER 01 &middot; SUSTAINABILITY</span>
-                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">25&times; Sustainability Cap</h3>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">RULE 01 &middot; THE CAP</span>
+                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">25&times; Earnings Cap</h3>
                   <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
                     Each $300 package earns up to $7,500 in level income. A $300 top-up then starts a new package.
                   </p>
@@ -1256,10 +1281,10 @@
               </div>
               <div class="flip-card-back">
                 <div>
-                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">&check; PROOF MECHANISM</span>
-                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Built to Last</h4>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">&check; WHY IT MATTERS</span>
+                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Fair for Every Member</h4>
                   <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
-                    Uncapped earnings let a few accounts drain a system. The 25&times; cap keeps income in proportion to what each package brings in, and a top-up starts a fresh cap with the same ID and team.
+                    Without a cap, a few accounts could take most of what comes in. The 25&times; cap keeps each package&rsquo;s income in proportion, and a top-up starts a new cap with the same ID and team.
                   </p>
                 </div>
                 <div class="mono" style="font-size: 0.78rem; color: var(--gold); border-top: 1px solid rgba(255,196,0,0.25); padding-top: 0.6rem;">
@@ -1274,25 +1299,25 @@
             <div class="flip-card-inner">
               <div class="flip-card-front">
                 <div>
-                  <span class="mono" style="font-size: 0.75rem; color: var(--green);">LAYER 02 &middot; ETHICS</span>
-                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">No Fixed Returns, Only Real Growth</h3>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">RULE 02 &middot; REAL ACTIVITY</span>
+                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">No Fixed Returns</h3>
                   <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
-                    No promised daily returns or staking schemes. Every reward is backed by real activity.
+                    No daily interest and no staking. Rewards come only from people joining and teams growing.
                   </p>
                 </div>
-                <div class="flip-hint mono" style="color: var(--green);">
+                <div class="flip-hint mono" style="color: var(--gold);">
                   <span>Hover to flip card</span> &rarr;
                 </div>
               </div>
               <div class="flip-card-back">
                 <div>
-                  <span class="mono" style="font-size: 0.75rem; color: var(--green);">&check; ZERO LIABILITY</span>
-                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">No Promised Interest</h4>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">&check; WHY IT MATTERS</span>
+                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Nothing Promised That Isn&rsquo;t Earned</h4>
                   <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
-                    Platforms that promise fixed daily returns depend on new deposits to pay earlier ones. DAOVAULT promises no interest: every reward is a share of a real $300 activation, paid under published rules.
+                    DAOVAULT pays no interest on your $300. Every reward is a share of a real $300 activation, worked out by the same published rules for everyone.
                   </p>
                 </div>
-                <div class="mono" style="font-size: 0.78rem; color: var(--green); border-top: 1px solid rgba(16,185,129,0.3); padding-top: 0.6rem;">
+                <div class="mono" style="font-size: 0.78rem; color: var(--gold); border-top: 1px solid rgba(255,196,0,0.25); padding-top: 0.6rem;">
                   Every reward comes from a real $300 activation
                 </div>
               </div>
@@ -1304,25 +1329,25 @@
             <div class="flip-card-inner">
               <div class="flip-card-front">
                 <div>
-                  <span class="mono" style="font-size: 0.75rem; color: var(--cyan);">LAYER 03 &middot; DISTRIBUTION</span>
-                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">40% 20-Level Income</h3>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">RULE 03 &middot; 20 LEVELS</span>
+                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">40% Across 20 Levels</h3>
                   <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
-                    40% of every package is shared automatically across 20 levels of uplines.
+                    40% ($120) of every $300 package is shared across 20 levels of uplines.
                   </p>
                 </div>
-                <div class="flip-hint mono" style="color: var(--cyan);">
+                <div class="flip-hint mono" style="color: var(--gold);">
                   <span>Hover to flip card</span> &rarr;
                 </div>
               </div>
               <div class="flip-card-back">
                 <div>
-                  <span class="mono" style="font-size: 0.75rem; color: var(--cyan);">&check; DIRECT INCENTIVE</span>
-                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Levels Earned by Building</h4>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">&check; WHY IT MATTERS</span>
+                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Levels Open as You Build</h4>
                   <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
-                    Level 1 pays 10% ($30) from day one. The deeper 19 levels open as you bring in active direct members, up to 15 directs for all 20 levels, which rewards wide, healthy teams.
+                    Level 1 pays 10% ($30) from the start. The other 19 levels open as you bring in active direct members: 15 directs open all 20. Deep income goes to people who build.
                   </p>
                 </div>
-                <div class="mono" style="font-size: 0.78rem; color: var(--cyan); border-top: 1px solid rgba(34,211,238,0.3); padding-top: 0.6rem;">
+                <div class="mono" style="font-size: 0.78rem; color: var(--gold); border-top: 1px solid rgba(255,196,0,0.25); padding-top: 0.6rem;">
                   $120 of every $300 entry
                 </div>
               </div>
@@ -1334,26 +1359,26 @@
             <div class="flip-card-inner">
               <div class="flip-card-front">
                 <div>
-                  <span class="mono" style="font-size: 0.75rem; color: var(--violet);">LAYER 04 &middot; SECURITY</span>
-                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">Transparent 5% Fee</h3>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">RULE 04 &middot; WITHDRAWALS</span>
+                  <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">One Flat 5% Fee</h3>
                   <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
-                    Withdraw your balance instantly in USDT to your own wallet on BNB Smart Chain; you receive 95%.
+                    Withdraw your balance in USDT to your own wallet on BNB Smart Chain. You receive 95%.
                   </p>
                 </div>
-                <div class="flip-hint mono" style="color: var(--violet);">
+                <div class="flip-hint mono" style="color: var(--gold);">
                   <span>Hover to flip card</span> &rarr;
                 </div>
               </div>
               <div class="flip-card-back">
                 <div>
-                  <span class="mono" style="font-size: 0.75rem; color: var(--violet);">&check; LIQUIDITY RESERVE</span>
-                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">Ecosystem Treasury</h4>
+                  <span class="mono" style="font-size: 0.75rem; color: var(--gold);">&check; WHY IT MATTERS</span>
+                  <h4 style="font-size: 1.2rem; margin-top: 0.4rem; color: #fff;">No Hidden Charges</h4>
                   <p style="color: #cbd5e1; font-size: 0.84rem; line-height: 1.6; margin-top: 0.6rem;">
-                    The flat 5% withdrawal fee supports the rank reward pool, network fees and platform operations.
+                    One fee, the same for everyone, shown before you confirm. It covers network costs, rank rewards and running the platform.
                   </p>
                 </div>
-                <div class="mono" style="font-size: 0.78rem; color: var(--violet); border-top: 1px solid rgba(168,85,247,0.3); padding-top: 0.6rem;">
-                  Net Transfer: 95% in USDT
+                <div class="mono" style="font-size: 0.78rem; color: var(--gold); border-top: 1px solid rgba(255,196,0,0.25); padding-top: 0.6rem;">
+                  You receive: 95% in USDT
                 </div>
               </div>
             </div>
@@ -1655,12 +1680,12 @@
               <circle cx="470" cy="8" r="4" fill="#ffb800" class="beam-dot" />
             </svg>
           </div>
-          <p class="section-tag mono">KNOWLEDGE BASE</p>
+          <p class="section-tag mono">FAQ</p>
           <h2 class="section-title">
             <span class="wm-line"><span>Frequently Asked <span class="grad-text">Questions</span></span></span>
           </h2>
           <p class="section-sub">
-            Clear, transparent answers to help you navigate activations, 20-level distribution, 25&times; earning caps, and instant non-custodial payouts.
+            Straight answers on activation, the 20 levels, the 25&times; cap, rank rewards and withdrawals.
           </p>
         </header>
 
@@ -1675,9 +1700,9 @@
             </button>
             <div class="faq-answer">
               <p>
-                DAOVAULT is a fully decentralized, community-driven Web3 DeFi platform deployed on BNB Smart Chain (BSC). 
-                Members activate their decentralized ID with a single, fixed <b>$300 package in USDT (BEP-20)</b>. 
-                All distribution logic is encoded into open, published smart contracts that automatically share 40% across 20 generational levels, fund 11-tier leadership milestones, and execute instant payouts directly to your connected wallet.
+                DAOVAULT is a community-driven rewards platform on BNB Smart Chain. You join once with a fixed <b>$300 USDT (BEP-20)</b>
+                package, paid through a public smart contract. Each package shares <b>40%</b> across 20 levels of uplines, and
+                11 rank rewards are paid as your team grows on both sides. Earnings go to your balance and you withdraw to your own wallet.
               </p>
             </div>
           </div>
@@ -1685,14 +1710,15 @@
           <!-- FAQ Item 2 -->
           <div class="faq-item glass-v2">
             <button class="faq-question" type="button" aria-expanded="false">
-              <span class="faq-q-text">How much does it cost to activate an ID and what currency is required?</span>
+              <span class="faq-q-text">What does it cost to join?</span>
               <span class="faq-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </span>
             </button>
             <div class="faq-answer">
               <p>
-                Activation requires exactly <b>$300.00 USDT (BEP-20)</b>, plus a tiny fraction of BNB (typically $0.10 to $0.25) to cover BNB Smart Chain network gas fees. There are zero recurring subscription charges, sign-up fees, or hidden server costs.
+                Exactly <b>$300 USDT (BEP-20)</b>, plus a little BNB for the BNB Smart Chain network fee (usually a few cents).
+                There is no subscription, no sign-up fee and no other charge.
               </p>
             </div>
           </div>
@@ -1700,21 +1726,22 @@
           <!-- FAQ Item 3 -->
           <div class="faq-item glass-v2">
             <button class="faq-question" type="button" aria-expanded="false">
-              <span class="faq-q-text">How does the 40% 20-Level Generational Income work?</span>
+              <span class="faq-q-text">How does the 20-level income work?</span>
               <span class="faq-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </span>
             </button>
             <div class="faq-answer">
               <p>
-                For every $300 package activation, exactly <b>40% ($120.00 USDT)</b> is distributed across 20 upline generations:
+                Every $300 package shares exactly <b>40% ($120 USDT)</b> across 20 levels of uplines. Each level opens with a
+                number of active direct referrals:
               </p>
               <ul>
-                <li><b>Level 1 (Direct Apex):</b> 10% ($30.00) &bull; Unlocked immediately with 0 directs.</li>
-                <li><b>Level 2 (Expansion):</b> 5% ($15.00) &bull; Unlocked with 2 active directs.</li>
-                <li><b>Levels 3–4 (Mid Expansion):</b> 3% ($9.00 each &bull; $18 total) &bull; Unlocked with 3 &amp; 5 directs.</li>
-                <li><b>Levels 5–7 (Cluster Depth):</b> 2% ($6.00 each &bull; $18 total) &bull; Unlocked with 7, 9 &amp; 10 directs.</li>
-                <li><b>Levels 8–20 (Crown Galaxy):</b> 1% ($3.00 each &bull; $39 total) &bull; 15 active directs permanently unlocks all 20 levels.</li>
+                <li><b>Level 1:</b> 10% ($30) &bull; open from your activation.</li>
+                <li><b>Level 2:</b> 5% ($15) &bull; 2 active directs.</li>
+                <li><b>Levels 3&ndash;4:</b> 3% each ($9) &bull; 3 and 5 active directs.</li>
+                <li><b>Levels 5&ndash;7:</b> 2% each ($6) &bull; 7, 9 and 10 active directs.</li>
+                <li><b>Levels 8&ndash;20:</b> 1% each ($3) &bull; 15 active directs open all 20 levels.</li>
               </ul>
             </div>
           </div>
@@ -1722,17 +1749,16 @@
           <!-- FAQ Item 4 -->
           <div class="faq-item glass-v2">
             <button class="faq-question" type="button" aria-expanded="false">
-              <span class="faq-q-text">What happens when I reach the 25&times; Earning Cap ($7,500)?</span>
+              <span class="faq-q-text">What happens at the 25&times; cap ($7,500)?</span>
               <span class="faq-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </span>
             </button>
             <div class="faq-answer">
               <p>
-                To maintain mathematical permanence and ensure zero platform liability, every $300 package carries a strict <b>25&times; cap ($7,500 USDT)</b> on level income. 
-                Once you reach $7,500, further level income pauses until renewal. 
-                <b>You never lose your position, your referral genealogy, or your leadership rank.</b> 
-                You simply buy a fresh $300 package from your Web3 wallet (Manual Re-Topup) to immediately unlock a new $7,500 earning room with your exact same team.
+                Each $300 package earns up to <b>25&times; ($7,500 USDT)</b> in level income. When it reaches the cap, level income
+                for that package stops. <b>You keep your ID, your team and your rank.</b> A new $300 top-up from your wallet starts
+                the next package, with its own $7,500 cap. Rank rewards are separate and do not count toward the cap.
               </p>
             </div>
           </div>
@@ -1740,15 +1766,15 @@
           <!-- FAQ Item 5 -->
           <div class="faq-item glass-v2">
             <button class="faq-question" type="button" aria-expanded="false">
-              <span class="faq-q-text">Is the $300 Re-Topup automatic or deducted from my wallet?</span>
+              <span class="faq-q-text">Is the $300 top-up taken from my wallet automatically?</span>
               <span class="faq-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </span>
             </button>
             <div class="faq-answer">
               <p>
-                <b>No. DAOVAULT has zero auto-debit mechanisms.</b> 
-                You maintain 100% custody of your funds at all times. Re-topup is completely manual: whenever your $7,500 ceiling is reached, you decide when to purchase a fresh $300 package directly through your connected Web3 wallet.
+                <b>No.</b> Nothing is ever taken from your wallet automatically. When a package reaches its cap, you decide if and when
+                to top up, and you approve the $300 payment yourself in your wallet.
               </p>
             </div>
           </div>
@@ -1756,16 +1782,16 @@
           <!-- FAQ Item 6 -->
           <div class="faq-item glass-v2">
             <button class="faq-question" type="button" aria-expanded="false">
-              <span class="faq-q-text">How do the 11-Tier Leadership Rank Rewards work?</span>
+              <span class="faq-q-text">How do the 11 rank rewards work?</span>
               <span class="faq-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </span>
             </button>
             <div class="faq-answer">
               <p>
-                DAOVAULT features 11 leadership ranks ranging from <b>Starter ($150 reward)</b> up to <b>Crown President ($200,000 reward)</b>. 
-                Qualifications require balanced <b>50:50 volume matching</b>: the rank's target DAO volume (1 DAO = 1 member package) must be matched on your Strong Leg and your Other Leg (all other legs combined). 
-                Once achieved, rank rewards are one-time cash payouts credited directly to your balance, and ranks never demote.
+                There are 11 ranks, from <b>Starter ($150)</b> to <b>Crown President ($200,000)</b>. Each rank needs its DAO target
+                on <b>both sides</b>: your Strong Leg (your biggest team) and your Other Leg (all your other teams together).
+                1 DAO = 1 activated $300 package. Each reward is paid once, to your balance, and ranks never go down.
               </p>
             </div>
           </div>
@@ -1773,7 +1799,7 @@
           <!-- FAQ Item 7 -->
           <div class="faq-item glass-v2">
             <button class="faq-question" type="button" aria-expanded="false">
-              <span class="faq-q-text">Does DAOVAULT offer fixed daily returns or ROI?</span>
+              <span class="faq-q-text">Is there a fixed daily return?</span>
               <span class="faq-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </span>
@@ -1797,9 +1823,8 @@
             </button>
             <div class="faq-answer">
               <p>
-                Withdrawals can be requested at any time directly through your DApp dashboard. 
-                Payouts are sent in USDT (BEP-20) straight to your own Web3 wallet. 
-                A flat <b>5% fee</b> applies; you receive 95% of the amount you withdraw, usually within moments.
+                Request a withdrawal from your dashboard at any time. It is paid in USDT (BEP-20) to your own wallet. A flat
+                <b>5% fee</b> applies, so you receive 95% of the amount you withdraw.
               </p>
             </div>
           </div>
@@ -1820,7 +1845,7 @@
           <p style="color: var(--text-dim); font-size: 0.88rem; max-width: 320px; line-height: 1.6;">
             Where communities build wealth together. A transparent, fully decentralized, community-driven DeFi ecosystem built on BNB Smart Chain.
           </p>
-          <p class="footer-tagline mono">Your assets. Your community. Your decisions.</p>
+          <p class="footer-tagline mono">Your assets &middot; Your community &middot; Your decisions</p>
         </div>
 
         <div class="footer-col" data-reveal>

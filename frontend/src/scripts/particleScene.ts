@@ -59,6 +59,10 @@ export const SCENE_STATES: Record<string, SceneState> = {
   // quiz carries the hidden CTA's (#join) background since 2026-10-12: the vault dial with its strong lightning
   quiz:    { shape: 'dial', x: -0.6,  y: -0.1, s: 1.05, op: 0.8,  storm: 1.6, mx: 0, my: -0.35, mop: 0.45, anchor: '#quiz .scene-slot' },
   // FAQ (owner, 2026-10-12): the DV mark beside the heading, with lightning like the sections above
+  // landing rank calculator card (owner, 2026-10-12): the vault dial behind the card, also on phones
+  // landing 25x cap card (owner, 2026-10-12): the DV mark behind the card, also on phones
+  retopup:  { shape: 'mark', x: 0, y: 0.1, s: 1, op: 0.85, storm: 1.4, mop: 0.6, anchor: '#retopupCycleCard .scene-slot--calc', fit: 0.95 },
+  rankcalc: { shape: 'dial', x: 0, y: 0.1, s: 1, op: 0.85, storm: 1.4, mop: 0.6, anchor: '#rankCalcCard .scene-slot--calc', fit: 0.95 },
   faq:     { shape: 'mark', x: -0.58, y: 0,    s: 0.95, op: 0.85, storm: 1.3, mop: 0.45, anchor: '#faq .scene-slot' },
   footer:  { shape: 'dust', x: 0,     y: 0,    s: 1,    op: 0.35, storm: 0.2 },
   // dashboard: the logo forms while the wallet is checked, then calm dust
@@ -723,8 +727,17 @@ export function bindSectionScenes(ctrl: ParticleSceneController): void {
   if (!sections.length || !('IntersectionObserver' in window)) return;
   const io = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
-      const name = (entry.target as HTMLElement).dataset.scene;
-      if (entry.isIntersecting && name) ctrl.setScene(name);
+      const el = entry.target as HTMLElement;
+      const name = el.dataset.scene;
+      if (entry.isIntersecting && name) { ctrl.setScene(name); return; }
+      // leaving a scene nested in a section (the #ranks calculator card): back to the section's
+      // own scene while the section still fills the middle of the screen
+      const parent = el.parentElement?.closest<HTMLElement>('[data-scene]');
+      if (!entry.isIntersecting && parent?.dataset.scene) {
+        const r = parent.getBoundingClientRect();
+        const mid = window.innerHeight * 0.5;
+        if (r.top < mid && r.bottom > mid) ctrl.setScene(parent.dataset.scene);
+      }
     });
   }, { rootMargin: '-45% 0px -50% 0px' });
   sections.forEach((s) => io.observe(s));

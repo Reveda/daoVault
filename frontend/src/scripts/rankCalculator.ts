@@ -54,7 +54,12 @@ export function initRankCalculator(): void {
 
   const updateFromVolume = (volume: number, syncCard = true, updateInput = true): void => {
     const safeVol = Math.max(0, volume);
-    if (slider) slider.value = String(safeVol);
+    if (slider) {
+      slider.value = String(safeVol);
+      // gold fill up to the thumb (CSS --fill)
+      const max = Number(slider.max) || 1;
+      slider.style.setProperty('--fill', `${Math.min(100, (safeVol / max) * 100)}%`);
+    }
     if (updateInput && teamInput) {
       teamInput.value = String(safeVol * 2);
     }
@@ -73,7 +78,7 @@ export function initRankCalculator(): void {
       const rank = RANK_DATA[achievedIndex];
       const meta = RANK_CREST_METAS[achievedIndex] || RANK_CREST_METAS[0];
       if (rankTitle) rankTitle.textContent = `${rank.id}. ${rank.title}`;
-      if (rankTier) rankTier.textContent = `Rank ${String(rank.id).padStart(2, '0')} / 11 Qualified &bull; ${meta.metal}`;
+      if (rankTier) rankTier.textContent = `Rank ${String(rank.id).padStart(2, '0')} of 11 • ${meta.metal}`;
       if (rewardVal) rewardVal.textContent = `$${rank.reward.toLocaleString()}.00`;
       if (cumVal) cumVal.textContent = `$${cumulativeRewards[achievedIndex].toLocaleString()}.00`;
 
@@ -89,7 +94,7 @@ export function initRankCalculator(): void {
         const needed = next.dao - safeVol;
         if (nextTarget) nextTarget.textContent = `Next: ${next.title} (needs +${needed.toLocaleString()} DAO on each side)`;
       } else {
-        if (nextTarget) nextTarget.textContent = `🌟 Maximum Apex Rank Achieved!`;
+        if (nextTarget) nextTarget.textContent = `Top rank reached: Crown President`;
       }
 
       if (syncCard) {
@@ -97,12 +102,12 @@ export function initRankCalculator(): void {
       }
     } else {
       // Below Starter (0 to 24 DAO)
-      if (rankTitle) rankTitle.textContent = 'Unranked Initiator';
-      if (rankTier) rankTier.textContent = '0 / 11 Tiers &bull; Base Member';
+      if (rankTitle) rankTitle.textContent = 'No rank yet';
+      if (rankTier) rankTier.textContent = 'Rank 00 of 11';
       if (rewardVal) rewardVal.textContent = '$0.00';
       if (cumVal) cumVal.textContent = '$0.00';
       const needed = 25 - safeVol;
-      if (nextTarget) nextTarget.textContent = `Next: Starter (needs +${needed} DAO on each side to win $150)`;
+      if (nextTarget) nextTarget.textContent = `Next: Starter (needs +${needed} DAO on each side, $150 reward)`;
 
       if (crestPreview) {
         crestPreview.innerHTML = getRankCrestSvg(0);

@@ -45,7 +45,7 @@ function initRetopupCycle(): void {
 
     // Step 1: Entry Active
     highlightStation(0);
-    if (statusPill) statusPill.textContent = `Cycle #${currentCycle} Active · Package: $300 Entry`;
+    if (statusPill) statusPill.textContent = `Package #${currentCycle} active · $300 entry`;
 
     // Step 2: Accumulating 20-Level Network Income
     highlightStation(1);
@@ -64,13 +64,13 @@ function initRetopupCycle(): void {
         highlightStation(2);
         try { navigator.vibrate?.([30, 50, 30]); } catch { /* no vibration */ }
         if (capAlert) capAlert.classList.add('is-visible');
-        if (statusPill) statusPill.textContent = `🚨 25× Cap Reached ($7,500) · Platform Protected`;
+        if (statusPill) statusPill.textContent = `25× cap reached · $7,500 earned on this package`;
 
         // Step 4: Show Manual Re-Topup Option (No Auto-debits!)
         setTimeout(() => {
           highlightStation(3);
           if (manualBuyPrompt) manualBuyPrompt.classList.add('is-visible');
-          if (statusPill) statusPill.textContent = `Ready for Manual $300 Re-Topup (1-Click From Wallet)`;
+          if (statusPill) statusPill.textContent = `Ready for a $300 top-up from your wallet`;
         }, 800);
       },
     });
@@ -83,7 +83,7 @@ function initRetopupCycle(): void {
     manualBuyBtn.addEventListener('click', () => {
       try { navigator.vibrate?.(25); } catch { /* no vibration */ }
       currentCycle++;
-      if (cycleCountBadge) cycleCountBadge.textContent = `CYCLE #${currentCycle}`;
+      if (cycleCountBadge) cycleCountBadge.textContent = `PACKAGE #${currentCycle}`;
       if (capAlert) capAlert.classList.remove('is-visible');
       if (manualBuyPrompt) manualBuyPrompt.classList.remove('is-visible');
       triggerBtn.removeAttribute('disabled');
@@ -91,7 +91,7 @@ function initRetopupCycle(): void {
       // Reset progress to 0 for the fresh $7,500 room
       meterFill.style.width = '0%';
       meterVal.textContent = '$0 / $7,500 USDT';
-      if (statusPill) statusPill.textContent = `✅ Cycle #${currentCycle} Unlocked! Fresh $7,500 Cap Room · Team Retained: 100%`;
+      if (statusPill) statusPill.textContent = `Package #${currentCycle} active · new $7,500 cap · same ID and team`;
       highlightStation(0);
 
       gsap.fromTo(meterFill, { opacity: 0.3 }, { opacity: 1, duration: 0.4 });

@@ -8357,3 +8357,369 @@ html.lite .hw-wallet { animation: none; filter: none; }
 @media (hover: none) and (prefers-reduced-motion: reduce) {
   .tap-glow, .glass:active, .metric-card:active, .reward-box:active { transform: none !important; }
 }
+
+/* ==========================================================================
+   Landing rank calculator (owner 2026-10-12): same look as the other sections. The particle dial
+   with its lightning forms behind the card (particleScene.ts rankcalc), on phones too; the card is
+   lighter and unblurred so the particles show through; gold tag, gradient title, muted subtitle.
+   ========================================================================== */
+#rankCalcCard { position: relative; overflow: hidden; isolation: isolate;
+  background: linear-gradient(180deg, rgba(10, 9, 7, 0.5), rgba(10, 9, 7, 0.72)) !important;
+  border-color: rgba(212, 175, 55, 0.32) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+#rankCalcCard > :not(.scene-slot):not(.card-beam-glow) { position: relative; z-index: 1; }
+.scene-slot.scene-slot--calc { display: block; top: 0.5rem; left: 50%; width: min(420px, 82%); transform: translateX(-50%); }
+.rcalc-tag { color: var(--gold); letter-spacing: 0.22em; font-weight: 600; }
+.rcalc-dot { background: var(--gold); box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); }
+.rcalc-head h3 { font-size: clamp(1.5rem, 3.2vw, 2.1rem); letter-spacing: -0.02em; }
+.rcalc-head p { color: var(--text-muted); }
+
+/* Landing 25x cap card (owner 2026-10-12): same look as the rank calculator, particles + lightning
+   behind it (particleScene.ts retopup), gold tag, gradient title */
+#retopupCycleCard { position: relative; overflow: hidden; isolation: isolate;
+  background: linear-gradient(180deg, rgba(10, 9, 7, 0.5), rgba(10, 9, 7, 0.72)) !important;
+  border-color: rgba(212, 175, 55, 0.32) !important;
+  backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+#retopupCycleCard > :not(.scene-slot):not(.card-beam-glow) { position: relative; z-index: 1; }
+.retopup-tag { color: var(--gold); letter-spacing: 0.22em; font-weight: 600; }
+.retopup-dot { background: var(--gold); box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); }
+.retopup-head h3 { font-size: clamp(1.45rem, 3.2vw, 2.1rem); letter-spacing: -0.02em; }
+.retopup-head p { color: var(--text-muted); }
+/* 25x cap card on phones (owner 2026-10-12): compact steps (icon beside the title, no tall boxes),
+   a slimmer card frame, and the simulator figures on one line */
+@media (max-width: 600px) {
+  #retopupCycleCard { padding: 1.5rem 0.9rem 1.1rem !important; }
+  #retopupCycleCard .retopup-head { margin-bottom: 1.3rem; }
+  #retopupCycleCard .cycle-stations-grid { gap: 0.6rem; }
+  #retopupCycleCard .cycle-station {
+    min-height: 0; padding: 0.85rem 0.9rem;
+    display: grid; grid-template-columns: 40px 1fr; column-gap: 0.75rem; align-items: start;
+  }
+  #retopupCycleCard .station-step { grid-column: 2; grid-row: 1; margin: 0; font-size: 0.6rem; }
+  #retopupCycleCard .station-icon-wrap { grid-column: 1; grid-row: 1 / span 3; width: 40px; height: 40px; margin: 0; }
+  #retopupCycleCard .cycle-station h4 { grid-column: 2; font-size: 0.98rem; margin: 0.1rem 0 0.25rem; }
+  #retopupCycleCard .cycle-station p { grid-column: 2; font-size: 0.78rem; margin: 0; }
+  #retopupCycleCard .station-badge { grid-column: 2; margin-top: 0.55rem; padding-top: 0.45rem; font-size: 0.6rem; }
+  #retopupCycleCard .retopup-sim-box { padding: 1rem 0.9rem; }
+  #retopupCycleCard .retopup-sim-head { gap: 0.6rem; align-items: flex-start; }
+  #retopupCycleCard .retopup-sim-status { font-size: 0.7rem; min-width: 0; }
+  #retopupCycleCard .retopup-cycle-badge { flex-shrink: 0; white-space: nowrap; font-size: 0.64rem; }
+  #retopupCycleCard .retopup-meter-meta { flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+  #retopupCycleCard .retopup-meter-num { white-space: nowrap; font-size: 1.05rem; }
+}
+
+/* 25x cap simulator in the DAOvault theme (owner 2026-10-12): gold pill buttons like the rest of the
+   landing, gold accents (no green / cyan / violet), heading font for figures, muted body text */
+#retopupCycleCard .retopup-sim-box {
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.06), rgba(212, 175, 55, 0.015));
+  border-color: rgba(212, 175, 55, 0.28);
+}
+#retopupCycleCard .retopup-sim-status { font-family: var(--font-body); font-size: 0.82rem; color: #e6e7eb; }
+#retopupCycleCard .retopup-status-dot { background: var(--gold); box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); }
+#retopupCycleCard .retopup-cycle-badge { color: var(--gold); border-color: rgba(212, 175, 55, 0.45); background: rgba(212, 175, 55, 0.1); border-radius: 999px; padding: 0.25rem 0.75rem; }
+#retopupCycleCard .retopup-meter-meta { color: var(--text-muted); letter-spacing: 0.08em; }
+#retopupCycleCard .retopup-meter-num { font-family: var(--font-heading); font-size: 1.3rem; letter-spacing: -0.01em; }
+#retopupCycleCard .retopup-meter-track { background: rgba(255, 255, 255, 0.06); border-radius: 999px; }
+#retopupCycleCard .retopup-meter-fill { background: var(--grad-gold); box-shadow: 0 0 12px rgba(212, 175, 55, 0.55); border-radius: 999px; }
+#retopupCycleCard .retopup-test-btn,
+#retopupCycleCard .btn-gold-sm {
+  font-family: var(--font-heading); font-weight: 700; font-size: 0.9rem;
+  padding: 0.75rem 1.5rem; border-radius: 999px; border: 0;
+  color: #1a1404; background: var(--grad-gold);
+  box-shadow: 0 8px 24px -8px rgba(212, 175, 55, 0.6);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, opacity 0.25s ease;
+}
+#retopupCycleCard .retopup-test-btn:hover:not(:disabled),
+#retopupCycleCard .btn-gold-sm:hover { transform: translateY(-2px); background: var(--grad-gold); color: #1a1404; box-shadow: 0 12px 30px -8px rgba(212, 175, 55, 0.8); }
+#retopupCycleCard .retopup-test-btn:disabled { opacity: 0.4; }
+#retopupCycleCard .retopup-manual-prompt {
+  background: rgba(212, 175, 55, 0.08); border-color: rgba(212, 175, 55, 0.5); border-radius: 14px;
+  animation: none; box-shadow: 0 0 18px rgba(212, 175, 55, 0.15);
+}
+#retopupCycleCard .prompt-text { color: #f5d77a; font-family: var(--font-body); font-size: 0.82rem; }
+#retopupCycleCard .retopup-guarantee-grid { border-top-color: rgba(212, 175, 55, 0.18); }
+#retopupCycleCard .guarantee-item span { color: var(--gold) !important; letter-spacing: 0.12em; }
+#retopupCycleCard .guarantee-item p { font-family: var(--font-body); font-size: 0.84rem; color: var(--text-muted); line-height: 1.55; }
+@media (max-width: 600px) {
+  #retopupCycleCard .retopup-test-btn, #retopupCycleCard .btn-gold-sm { width: 100%; justify-content: center; }
+  #retopupCycleCard .retopup-manual-prompt { width: 100%; }
+}
+
+/* ==========================================================================
+   Live on-chain pulse card (liveActivity.ts, owner 2026-10-12): the 3rd signal card. Real events
+   slide in one at a time; the BSC block number ticks; a radar sweep shows it is live.
+   ========================================================================== */
+.live-pulse-card { position: relative; overflow: hidden; }
+.live-pulse-card::after {
+  content: ''; position: absolute; inset: -60% -20% auto auto; width: 70%; aspect-ratio: 1; border-radius: 50%;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.16), transparent 60%); pointer-events: none;
+  animation: lpRadar 3.2s ease-out infinite;
+}
+@keyframes lpRadar { 0% { transform: scale(0.3); opacity: 0.9; } 100% { transform: scale(1.3); opacity: 0; } }
+.ex-dot.lp-live { background: #10b981; box-shadow: 0 0 8px #10b981; animation: lpBlink 1.4s ease-in-out infinite; }
+@keyframes lpBlink { 50% { opacity: 0.35; } }
+.lp-block { font-size: 0.58rem; letter-spacing: 0.1em; color: var(--text-dim); white-space: nowrap; }
+.lp-block b { color: #34d399; font-weight: 700; display: inline-block; }
+.lp-block b.is-tick { animation: lpTick 0.6s ease-out; }
+@keyframes lpTick { 0% { transform: translateY(-4px); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.lp-feed { position: relative; z-index: 1; min-height: 3.1rem; margin: 0.55rem 0 0.15rem; transition: opacity 0.26s ease, transform 0.26s ease; }
+.lp-feed.is-out { opacity: 0; transform: translateY(-8px); }
+.lp-item {
+  display: grid; grid-template-columns: 30px 1fr auto; grid-template-rows: auto auto; column-gap: 0.6rem; row-gap: 0.1rem;
+  align-items: center; color: inherit; text-decoration: none;
+}
+.lp-icon {
+  grid-row: 1 / span 2; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+  color: var(--gold); background: rgba(212, 175, 55, 0.12); border: 1px solid rgba(212, 175, 55, 0.35);
+}
+.lp-icon svg { width: 15px; height: 15px; }
+.lp-item.is-withdrawal .lp-icon { color: #34d399; background: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.35); }
+.lp-text { font-size: 0.8rem; color: #e6e7eb; line-height: 1.35; min-width: 0; }
+.lp-text b { color: #fff; font-weight: 600; font-size: 0.74rem; }
+.lp-amount { grid-column: 3; grid-row: 1; font-size: 0.95rem; font-weight: 700; color: var(--gold); }
+.lp-item.is-withdrawal .lp-amount { color: #34d399; }
+.lp-time { grid-column: 2 / span 2; grid-row: 2; font-size: 0.6rem; color: var(--text-dim); }
+a.lp-item[href]:hover .lp-text b { text-decoration: underline; }
+.lp-item.is-empty { grid-template-columns: 30px 1fr; }
+.lp-item.is-empty .lp-text { color: var(--text-muted); font-size: 0.74rem; grid-row: 1 / span 2; }
+.live-pulse-card .ex-footer-meta { display: flex; justify-content: space-between; gap: 0.5rem; }
+@media (prefers-reduced-motion: reduce) { .live-pulse-card::after, .ex-dot.lp-live { animation: none; } }
+.live-pulse-card .ex-pair { white-space: nowrap; }
+.live-pulse-card .ex-footer-meta span { white-space: nowrap; }
+/* sample preview (before the first real event): amber dot, no "live" blink */
+.live-pulse-card.is-sample .ex-dot.lp-live { background: #f59e0b; box-shadow: 0 0 8px #f59e0b; animation: none; }
+.live-pulse-card.is-sample .ex-pair { color: #fbbf24; }
+
+/* ==========================================================================
+   FAQ in the DAOvault theme (owner 2026-10-12): gold-rimmed dark cards like the other sections,
+   heading font for questions, a gold number + chevron, and a smooth open / close (grid rows
+   0fr -> 1fr, so closing eases out as smoothly as opening; landingFx.ts wraps the content)
+   ========================================================================== */
+.faq-accordion-wrap { counter-reset: faq; gap: 0.75rem; }
+.faq-item {
+  counter-increment: faq;
+  background: linear-gradient(180deg, rgba(22, 19, 10, 0.72), rgba(8, 7, 5, 0.82));
+  border-color: rgba(212, 175, 55, 0.2);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
+  transition: border-color 0.35s ease, box-shadow 0.45s ease, background 0.35s ease;
+}
+.faq-item:hover { border-color: rgba(212, 175, 55, 0.45); background: linear-gradient(180deg, rgba(26, 22, 11, 0.8), rgba(10, 9, 6, 0.88)); }
+.faq-item.is-open {
+  border-color: rgba(212, 175, 55, 0.7);
+  box-shadow: 0 14px 40px -12px rgba(0, 0, 0, 0.75), 0 0 28px -8px rgba(212, 175, 55, 0.3);
+}
+.faq-question { padding: 1.2rem 1.4rem; gap: 1rem; font-size: 1.05rem; letter-spacing: -0.01em; }
+.faq-question:hover { color: #fff; }
+.faq-q-text { display: flex; align-items: baseline; gap: 0.85rem; }
+.faq-q-text::before {
+  content: counter(faq, decimal-leading-zero);
+  flex: none; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em;
+  color: var(--gold); opacity: 0.75; transition: opacity 0.3s ease;
+}
+.faq-item.is-open .faq-q-text::before, .faq-item:hover .faq-q-text::before { opacity: 1; }
+.faq-item.is-open .faq-q-text { color: #f5d77a; }
+.faq-icon {
+  width: 30px; height: 30px; color: var(--gold);
+  background: rgba(212, 175, 55, 0.08); border-color: rgba(212, 175, 55, 0.3);
+  transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1), background 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
+}
+.faq-icon svg { width: 15px; height: 15px; }
+.faq-item:hover .faq-icon { background: rgba(212, 175, 55, 0.16); border-color: var(--gold); }
+.faq-item.is-open .faq-icon { transform: rotate(135deg); background: var(--grad-gold); color: #1a1404; border-color: transparent; box-shadow: 0 0 14px rgba(212, 175, 55, 0.5); }
+
+/* open / close */
+.faq-answer, .faq-item.is-open .faq-answer {
+  display: grid; grid-template-rows: 0fr; max-height: none; padding: 0 1.4rem; opacity: 1;
+  transition: grid-template-rows 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.faq-item.is-open .faq-answer { grid-template-rows: 1fr; }
+.faq-answer-inner {
+  min-height: 0; overflow: hidden;
+  opacity: 0; transform: translateY(-6px);
+  transition: opacity 0.3s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), padding 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  padding: 0 0 0 calc(0.72rem + 2.4ch);
+}
+.faq-item.is-open .faq-answer-inner { opacity: 1; transform: none; transition-delay: 0.08s, 0.05s, 0s; padding-bottom: 1.35rem; }
+.faq-answer p { color: var(--text-muted); font-size: 0.93rem; line-height: 1.75; }
+.faq-answer b { color: #f5d77a; font-weight: 600; }
+.faq-answer ul { gap: 0.4rem; padding-left: 0; }
+.faq-answer ul li { color: var(--text-muted); padding-left: 1.2rem; }
+.faq-answer ul li::before { content: ''; top: 0.62em; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 6px rgba(212, 175, 55, 0.6); }
+.faq-answer ul li b { color: #fff; }
+@media (max-width: 600px) {
+  .faq-question { padding: 1rem 1rem; font-size: 0.95rem; }
+  .faq-q-text { gap: 0.6rem; }
+  .faq-answer, .faq-item.is-open .faq-answer { padding: 0 1rem; }
+  .faq-answer-inner { padding-left: 0; }
+  .faq-answer p { font-size: 0.88rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .faq-answer, .faq-answer-inner, .faq-icon { transition: none !important; }
+}
+
+/* ==========================================================================
+   Rank calculator inside, DAOvault theme (owner 2026-10-12): gold accents only (no blue-grey,
+   green, cyan), heading font for numbers, gold pill buttons, a gold-filled slider track.
+   ========================================================================== */
+#rankCalcCard .rcalc-team-input-row,
+#rankCalcCard .rcalc-stat {
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.07), rgba(212, 175, 55, 0.015)) !important;
+  border: 1px solid rgba(212, 175, 55, 0.26) !important;
+  border-radius: 16px;
+}
+#rankCalcCard .rcalc-input-label { color: #fff; letter-spacing: 0.14em; }
+#rankCalcCard .rcalc-pulse-dot { background: var(--gold); box-shadow: 0 0 8px rgba(212, 175, 55, 0.8); }
+#rankCalcCard .rcalc-input-hint, #rankCalcCard .rcalc-presets-lbl, #rankCalcCard .rcalc-ticks,
+#rankCalcCard .rcalc-slider-meta, #rankCalcCard .rcalc-stat-lbl { color: var(--text-dim); }
+#rankCalcCard .rcalc-stat-lbl { letter-spacing: 0.14em; }
+#rankCalcCard .rcalc-stat-sub { color: var(--text-muted); font-family: var(--font-body); font-size: 0.8rem; }
+#rankCalcCard .rcalc-stat-title { font-family: var(--font-heading); letter-spacing: -0.02em; }
+#rankCalcCard .rcalc-stat-title.text-gold { color: #f5d77a; }
+#rankCalcCard .rcalc-current-val { font-family: var(--font-heading); }
+#rankCalcCard .rcalc-crest-hint { color: var(--gold); opacity: 0.8; }
+#rankCalcCard .rcalc-pill {
+  border-radius: 999px; padding: 0.4rem 0.85rem;
+  background: rgba(212, 175, 55, 0.06); border: 1px solid rgba(212, 175, 55, 0.25); color: #e6e7eb;
+  transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.25s ease;
+}
+#rankCalcCard .rcalc-pill:hover, #rankCalcCard .rcalc-pill.is-active {
+  background: var(--grad-gold); border-color: transparent; color: #1a1404; transform: translateY(-1px);
+}
+#rankCalcCard .rcalc-step-btn {
+  border-radius: 999px; background: rgba(212, 175, 55, 0.1); border: 1px solid rgba(212, 175, 55, 0.4); color: var(--gold);
+}
+#rankCalcCard .rcalc-step-btn:hover { background: var(--grad-gold); color: #1a1404; border-color: transparent; }
+#rankCalcCard .rcalc-input-box { border-radius: 999px; border-color: rgba(212, 175, 55, 0.4); background: rgba(0, 0, 0, 0.35); }
+#rankCalcCard .rcalc-unit { color: #1a1404; background: var(--grad-gold); border-radius: 999px; }
+#rankCalcCard .rcalc-slider {
+  background: linear-gradient(90deg, #d4af37 0 var(--fill, 0%), rgba(255, 255, 255, 0.1) var(--fill, 0%)) !important;
+}
+#rankCalcCard .rcalc-slider::-webkit-slider-thumb { background: radial-gradient(circle at 35% 35%, #fff6c4 15%, #d4af37 65%, #8a6510 100%); border-color: #f5d77a; }
+#rankCalcCard .rcalc-slider::-moz-range-thumb { background: radial-gradient(circle at 35% 35%, #fff6c4 15%, #d4af37 65%, #8a6510 100%); border-color: #f5d77a; }
+
+/* [data-unfold] cards (unfoldCard.ts, owner 2026-10-12): drop in from the scroll side, then the
+   content opens. The card itself moves (transform); its content is revealed with a clip-path. */
+[data-unfold].unfold-ready {
+  opacity: 0;
+  transform: translateY(-70px) scale(0.96);
+  transition: opacity 0.45s ease, transform 0.75s cubic-bezier(0.22, 1.25, 0.36, 1);
+}
+[data-unfold].unfold-ready[data-from="bottom"] { transform: translateY(70px) scale(0.96); }
+[data-unfold].unfold-ready > :not(.scene-slot):not(.card-beam-glow) {
+  clip-path: inset(0 0 100% 0);
+  opacity: 0;
+  transition: clip-path 0.8s cubic-bezier(0.65, 0, 0.35, 1) 0.45s, opacity 0.4s ease 0.45s;
+}
+[data-unfold].unfold-ready[data-from="bottom"] > :not(.scene-slot):not(.card-beam-glow) { clip-path: inset(100% 0 0 0); }
+[data-unfold].unfold-ready.is-unfolded { opacity: 1; transform: none; }
+[data-unfold].unfold-ready.is-unfolded > :not(.scene-slot):not(.card-beam-glow) { clip-path: inset(0 0 0 0); opacity: 1; }
+/* the body opens a beat after the heading */
+[data-unfold].unfold-ready.is-unfolded > .rcalc-body { transition-delay: 0.65s, 0.65s; }
+/* a gold seam sweeps along the opening edge */
+[data-unfold].unfold-ready::after {
+  content: ''; position: absolute; left: 6%; right: 6%; height: 2px; top: 0; z-index: 2; pointer-events: none;
+  background: linear-gradient(90deg, transparent, #f5d77a, transparent); box-shadow: 0 0 14px rgba(212, 175, 55, 0.8);
+  opacity: 0;
+}
+[data-unfold].unfold-ready[data-from="bottom"]::after { top: auto; bottom: 0; }
+[data-unfold].unfold-ready.is-unfolded::after { animation: unfoldSeam 1.3s cubic-bezier(0.65, 0, 0.35, 1) 0.45s both; }
+@keyframes unfoldSeam {
+  0% { opacity: 0; transform: translateY(0); }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(var(--unfold-h, 600px)); }
+}
+[data-unfold].unfold-ready[data-from="bottom"].is-unfolded::after { animation-name: unfoldSeamUp; }
+@keyframes unfoldSeamUp {
+  0% { opacity: 0; transform: translateY(0); }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(calc(var(--unfold-h, 600px) * -1)); }
+}
+
+/* ==========================================================================
+   Mobile menu (landingFx.ts initMobileNav, owner 2026-10-12): hamburger beside Connect Wallet,
+   a dark-gold sheet that drops under the header, numbered sections with icons, active highlight.
+   ========================================================================== */
+.top-actions { display: flex; align-items: center; gap: 0.55rem; }
+.mnav-toggle { display: none; }
+.mnav { display: none; }
+@media (max-width: 960px) {
+  .mnav-toggle {
+    position: relative; display: grid; place-items: center; flex: none;
+    width: 42px; height: 42px; padding: 0; border-radius: 50%; cursor: pointer;
+    background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.45);
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mnav-toggle span {
+    position: absolute; left: 50%; width: 18px; height: 2px; margin-left: -9px; border-radius: 2px; background: var(--gold);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.25s ease, width 0.3s ease;
+  }
+  .mnav-toggle span:nth-child(1) { top: 14px; }
+  .mnav-toggle span:nth-child(2) { top: 20px; width: 12px; margin-left: -3px; }
+  .mnav-toggle span:nth-child(3) { top: 26px; }
+  .mnav-toggle.is-open { background: var(--grad-gold); border-color: transparent; box-shadow: 0 0 18px rgba(212, 175, 55, 0.45); }
+  .mnav-toggle.is-open span { background: #1a1404; }
+  .mnav-toggle.is-open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .mnav-toggle.is-open span:nth-child(2) { opacity: 0; transform: translateX(6px); }
+  .mnav-toggle.is-open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+
+  .mnav { display: block; position: fixed; inset: 0; z-index: 99; pointer-events: none; visibility: hidden; transition: visibility 0s linear 0.5s; }
+  .mnav.is-open { pointer-events: auto; visibility: visible; transition-delay: 0s; }
+  .mnav-backdrop { position: absolute; inset: 0; background: rgba(3, 3, 5, 0.6); opacity: 0; transition: opacity 0.4s ease; }
+  .mnav.is-open .mnav-backdrop { opacity: 1; }
+  .mnav-sheet {
+    position: absolute; left: 0.75rem; right: 0.75rem; top: calc(4.6rem + env(safe-area-inset-top, 0px));
+    max-height: calc(100dvh - 5.6rem); overflow-y: auto; overscroll-behavior: contain;
+    padding: 1rem 0.9rem 0.9rem; border-radius: 20px;
+    background: radial-gradient(120% 60% at 50% 0%, rgba(212, 175, 55, 0.16), transparent 60%), linear-gradient(180deg, #17150f, #0a0907);
+    border: 1px solid rgba(212, 175, 55, 0.45);
+    box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.9), 0 0 40px -12px rgba(212, 175, 55, 0.35);
+    transform-origin: top center; transform: translateY(-14px) scale(0.97); opacity: 0;
+    transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.3s ease;
+  }
+  .mnav.is-open .mnav-sheet { transform: none; opacity: 1; }
+  .mnav-kicker { margin: 0 0 0.6rem 0.35rem; font-size: 0.6rem; letter-spacing: 0.2em; color: var(--gold); }
+  .mnav-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+  .mnav-list li { opacity: 0; transform: translateY(-8px); transition: opacity 0.35s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+  .mnav.is-open .mnav-list li { opacity: 1; transform: none; transition-delay: calc(0.06s + var(--i) * 0.045s); }
+  .mnav-list a {
+    display: grid; grid-template-columns: 36px 1fr auto; align-items: center; gap: 0.75rem;
+    padding: 0.6rem 0.7rem; border-radius: 14px; text-decoration: none; color: #fff;
+    border: 1px solid transparent; transition: background 0.25s ease, border-color 0.25s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .mnav-list a:active, .mnav-list a.is-active { background: rgba(212, 175, 55, 0.1); border-color: rgba(212, 175, 55, 0.4); }
+  .mnav-ico {
+    width: 36px; height: 36px; border-radius: 11px; display: grid; place-items: center; color: var(--gold);
+    background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.3);
+  }
+  .mnav-ico svg { width: 18px; height: 18px; }
+  .mnav-list a.is-active .mnav-ico { background: var(--grad-gold); color: #1a1404; border-color: transparent; }
+  .mnav-txt { display: grid; gap: 0.1rem; min-width: 0; }
+  .mnav-txt b { font-family: var(--font-heading); font-size: 1rem; font-weight: 600; }
+  .mnav-txt small { font-size: 0.72rem; color: var(--text-muted); }
+  .mnav-list em { font-style: normal; font-size: 0.66rem; color: var(--text-dim); letter-spacing: 0.08em; }
+  .mnav-list a.is-active em { color: var(--gold); }
+  .mnav-list .nav-dash { display: none; }
+  body.wallet-connected .mnav-list .nav-dash { display: block; }
+  .mnav-cta { width: 100%; justify-content: center; margin-top: 0.85rem; }
+  body.wallet-connected .mnav-cta { display: none; }
+  .mnav-foot { margin: 0.7rem 0 0; text-align: center; font-size: 0.58rem; letter-spacing: 0.14em; color: var(--text-dim); }
+  body.mnav-open { overflow: hidden; }
+}
+@media (max-width: 380px) {
+  .btn.btn-wallet--nav .btn-label { font-size: 0.74rem; }
+  .mnav-toggle { width: 38px; height: 38px; }
+  .mnav-toggle span:nth-child(1) { top: 12px; }
+  .mnav-toggle span:nth-child(2) { top: 18px; }
+  .mnav-toggle span:nth-child(3) { top: 24px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mnav-sheet, .mnav-list li, .mnav-toggle span { transition: none !important; }
+}
+/* footer tagline on one line on phones */
+@media (max-width: 600px) {
+  .footer-tagline { font-size: 0.6rem; letter-spacing: 0.04em; white-space: nowrap; }
+}

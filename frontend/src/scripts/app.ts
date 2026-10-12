@@ -45,11 +45,12 @@ import { initDvLogos } from './dvLogo.ts';
 import { ApiError, getSponsorByCode, wakeBackend } from './api.ts';
 import { initLiveActivityStream } from './liveActivity.ts';
 import { initRankCalculator } from './rankCalculator.ts';
+import { initUnfoldCards } from './unfoldCard.ts';
 import { initMatrixVisualizer } from './matrixVisualizer.ts';
 
 // start waking the backend right away (Render free plan sleeps it); the dashboard needs it next
 wakeBackend();
-import { initAnchorScroll, initScrollSpy, initNavIndicator, initJoinSteps, initDropCards, initSignalCardFlips, initFaqAccordion } from './landingFx.ts';
+import { initAnchorScroll, initScrollSpy, initNavIndicator, initJoinSteps, initDropCards, initSignalCardFlips, initFaqAccordion, initMobileNav } from './landingFx.ts';
 
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -100,10 +101,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   initScrollSpy();
   initAnchorScroll(); // in-page links land on their section even when sections above change height
   initNavIndicator();
+  initMobileNav(); // phones / tablets: hamburger menu to every section
   initJoinSteps();
   initDropCards();
   initRankGameCard();
   initRankCalculator();
+  initUnfoldCards(); // rank calculator: drops in from the scroll side and opens
   initLiveActivityStream();
   initHeroMetricsSection();
   initSignalCardFlips();

@@ -18,7 +18,6 @@ import { createPortal } from './giftBox.ts';
 
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
-const easeInOut = (v: number) => (v < 0.5 ? 4 * v * v * v : 1 - Math.pow(-2 * v + 2, 3) / 2);
 
 type Rgb = [number, number, number];
 // pure red: many glowing (additive) particles on top of each other must add up to red, not white
@@ -154,12 +153,23 @@ const GIFT_VERT = /* glsl */ `
   uniform float uBurst;
   uniform float uFlash;
   uniform float uNear;
+  uniform float uProgress;
   attribute float aSeed;
   attribute float aSize;
+  attribute vec3 aStart;
+  attribute float aDelay;
+  attribute float aSwirl;
   varying vec3 vColor;
   varying float vAlpha;
   void main() {
-    vec3 p = position;
+    // scattered (aStart) -> gift (position) with the scroll: each particle a little later than the
+    // last (aDelay), swirling around the vertical axis on the way (aSwirl); the ring has aSwirl 0
+    float k = clamp((uProgress - aDelay) / 0.65, 0.0, 1.0);
+    k = k < 0.5 ? 4.0 * k * k * k : 1.0 - pow(-2.0 * k + 2.0, 3.0) / 2.0;
+    float ang = (1.0 - k) * aSwirl;
+    float c = cos(ang), s = sin(ang);
+    vec3 st = vec3(aStart.x * c - aStart.z * s, aStart.y, aStart.x * s + aStart.z * c);
+    vec3 p = mix(st, position, k);
     float ph = aSeed * 6.2831853;
     // the formed gift breathes; hover / tap pushes the particles out a little
     p += vec3(sin(uTime * 1.6 + ph * 3.0), sin(uTime * 1.2 + ph * 5.0), cos(uTime * 1.4 + ph * 2.0)) * 0.022 * uForm;
@@ -205,6 +215,7 @@ function giftMaterial(size: number) {
     uniforms: {
       uTime: { value: 0 }, uPx: { value: 1 }, uSize: { value: size }, uForm: { value: 0 },
       uSweep: { value: -2 }, uBurst: { value: 0 }, uFlash: { value: 0 }, uOpacity: { value: 1 }, uNear: { value: 6.5 },
+      uProgress: { value: 1 },
     },
   });
 }
@@ -229,7 +240,7 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
     stage.classList.add('is-static');
     return;
   }
-  const px = Math.min(window.devicePixelRatio || 1, LITE ? 1.5 : 2);
+  const px = Math.min(window.devicePixelRatio || 1, LITE ? 1.25 : 2);
   renderer.setPixelRatio(px);
 
   const scene = new THREE.Scene();
@@ -254,9 +265,15 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
   const logoCount = Math.round(total * 0.2); // shared by the four seals
   const giftPts = sampleGift(total - logoCount);
   const logoPts = logoPoints(await loadImage('/favicon.png'), logoCount);
-  const target = new Float32Array([...giftPts.pos, ...logoPts.pos]);
-  const colors = new Float32Array([...giftPts.col, ...logoPts.col]);
-  const count = target.length / 3;
+  // shuffled together (position + colour), so drawing only the first N still draws the whole gift
+  const allPos = [...giftPts.pos, ...logoPts.pos];
+  const allCol = [...giftPts.col, ...logoPts.col];
+  const count = allPos.length / 3;
+  const order = Array.from({ length: count }, (_, i) => i);
+  for (let i = count - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+  const target = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  order.forEach((from, i) => { target.set(allPos.slice(from * 3, from * 3 + 3), i * 3); colors.set(allCol.slice(from * 3, from * 3 + 3), i * 3); });
   const start = new Float32Array(count * 3);
   const delay = new Float32Array(count);
   const swirl = new Float32Array(count);
@@ -273,12 +290,17 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
     seeds[i] = Math.random();
     sizes[i] = 0.7 + Math.random() * 0.6;
   }
-  const live = new Float32Array(start);
   const geo = new THREE.BufferGeometry();
-  geo.setAttribute('position', new THREE.BufferAttribute(live, 3));
+  geo.setAttribute('position', new THREE.BufferAttribute(target, 3));
+  geo.setAttribute('aStart', new THREE.BufferAttribute(start, 3));
+  geo.setAttribute('aDelay', new THREE.BufferAttribute(delay, 1));
+  geo.setAttribute('aSwirl', new THREE.BufferAttribute(swirl, 1));
+  // the gift moves far from its targets while scattered: never cull it by its bounding sphere
+  geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 12);
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
   geo.setAttribute('aSize', new THREE.BufferAttribute(sizes, 1));
+  geo.setDrawRange(0, count);
   const mat = giftMaterial(LITE ? 4.4 : 3.6);
   mat.uniforms.uPx.value = px;
   shaded.push(mat);
@@ -304,6 +326,9 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
   ringGeo.setAttribute('color', new THREE.BufferAttribute(ringCol, 3));
   ringGeo.setAttribute('aSeed', new THREE.BufferAttribute(ringSeed, 1));
   ringGeo.setAttribute('aSize', new THREE.BufferAttribute(ringSize, 1));
+  ringGeo.setAttribute('aStart', new THREE.BufferAttribute(ringPos, 3));
+  ringGeo.setAttribute('aDelay', new THREE.BufferAttribute(new Float32Array(ringCount), 1));
+  ringGeo.setAttribute('aSwirl', new THREE.BufferAttribute(new Float32Array(ringCount), 1));
   const ringMat = giftMaterial(LITE ? 4.4 : 3.8);
   ringMat.uniforms.uPx.value = px;
   shaded.push(ringMat);
@@ -337,8 +362,11 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
 
   /* ---------- scroll progress: 0 = section just below the screen, 1 = card well in view */
   const progress = () => {
+    // by the gift's centre (phones stack it under the text, so its top came in much later): it starts
+    // forming as the centre enters the screen and is complete when the centre is just below the middle
     const r = stage.getBoundingClientRect(), vh = window.innerHeight || 800;
-    return clamp01((vh * 0.92 - r.top) / (vh * 0.55));
+    const centre = r.top + r.height / 2;
+    return clamp01((vh * 1.05 - centre) / (vh * 0.45));
   };
 
   const still = reduceMotion();
@@ -350,19 +378,26 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
   let visible = false;
   let raf = 0;
   let last = performance.now();
-  let lastP = -1;
 
-  const place = (p: number) => {
-    for (let i = 0; i < count; i++) {
-      const k = easeInOut(clamp01((p - delay[i]) / 0.65));
-      const ang = (1 - k) * swirl[i];
-      const c = Math.cos(ang), s = Math.sin(ang);
-      const sx = start[i * 3] * c - start[i * 3 + 2] * s, sz = start[i * 3] * s + start[i * 3 + 2] * c;
-      live[i * 3] = sx + (target[i * 3] - sx) * k;
-      live[i * 3 + 1] = start[i * 3 + 1] + (target[i * 3 + 1] - start[i * 3 + 1]) * k;
-      live[i * 3 + 2] = sz + (target[i * 3 + 2] - sz) * k;
+  /* ---------- adaptive quality: if the device cannot keep ~40 fps, draw fewer particles at a lower
+     resolution (the shuffled order keeps the full shape); checked once, after a short warm-up */
+  let frames = 0;
+  let slowSum = 0;
+  let tuned = false;
+  const tune = (dtMs: number) => {
+    if (tuned) return;
+    frames++;
+    if (frames <= 20) return; // shaders compiling, page settling
+    slowSum += dtMs;
+    if (frames < 80) return;
+    tuned = true;
+    const avg = slowSum / 60;
+    if (avg > 25) {
+      geo.setDrawRange(0, Math.round(count * (avg > 40 ? 0.45 : 0.65)));
+      renderer.setPixelRatio(1);
+      for (const m of shaded) m.uniforms.uPx.value = 1;
+      size();
     }
-    geo.attributes.position.needsUpdate = true;
   };
 
   const frame = (now: number) => {
@@ -371,8 +406,9 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     const time = now / 1000;
+    tune(dt * 1000);
     const p = still ? 1 : progress();
-    if (Math.abs(p - lastP) > 0.0005) { place(p); lastP = p; }
+    mat.uniforms.uProgress.value = p;
 
     if (!still) {
       // complete: lightning and a flash; back up: it breaks apart again

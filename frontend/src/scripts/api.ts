@@ -239,3 +239,7 @@ export function wakeBackend(): void {
   ping();
   window.setInterval(ping, 10 * 60_000);
 }
+
+// ── landing live pulse (real events only) ──
+export type ActivityItem = { type: 'activation' | 'topup' | 'rank' | 'withdrawal'; wallet: string; detail: string; amountUsd: number; at: string; txHash: string | null };
+export const getRecentActivity = () => request<ActivityItem[]>('/activity/recent');

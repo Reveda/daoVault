@@ -91,7 +91,8 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
            trophy3d.ts (old Apex trophy: NOT loaded since 2026-10-12, import commented in app.ts),
            giftShowcase.ts (landing #ranks card: the packed reward box from giftBox.ts makeBox/createPortal/makePacker,
            scroll-driven: gold particles (sampleGift + favicon logo points) swirl into the gift as the card scrolls in
-           (progress = stage top 92%..37% of the screen); the gift STAYS particles (owner 2026-10-12: like the background
+           (progress = gift centre 105%..60% of the screen; morph on the GPU: aStart/aDelay/aSwirl + uProgress, shuffled points,
+           adaptive quality: avg frame > 25ms after warm-up = fewer points + pixel ratio 1); the gift STAYS particles (owner 2026-10-12: like the background
            logo; no solid box): GIFT_VERT/FRAG shader = glow+core dots, twinkle, flares, rising light band, breathing,
            orbit ring, hover/tap burst; at 100% lightning + .gift-thunder flash; RED is pure red so additive dots stay red;
            denser (4200 / lite 2600), crisp edge points, DV logo on all 4 seals, far side dimmed 85% via uNear), walletDialog3D.ts, rankGameCard.ts (RANK_DATA), matrixAutoDeck.ts, scrollAnimations.ts (GSAP per section,
@@ -189,7 +190,20 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   via tbody/.reward-boxes.is-settled, particleScene skips frames while scrolling on LITE. Tap feedback site-wide: core.ts
   enableTouchPress adds .tap-glow only on a real tap (moved < 10px), CSS floats the card 3px (.tap-glow:not(#_) beats sticky
   :hover rules), no scale press. ADMIN_WALLETS parsing strips quotes/spaces; server.ts logs "Admin wallets: …" at start.
-  #join CTA commented out in index.html (its dial + lightning went to the quiz scene); FAQ has the faq particle state.
+  #join CTA commented out in index.html (its dial + lightning went to the quiz scene); FAQ has the faq particle state. Rank
+  calculator card #rankCalcCard has its own data-scene "rankcalc" (dial + lightning behind the card via .scene-slot--calc, also on
+  phones); bindSectionScenes returns to the parent section scene when a nested scene leaves the middle band. 25x cap card
+  #retopupCycleCard: data-scene "retopup" (DV mark + lightning), gold-themed simulator (matrixVisualizer.ts texts: "Package #N",
+  no emojis / "platform protected"), compact icon-beside-title steps on phones.
+  Live pulse (owner 2026-10-12): the strip under the hero is gone; signal card 3 (was 25x Cap, commented out) = #livePulseCard
+  (liveActivity.ts): real events from GET /activity/recent (modules/activity: packages / rank rewards / paid withdrawals, short
+  wallets, 30s cache) + live BSC block number; until a real event exists it shows labelled SAMPLE events ("SAMPLE PREVIEW",
+  amber dot, "sample •" per line). Never label sample data as live.
+  FAQ (owner 2026-10-12): gold-themed cards with numbered questions; open/close is a grid-row 0fr->1fr transition
+  (landingFx initFaqAccordion wraps content in .faq-answer-inner; max-height made the close jump); plain plan-accurate answers.
+  Rank calculator: data-unfold (unfoldCard.ts): scrolling down it drops in from above and its content opens top-down,
+  scrolling up it rises from below and opens bottom-up (clip-path, replays after it leaves); gold-only internals,
+  slider gold fill via --fill (rankCalculator.ts); texts plain (no literal &bull;, no "instant cash", no emoji).
   #matrix level cards (owner 2026-10-11): matrixAutoDeck.ts revealCard on every active-card change (after the deck
   reaches 70% of the screen): .mx-scan light sweeps down, content drops in piece by piece, % and USDT count up; CSS
   `.mx-reveal` block at the end of main.css, removed after 2.4s so the cards' own loops return; off for reduced motion.
