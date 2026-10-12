@@ -8323,3 +8323,37 @@ html.lite .hw-wallet { animation: none; filter: none; }
   .rank-card-display > .rank-emblem { width: auto; max-width: none; justify-self: center; }
   .rank-card-display .leg-stat-lbl { font-size: 0.58rem; letter-spacing: 0.04em; }
 }
+
+/* ==========================================================================
+   Touch feedback, whole site (owner 2026-10-12): the press (scale 0.975 in 0.12s) felt hard. A tapped
+   card now floats up a little and glows gold, easing in and settling back softly. Overrides the
+   older :active press rules above (landing, compare cards, dashboard cards via core.ts tap-glow).
+   ========================================================================== */
+@media (hover: none) {
+  .glass, .glass-v2, .crypto-exchange-card, .step-card, .calc-stat, .reward-box, .metric-card, .rule-step,
+  .compare-matrix tbody tr, .faq-item, .rank-item, .wallet-opt {
+    transition:
+      transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.6s ease,
+      border-color 0.6s ease !important;
+  }
+  .glass:active, .glass-v2:active, .crypto-exchange-card:active, .step-card:active, .matrix-calc-box .calc-stat:active,
+  .reward-box:active, .metric-card:active, .rule-step:active, .compare-matrix tbody tr:active,
+  .faq-item:active, .rank-item:active, .wallet-opt:active,
+  /* :not(#_) lifts the specificity over the older ".card:hover { transform: none !important }" rules:
+     a tapped card counts as hovered on phones */
+  .tap-glow:not(#_) {
+    transform: translateY(-3px) !important;
+    transition-duration: 0.3s, 0.35s, 0.35s !important;
+  }
+  .tap-glow {
+    border-color: rgba(245, 215, 110, 0.7) !important;
+    box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.3), 0 0 22px rgba(212, 175, 55, 0.22), 0 14px 30px rgba(0, 0, 0, 0.45) !important;
+  }
+  /* cards whose transform belongs to a scroll animation keep it */
+  .matrix-stack-card:active, .matrix-stack-card.tap-glow, #rankDisplayCard:active, #rankDisplayCard.tap-glow,
+  .flip-card-wrap:active, .flip-card-wrap.tap-glow { transform: none !important; }
+}
+@media (hover: none) and (prefers-reduced-motion: reduce) {
+  .tap-glow, .glass:active, .metric-card:active, .reward-box:active { transform: none !important; }
+}

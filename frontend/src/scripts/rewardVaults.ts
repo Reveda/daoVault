@@ -75,6 +75,9 @@ export function renderRewardVaults(wallet: string, currentRank: number): void {
       }));
       grid.appendChild(btn);
     });
+    // finished entrance animations are dropped (they kept a GPU layer per box on phones)
+    grid.classList.remove('is-settled');
+    window.setTimeout(() => grid.classList.add('is-settled'), 1400);
 
     const set = (id: string, text: string) => { const el = document.getElementById(id); if (el) el.textContent = text; };
     const reachedTier = RANK_TIERS[currentRank - 1];

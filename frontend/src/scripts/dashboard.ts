@@ -552,6 +552,10 @@ function renderLevelTable(data: DashboardData | null): void {
     }
     tbody.appendChild(tr);
   });
+  // once the rows have cascaded in, drop the finished animation: kept with fill-mode it held a GPU
+  // layer per row and phones left rows blank while scrolling fast (owner, 2026-10-12)
+  tbody.classList.remove('is-settled');
+  window.setTimeout(() => tbody.classList.add('is-settled'), 2200);
 }
 
 // ── Withdrawals: wallet-signature session, request, history ─────────────

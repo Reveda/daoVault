@@ -43,7 +43,10 @@ const envSchema = z.object({
   ACCESS_TOKEN_MINUTES: z.coerce.number().int().min(1).max(60).default(15),
   REFRESH_TOKEN_DAYS: z.coerce.number().int().min(1).max(90).default(30),
   /** comma-separated wallets allowed to use /admin (they still have to sign in with that wallet) */
-  ADMIN_WALLETS: z.string().default("").transform((v) => v.split(",").map((w) => w.trim().toLowerCase()).filter((w) => /^0x[a-f0-9]{40}$/.test(w))),
+  // forgiving (owner, 2026-10-12: a value pasted with quotes was silently dropped): quotes, spaces,
+  // commas, semicolons and new lines all separate; anything that is not a full 0x address is ignored
+  // (server.ts logs which wallets were accepted)
+  ADMIN_WALLETS: z.string().default("").transform((v) => v.replace(/["'`]/g, " ").split(/[\s,;]+/).map((w) => w.trim().toLowerCase()).filter((w) => /^0x[a-f0-9]{40}$/.test(w))),
   // withdrawals
   WITHDRAWAL_MIN_USD: z.coerce.number().positive().default(10),
   WITHDRAWAL_FEE_PERCENT: z.coerce.number().min(0).max(50).default(5),

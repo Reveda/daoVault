@@ -173,7 +173,7 @@ export function initScrollReveal(): void {
  * see the Performance block in main.css). Saves battery and keeps scrolling smooth.
  */
 /** Cards that glow gold when touched (main.css .tap-glow). */
-const TAP_GLOW_CARDS = '.compare-matrix tbody tr, .glass, .metric-card, .calc-stat, .step-card, .reward-box, .crypto-exchange-card';
+const TAP_GLOW_CARDS = '.compare-matrix tbody tr, .glass, .glass-v2, .metric-card, .calc-stat, .step-card, .reward-box, .crypto-exchange-card, .faq-item, .rank-item';
 
 /**
  * Touch feedback. iOS Safari only applies :active (the card press in main.css) when the page
@@ -182,13 +182,23 @@ const TAP_GLOW_CARDS = '.compare-matrix tbody tr, .glass, .metric-card, .calc-st
  * down). Passive: it never delays scrolling.
  */
 export function enableTouchPress(): void {
+  // iOS needs a touch listener for :active; the gold float (.tap-glow) is added only for a real tap,
+  // not when the finger starts a scroll over a card (owner, 2026-10-12: cards jumped while scrolling)
   const timers = new WeakMap<Element, number>();
+  let start: { x: number; y: number; card: Element } | null = null;
   document.addEventListener('touchstart', (e) => {
     const card = (e.target as Element | null)?.closest?.(TAP_GLOW_CARDS);
-    if (!card) return;
+    const t = e.touches[0];
+    start = card && t ? { x: t.clientX, y: t.clientY, card } : null;
+  }, { passive: true });
+  document.addEventListener('touchend', (e) => {
+    const t = e.changedTouches[0];
+    if (!start || !t || Math.hypot(t.clientX - start.x, t.clientY - start.y) > 10) { start = null; return; }
+    const card = start.card;
+    start = null;
     card.classList.add('tap-glow');
     window.clearTimeout(timers.get(card));
-    timers.set(card, window.setTimeout(() => card.classList.remove('tap-glow'), 650));
+    timers.set(card, window.setTimeout(() => card.classList.remove('tap-glow'), 900));
   }, { passive: true });
 }
 

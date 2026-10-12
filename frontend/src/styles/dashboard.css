@@ -1484,3 +1484,13 @@ html.lite .sign-gate { backdrop-filter: none; -webkit-backdrop-filter: none; bac
 .rb-crest { display: inline-grid; width: 26px; height: 26px; }
 .rb-crest .rank-crest-svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6)); }
 .reward-box.is-locked .rb-crest .rank-crest-svg { filter: grayscale(0.85) brightness(0.7); }
+
+/* phones: finished entrances are dropped and the badge pulse is still (owner 2026-10-12: rows went
+   blank during fast scrolls; every finished / looping animation kept the GPU busy) */
+.level-table tbody.is-settled .lvl-row { animation: none; }
+html.lite .level-status-tag.unlocked { animation: none; box-shadow: 0 0 10px rgba(212, 175, 55, 0.25); }
+.reward-boxes.is-settled .reward-box { animation: none; }
+/* phones (html.lite): the 20 level rows and the reward boxes appear without an entrance at all, so no
+   row ever sits on its own GPU layer (some phones left one row unpainted, e.g. "Level 13") */
+html.lite .level-table .lvl-row,
+html.lite .reward-box { animation: none; }

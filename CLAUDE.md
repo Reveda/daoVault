@@ -185,6 +185,11 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   INDEXER_START_BLOCK / INDEXER_RPC_URL: bnbchain/binance dataseeds refuse eth_getLogs, publicnode allows 5k blocks),
   voucher-settle (withdrawalsService.reconcileAllOpen), auth-cleanup. Not on Render (paid worker); Docker service `worker`.
   Dashboard 20-level rows open the level modal only when unlocked.
+  Phones (owner 2026-10-12): html.lite = no .lvl-row / .reward-box entrance (a row stayed unpainted), finished entrances dropped
+  via tbody/.reward-boxes.is-settled, particleScene skips frames while scrolling on LITE. Tap feedback site-wide: core.ts
+  enableTouchPress adds .tap-glow only on a real tap (moved < 10px), CSS floats the card 3px (.tap-glow:not(#_) beats sticky
+  :hover rules), no scale press. ADMIN_WALLETS parsing strips quotes/spaces; server.ts logs "Admin wallets: …" at start.
+  #join CTA commented out in index.html (its dial + lightning went to the quiz scene); FAQ has the faq particle state.
   #matrix level cards (owner 2026-10-11): matrixAutoDeck.ts revealCard on every active-card change (after the deck
   reaches 70% of the screen): .mx-scan light sweeps down, content drops in piece by piece, % and USDT count up; CSS
   `.mx-reveal` block at the end of main.css, removed after 2.4s so the cards' own loops return; off for reduced motion.

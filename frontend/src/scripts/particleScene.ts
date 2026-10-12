@@ -635,9 +635,16 @@ export function createParticleScene(
     pointer.ty = (e.clientY / window.innerHeight - 0.5) * 2;
   }, { passive: true });
 
+  // phones: no particle frames while the page is being scrolled (owner, 2026-10-12: parts of the
+  // dashboard went blank during a fast scroll; the GPU needs that time to paint the page). The canvas
+  // is fixed, so a paused frame is not visible; the scene carries on once the scroll stops.
+  let scrolledAt = 0;
+  if (LITE) window.addEventListener('scroll', () => { scrolledAt = performance.now(); }, { passive: true });
+
   function frame(): void {
     requestAnimationFrame(frame);
     if (document.hidden) return;
+    if (LITE && performance.now() - scrolledAt < 220) return;
     if (LITE && (skip = !skip)) return; // 30fps on phones
     const t = clock.getElapsedTime();
     const dt = Math.min(0.05, t - last);
