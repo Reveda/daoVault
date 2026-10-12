@@ -7,7 +7,7 @@
  */
 
 import { gsap } from 'gsap';
-import { mountDvLogo } from './dvLogo.ts';
+import { getRankCrestSvg, RANK_CREST_METAS } from './rankCrests.ts';
 
 const C = 120;        // centre of the 240x240 viewBox
 const RING_R = 100;   // tier segments
@@ -51,17 +51,33 @@ export function mountRankEmblem(host: HTMLElement, before: Element | null, total
         <g class="re-segs">${segs}</g>
         <g class="re-orbit"><circle cx="${C}" cy="${C - RING_R}" r="4" /></g>
       </svg>
-      <div class="re-coin">
-        <div class="re-face re-front"><span class="re-mark"></span></div>
-        <div class="re-face re-back"><span class="re-num">01</span></div>
+      <div class="re-coin" role="button" tabindex="0" aria-label="3D Rank Crest Medallion - Click to spin 360°">
+        <div class="re-face re-front">${getRankCrestSvg(0)}</div>
+        <div class="re-face re-back"><span class="re-num">01</span><span class="re-tier-title mono">STARTER</span></div>
       </div>
       <div class="re-sparks"></div>
     </div>
-    <div class="re-caption mono">TIER <b class="re-tier">01</b> / ${String(total).padStart(2, '0')}</div>`;
+    <div class="re-caption mono">TIER <b class="re-tier">01</b> / ${String(total).padStart(2, '0')} <span class="re-hint">&bull; ${matchMedia('(hover: none)').matches ? 'Tap' : 'Click'} the crest to spin it</span></div>`;
   host.insertBefore(root, before);
-  const mark = root.querySelector<HTMLElement>('.re-mark');
-  if (mark) mountDvLogo(mark, { word: false });
   segments = [...root.querySelectorAll<SVGPathElement>('.re-seg')];
+
+  // Interactive 3D Medallion Click: 360 spin + sparks + haptic
+  const coin = root.querySelector<HTMLElement>('.re-coin');
+  if (coin) {
+    const handleCoinSpin = () => {
+      try { navigator.vibrate?.(25); } catch { /* no vibration */ }
+      gsap.fromTo(coin, { rotateY: 0 }, { rotateY: 360, duration: 1.0, ease: 'back.out(1.4)', clearProps: 'transform' });
+      gsap.fromTo(coin, { scale: 1 }, { scale: 1.16, duration: 0.35, yoyo: true, repeat: 1, ease: 'power2.out' });
+      burst();
+    };
+    coin.addEventListener('click', handleCoinSpin);
+    coin.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleCoinSpin();
+      }
+    });
+  }
 }
 
 /** Moves the medallion to tier `index` (0-based). */
@@ -70,8 +86,23 @@ export function updateRankEmblem(index: number): void {
   const label = String(index + 1).padStart(2, '0');
   const tierEl = root.querySelector('.re-tier');
   const numEl = root.querySelector('.re-num');
+  const meta = RANK_CREST_METAS[index] || RANK_CREST_METAS[0];
+  const backTitleEl = root.querySelector('.re-tier-title');
+
   if (tierEl) tierEl.textContent = label;
   if (numEl) numEl.textContent = label;
+  if (backTitleEl) backTitleEl.textContent = meta.name.toUpperCase();
+
+  // Inject active 3D metallic crest SVG into front face
+  const frontEl = root.querySelector<HTMLElement>('.re-front');
+  if (frontEl) {
+    frontEl.innerHTML = getRankCrestSvg(index);
+  }
+
+  root.classList.toggle('is-tier-starter', index < 3);
+  root.classList.toggle('is-tier-mid', index >= 3 && index < 6);
+  root.classList.toggle('is-tier-elite', index >= 6 && index < 9);
+  root.classList.toggle('is-tier-crown', index >= 9);
 
   segments.forEach((s, i) => {
     s.classList.toggle('is-lit', i <= index);
@@ -85,7 +116,7 @@ export function updateRankEmblem(index: number): void {
 
   const coin = root.querySelector<HTMLElement>('.re-coin');
   const current = segments[index];
-  // coin flips through its back (rank number) and lands on the DAOvault face
+  // coin flips through its back (rank number) and lands on the 3D metal crest face
   if (coin) {
     gsap.fromTo(coin, { rotateY: 0 }, { rotateY: dir * 360, duration: 1.1, ease: 'power3.inOut', clearProps: 'transform' });
     gsap.fromTo(coin, { scale: 1 }, { scale: 1.12, duration: 0.45, yoyo: true, repeat: 1, ease: 'power2.out' });

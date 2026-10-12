@@ -1,3 +1,7 @@
+/*
+ * NOT LOADED since 2026-10-12: the landing card shows the packed reward box instead
+ * (giftShowcase.ts). The app.ts import and call are commented out; this file is kept for reference.
+ */
 /**
  * DAOvault AI — our own 3D Apex trophy (replaces the third-party Lottie trophy)
  *

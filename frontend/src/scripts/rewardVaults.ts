@@ -8,6 +8,7 @@
  */
 
 import { openGiftBox } from './giftBox.ts';
+import { getRankCrestSvg } from './rankCrests.ts';
 import { BSC_CHAIN_ID, showToast } from './core.ts';
 
 export const RANK_TIERS = [
@@ -58,7 +59,7 @@ export function renderRewardVaults(wallet: string, currentRank: number): void {
           <span class="rb-lid"></span><span class="rb-body"><img src="/favicon.png" alt="" /></span>
           ${state === 'locked' ? '<span class="rb-lock"></span>' : ''}
         </span>
-        <span class="rb-rank mono">RANK ${String(rank).padStart(2, '0')}</span>
+        <span class="rb-rank mono"><span class="rb-crest" aria-hidden="true">${getRankCrestSvg(i)}</span>RANK ${String(rank).padStart(2, '0')}</span>
         <span class="rb-name">${tier.name}</span>
         <span class="rb-reward">${state === 'opened' ? money(tier.reward) : '???'}</span>
         <span class="rb-state mono">${state === 'locked' ? `${tier.volume.toLocaleString()} DAO matching` : state === 'ready' ? 'Ready to open' : 'Opened'}</span>`;

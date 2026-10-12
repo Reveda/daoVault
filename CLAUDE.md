@@ -88,7 +88,13 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
            same string in vite.config.js (preview only) and frontend/nginx/security-headers.conf (Docker); keep all 3 in sync. Checked: zero violations on all pages.
   scripts: core.ts (referral capture, preloader, countUp, reveal stagger, toast), wallet.ts (EIP-6963, BSC switch, reconnect),
            payment.ts (resolveSponsor, approve + activate + POST verify, retry pending), api.ts (backend calls),
-           trophy3d.ts (our own three.js Apex trophy), walletDialog3D.ts, rankGameCard.ts (RANK_DATA), matrixAutoDeck.ts, scrollAnimations.ts (GSAP per section,
+           trophy3d.ts (old Apex trophy: NOT loaded since 2026-10-12, import commented in app.ts),
+           giftShowcase.ts (landing #ranks card: the packed reward box from giftBox.ts makeBox/createPortal/makePacker,
+           scroll-driven: gold particles (sampleGift + favicon logo points) swirl into the gift as the card scrolls in
+           (progress = stage top 92%..37% of the screen); the gift STAYS particles (owner 2026-10-12: like the background
+           logo; no solid box): GIFT_VERT/FRAG shader = glow+core dots, twinkle, flares, rising light band, breathing,
+           orbit ring, hover/tap burst; at 100% lightning + .gift-thunder flash; RED is pure red so additive dots stay red;
+           denser (4200 / lite 2600), crisp edge points, DV logo on all 4 seals, far side dimmed 85% via uNear), walletDialog3D.ts, rankGameCard.ts (RANK_DATA), matrixAutoDeck.ts, scrollAnimations.ts (GSAP per section,
            matrix card-stack deck), types.ts
   Motion layer (TPR + iorca inspired, DAOvault identity; see tpr-reference.md):
     particleScene.ts  one morphing gold particle cloud + lightning; hero = loose dust, sections re-form it into the
@@ -163,6 +169,9 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   Preloader/footer use --bg-dark (#050505) like the landing page. The wallet modal card never tilts.
   Wallet modal (owner 2026-10-10): MetaMask, Binance, Trust, TokenPocket (tpdapp:// deeplink), SafePal (no deeplink:
   copies the link on phones; window.safepalProvider), Other; dark-gold lifted theme (#walletModal block, end of main.css).
+  Wallet modal footer (owner 2026-10-12): "Joining under DV…" replaces "Earnings Cap 25×" (app.ts showJoiningUnder: ?ref or
+  saved code, checked with GET /users/referral/:code; amber "Invite DV… not active yet"; no code = "DAOVAULT"). The bigger
+  "You're joining under" strip with a Change form was removed (owner). Short screens: same single column, tighter spacing.
   core.ts showToast: top right below the header, dark-gold card, text-only message (never HTML), timer bar, close.
   Phones (<=600px): compact 300px card in the top-right corner under the status bar, smaller type (owner 2026-10-11).
   Admin page gate (owner 2026-10-11): admin.html shows "Page not found" (#notFound) to everyone but a signed-in admin;

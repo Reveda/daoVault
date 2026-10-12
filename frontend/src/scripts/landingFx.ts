@@ -396,3 +396,35 @@ export function initNavIndicator(): void {
   // the Dashboard link appears once a wallet connects
   new MutationObserver(() => moveTo(active())).observe(document.body, { attributes: true, attributeFilter: ['class'] });
 }
+
+/**
+ * Interactive FAQ Accordion Controller
+ * Expands/collapses FAQ questions with smooth animated transitions.
+ */
+export function initFaqAccordion(): void {
+  const items = document.querySelectorAll<HTMLElement>('.faq-item');
+  if (!items.length) return;
+
+  items.forEach((item) => {
+    const btn = item.querySelector<HTMLButtonElement>('.faq-question');
+    if (!btn) return;
+
+    btn.addEventListener('click', () => {
+      const isCurrentlyOpen = item.classList.contains('is-open');
+
+      // Close all other open items
+      items.forEach((other) => {
+        if (other !== item && other.classList.contains('is-open')) {
+          other.classList.remove('is-open');
+          const otherBtn = other.querySelector<HTMLButtonElement>('.faq-question');
+          if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      // Toggle clicked item
+      item.classList.toggle('is-open', !isCurrentlyOpen);
+      btn.setAttribute('aria-expanded', String(!isCurrentlyOpen));
+    });
+  });
+}
+

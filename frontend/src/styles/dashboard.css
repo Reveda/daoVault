@@ -1469,3 +1469,18 @@ html.lite .sign-gate { backdrop-filter: none; -webkit-backdrop-filter: none; bac
   25% { box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.75), 0 0 40px rgba(212, 175, 55, 0.35); }
   100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
 }
+
+/* rank crests (rankCrests.ts, the landing's rank icons) on the dashboard (owner 2026-10-12) */
+.ri-badge { position: relative; background: radial-gradient(circle at 50% 40%, rgba(212, 175, 55, 0.22), rgba(0, 0, 0, 0.35)) !important; border: 1px solid rgba(212, 175, 55, 0.45); }
+.ri-badge .rank-crest-svg { width: 86%; height: 86%; display: block; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6)); }
+.ri-badge em {
+  position: absolute; right: -5px; bottom: -5px; min-width: 20px; padding: 1px 4px; border-radius: 999px;
+  font-style: normal; font-size: 0.58rem; font-weight: 800; line-height: 1.4; text-align: center;
+  color: #1a1205; background: var(--grad-gold); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+.rank-item.is-locked .ri-badge .rank-crest-svg { filter: grayscale(0.85) brightness(0.7); }
+.rank-item.is-locked .ri-badge em { color: var(--gold); background: #1a1712; border: 1px solid rgba(212, 175, 55, 0.4); }
+.rb-rank { display: inline-flex; align-items: center; gap: 0.35rem; }
+.rb-crest { display: inline-grid; width: 26px; height: 26px; }
+.rb-crest .rank-crest-svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6)); }
+.reward-box.is-locked .rb-crest .rank-crest-svg { filter: grayscale(0.85) brightness(0.7); }

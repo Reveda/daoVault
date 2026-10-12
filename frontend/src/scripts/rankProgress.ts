@@ -9,6 +9,7 @@
  */
 import type { DashboardData } from './api.ts';
 import { RANK_TIERS } from './rewardVaults.ts';
+import { getRankCrestSvg } from './rankCrests.ts';
 
 const num = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 1 });
 const usd = (n: number) => `$${Math.round(n).toLocaleString('en-US')}`;
@@ -89,7 +90,7 @@ export function renderRankProgress(data: DashboardData | null): void {
     return `
       <li class="rank-item is-${state}" data-state="${state === 'achieved' ? 'achieved' : 'pending'}" style="--i:${i}">
         <div class="ri-head">
-          <span class="ri-badge mono">${String(rank).padStart(2, '0')}</span>
+          <span class="ri-badge mono" title="Rank ${rank}">${getRankCrestSvg(i)}<em>${String(rank).padStart(2, '0')}</em></span>
           <div class="ri-title">
             <b>${tier.name}</b>
             <span class="ri-reward mono">${GIFT}<span class="ri-reward-label">Reward:</span> ${usd(tier.reward)}</span>

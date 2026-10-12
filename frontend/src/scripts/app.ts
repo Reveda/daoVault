@@ -4,7 +4,9 @@
  */
 
 import { init3DScene, initHeroCore3D } from './scene.ts';
-import { initApexTrophy } from './trophy3d.ts';
+// Apex trophy replaced by the packed reward box (owner, 2026-10-12):
+// import { initApexTrophy } from './trophy3d.ts';
+import { initGiftShowcase } from './giftShowcase.ts';
 import { initScrollAnimations } from './scrollAnimations.ts';
 import { initHeroWallet } from './heroWallet.ts';
 import { initLiveMarket } from './liveMarket.ts';
@@ -41,10 +43,13 @@ import { initMatrixDial } from './matrixDial.ts';
 import { initVaultQuiz } from './quiz.ts';
 import { initDvLogos } from './dvLogo.ts';
 import { ApiError, getSponsorByCode, wakeBackend } from './api.ts';
+import { initLiveActivityStream } from './liveActivity.ts';
+import { initRankCalculator } from './rankCalculator.ts';
+import { initMatrixVisualizer } from './matrixVisualizer.ts';
 
 // start waking the backend right away (Render free plan sleeps it); the dashboard needs it next
 wakeBackend();
-import { initAnchorScroll, initScrollSpy, initNavIndicator, initJoinSteps, initDropCards, initSignalCardFlips } from './landingFx.ts';
+import { initAnchorScroll, initScrollSpy, initNavIndicator, initJoinSteps, initDropCards, initSignalCardFlips, initFaqAccordion } from './landingFx.ts';
 
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -55,7 +60,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   checkInviteCode();
   init3DScene();
   initHeroCore3D();
-  initApexTrophy();
+  // initApexTrophy(); // the old trophy (trophy3d.ts), see the import above
+  initGiftShowcase(); // packed reward box in the #ranks card
 
   // Ambient mouse spotlight tracker on whole document
   window.addEventListener('mousemove', (e: MouseEvent) => {
@@ -97,6 +103,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initJoinSteps();
   initDropCards();
   initRankGameCard();
+  initRankCalculator();
+  initLiveActivityStream();
   initHeroMetricsSection();
   initSignalCardFlips();
   initVaultQuiz();
@@ -106,6 +114,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initMatrixCalculator();
   initMatrixDial();
   initMatrixAutoDeck();
+  initMatrixVisualizer();
+  initFaqAccordion();
   initWalletPicker();
   autoConnectFromWalletApp(); // opened inside a wallet app from our Connect: connect right away
   initHeroWallet(); // our own wallet + circling coins in the hero Connect badge
@@ -507,6 +517,7 @@ function initWalletPicker(): void {
 
   const openModal = () => {
     renderWalletList();
+    window.dispatchEvent(new Event('daovault:openWalletModal'));
     modal.classList.add('active');
     document.body.classList.add('wallet-modal-open');
   };
@@ -780,14 +791,46 @@ function updateConnectButtonUI(account: string): void {
  */
 function checkInviteCode(): void {
   const ref = new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase() ?? '';
-  if (!/^DV[A-F0-9]{6,14}$/.test(ref)) return;
-  getSponsorByCode(ref).then(
-    () => window.setTimeout(() => showToast(`Invited by ${ref}. Connect your wallet to join.`), 3200),
-    (error) => {
-      if (error instanceof ApiError && error.status === 404) {
-        window.setTimeout(() => showToast(`Invite code ${ref} is not active yet: its owner must activate first.`, true), 3200);
-      }
-    },
+  if (/^DV[A-F0-9]{6,14}$/.test(ref)) {
+    getSponsorByCode(ref).then(
+      () => window.setTimeout(() => showToast(`Invited by ${ref}. Connect your wallet to join.`), 3200),
+      (error) => {
+        if (error instanceof ApiError && error.status === 404) {
+          window.setTimeout(() => showToast(`Invite code ${ref} is not active yet: its owner must activate first.`, true), 3200);
+        }
+      },
+    );
+  }
+  showJoiningUnder();
+  window.addEventListener('daovault:openWalletModal', showJoiningUnder);
+}
+
+/**
+ * Connect Wallet footer (owner, 2026-10-12): "Joining under DV…", the invite this visitor came
+ * with (link or saved), checked with the server; "DAOVAULT" without one; amber when the code's
+ * owner has not activated yet. Server asleep: the code is shown as is (payment.ts checks again).
+ */
+const joinChecks = new Map<string, boolean>();
+function showJoiningUnder(): void {
+  const el = document.getElementById('walletJoinUnder');
+  if (!el) return;
+  const raw = (getPendingReferral() || new URLSearchParams(window.location.search).get('ref') || '').trim().toUpperCase();
+  const code = /^DV[A-F0-9]{6,14}$/.test(raw) ? raw : '';
+  const paint = (active: boolean) => {
+    el.classList.toggle('is-inactive', !active);
+    el.textContent = active ? '• Joining under ' : '• Invite ';
+    const b = document.createElement('b');
+    b.textContent = code || 'DAOVAULT';
+    el.appendChild(b);
+    if (!active) el.append(' not active yet');
+  };
+  if (!code) { paint(true); return; }
+  const known = joinChecks.get(code);
+  paint(known ?? true);
+  if (known !== undefined) return;
+  getSponsorByCode(code).then(
+    () => { joinChecks.set(code, true); paint(true); },
+    (error) => { if (error instanceof ApiError && error.status === 404) { joinChecks.set(code, false); paint(false); } },
   );
 }
 
