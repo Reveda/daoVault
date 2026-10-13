@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { getAddress, verifyMessage } from "ethers";
 import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
+import { alert, shortWallet } from "../../config/alerts.js";
 
 const NONCE_TTL_MS = 5 * 60_000;
 /** two tabs refreshing at the same moment send the same token: not a theft */
@@ -86,6 +87,8 @@ export class AuthService {
       throw httpError("Invalid signature.", 401);
     }
     if (signer !== walletAddress) throw httpError("Signature does not match this wallet.", 401);
+    // security: the owner hears about every admin sign-in (a stranger signing in as admin = act at once)
+    if (isAdminWallet(walletAddress)) alert("info", `admin-signin-${walletAddress}`, `Admin wallet ${shortWallet(walletAddress)} signed in.`);
     return { access: await this.issueAccess(walletAddress), refresh: await this.issueRefresh(walletAddress, randomUUID()) };
   }
 
@@ -131,6 +134,8 @@ export class AuthService {
       return { access: await this.issueAccess(row.walletAddress), refresh: null };
     }
     await this.revokeAllSessions(row.walletAddress);
+    alert(isAdminWallet(row.walletAddress) ? "critical" : "warning", `session-theft-${row.walletAddress}`,
+      `A copied sign-in token was used for ${shortWallet(row.walletAddress)}${isAdminWallet(row.walletAddress) ? " (ADMIN)" : ""}: every session of that wallet was ended.`);
     throw httpError("Session ended for safety. Sign in again.", 401);
   }
 

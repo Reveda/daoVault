@@ -4,6 +4,9 @@
  *   chain-indexer   every INDEXER_INTERVAL_SECONDS  payment contract events -> activations / top-ups
  *   voucher-settle  every minute                    instant-withdrawal vouchers claimed / expired
  *   auth-cleanup    daily 03:00 UTC                 expired sign-in nonces and refresh tokens
+ *   watch           every 2 minutes                 database, plan queue, payout float / pause / signer,
+ *                                                   indexer lag -> [alert] log lines (jobs/watch.ts)
+ * Also sweeps the plan queue every few seconds (planQueue.ts; the API copies do too, one runs).
  * Run: `npm run worker` (production build) or `npm run worker:dev`. Needs REDIS_URL.
  * The API does not need the worker; without it everything works as before (the website reports
  * payments, vouchers settle when the member opens the dashboard).
@@ -14,6 +17,9 @@ import { env } from "./config/env.js";
 import { prisma } from "./config/prisma.js";
 import { indexPaymentEvents } from "./jobs/chainIndexer.js";
 import { cleanupAuthTables } from "./jobs/maintenance.js";
+import { runWatch } from "./jobs/watch.js";
+import { alert } from "./config/alerts.js";
+import { startPlanQueueTimer } from "./modules/activation/planQueue.js";
 import { withdrawalsService } from "./modules/withdrawals/withdrawals.service.js";
 
 if (!env.REDIS_URL) {
@@ -33,11 +39,13 @@ const queue = new Queue(QUEUE, {
 await queue.upsertJobScheduler("chain-indexer", { every: env.INDEXER_INTERVAL_SECONDS * 1000 }, { name: "chain-indexer" });
 await queue.upsertJobScheduler("voucher-settle", { every: 60_000 }, { name: "voucher-settle" });
 await queue.upsertJobScheduler("auth-cleanup", { pattern: "0 3 * * *", tz: "UTC" }, { name: "auth-cleanup" });
+await queue.upsertJobScheduler("watch", { every: 120_000 }, { name: "watch" });
 
 const handlers: Record<string, () => Promise<unknown>> = {
   "chain-indexer": indexPaymentEvents,
   "voucher-settle": () => withdrawalsService.reconcileAllOpen(),
   "auth-cleanup": cleanupAuthTables,
+  watch: () => runWatch({ indexer: true }),
 };
 
 // concurrency 1: jobs never overlap (the indexer must finish one block range before the next)
@@ -55,10 +63,17 @@ worker.on("completed", (job, result) => {
     console.log("[worker] auth-cleanup", result);
   }
 });
-worker.on("failed", (job, error) => console.error(`[worker] ${job?.name ?? "job"} failed (retried on the next run):`, error.message));
-worker.on("error", (error) => console.error("[worker]", error.message));
+worker.on("failed", (job, error) => {
+  console.error(`[worker] ${job?.name ?? "job"} failed (retried on the next run):`, error.message);
+  alert("warning", `job-${job?.name ?? "job"}`, `Background job ${job?.name ?? "job"} failed: ${error.message.slice(0, 200)} (retried on the next run).`);
+});
+worker.on("error", (error) => {
+  console.error("[worker]", error.message);
+  alert("critical", "worker-redis", `Worker lost Redis: ${error.message.slice(0, 160)}. Indexer and settlements pause until it is back.`);
+});
+startPlanQueueTimer();
 
-console.log(`[worker] running: chain-indexer every ${env.INDEXER_INTERVAL_SECONDS}s, voucher-settle every 60s, auth-cleanup daily`);
+console.log(`[worker] running: chain-indexer every ${env.INDEXER_INTERVAL_SECONDS}s, voucher-settle every 60s, watch every 2 min, auth-cleanup daily, plan queue sweep`);
 
 const shutdown = async (signal: string) => {
   console.log(`[worker] ${signal} received, finishing the current job...`);

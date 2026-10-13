@@ -1,6 +1,7 @@
 # Production on a VPS (Hostinger). Plan and security: PRODUCTION-SETUP.md. Step by step: DOCKER.md.
 #
 #   docker compose --env-file .env.production -f docker-compose.prod.yml --profile tunnel up -d --build
+#   (+ --profile payouts once the payout signer is set up, + --profile offsite once rclone.conf exists)
 #
 # Needs two files on the server (never in git; templates: *.example):
 #   .env.production            compose values: DB password, Cloudflare tunnel token, VITE_* (website build)
@@ -8,6 +9,7 @@
 #
 # Nothing here is reachable from the internet except through the Cloudflare Tunnel:
 #   Cloudflare -> cloudflared -> web (Nginx: site + /api) -> backend -> db
+#   backend -> signer (payout voucher key; own internal network, no port, no internet)
 # `web` is also on 127.0.0.1:8080 of the VPS only (checks over SSH; not public).
 
 name: daovault
@@ -114,9 +116,13 @@ services:
       # 10 connections per copy: 3 copies = 30 of Postgres' 100
       DATABASE_URL: postgresql://daovault:${POSTGRES_PASSWORD}@db:5432/daovault?schema=public&connection_limit=10
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      # instant withdrawals: vouchers are signed by the signer service (empty token = withdrawals closed)
+      PAYOUT_SIGNER_URL: ${PAYOUT_SIGNER_URL:-}
+      PAYOUT_SIGNER_TOKEN: ${PAYOUT_SIGNER_TOKEN:-}
     networks:
       - app      # Nginx in front + outbound internet (BSC RPC)
       - data     # database + redis
+      - signer   # payout voucher signer
     depends_on:
       db:
         condition: service_healthy
@@ -163,6 +169,51 @@ services:
       resources:
         limits:
           memory: 512m
+
+  # Payout voucher signer (owner, 2026-10-13: instant withdrawals, no admin review). Holds the ONE
+  # key the DAOvaultPayout contract trusts; it never sends money and holds none. Only the API can
+  # reach it (network `signer`: internal, no port on the VPS). Key = encrypted keystore + password,
+  # files in ./secrets (made by dist/signer/keygen.js), mounted read-only into this container only. Start it with
+  # --profile payouts once the payout contract is deployed (DOCKER.md, "Instant withdrawals").
+  signer:
+    <<: *hardening
+    build:
+      context: ./backend
+      target: production
+    image: daovault-backend:prod
+    command: ["node", "dist/signer/server.js"]
+    environment:
+      NODE_ENV: production
+      SIGNER_CHAIN_ID: ${SIGNER_CHAIN_ID:-97}
+      SIGNER_PAYOUT_CONTRACT: ${SIGNER_PAYOUT_CONTRACT:-}
+      SIGNER_TOKEN_DECIMALS: ${SIGNER_TOKEN_DECIMALS:-18}
+      # the signer's own caps, on top of the contract's maxPerClaim / dailyLimit
+      SIGNER_MAX_PER_CLAIM_USD: ${SIGNER_MAX_PER_CLAIM_USD:-1000}
+      SIGNER_MAX_PER_DAY_USD: ${SIGNER_MAX_PER_DAY_USD:-10000}
+      PAYOUT_SIGNER_TOKEN: ${PAYOUT_SIGNER_TOKEN:-}
+      SIGNER_KEYSTORE_FILE: /run/secrets/payout_keystore.json
+      SIGNER_KEYSTORE_PASSWORD_FILE: /run/secrets/payout_keystore_password.txt
+    volumes:
+      # read-only; only this container mounts it (files owned by uid 1000 = the image's node user)
+      - ./secrets:/run/secrets:ro
+    networks:
+      - signer
+    read_only: true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:7000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    profiles:
+      - payouts    # start with --profile payouts (needs ./secrets and the payout contract)
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          memory: 192m
 
   web:
     <<: *hardening
@@ -227,10 +278,36 @@ services:
       - ./docker/backup/backup.sh:/backup.sh:ro
       - ./backups:/backups
     networks:
-      - data
+      - data     # only the database (no internet)
     depends_on:
       db:
         condition: service_healthy
+
+  # Off-site copy of ./backups (owner, 2026-10-13): encrypted on the VPS by an rclone crypt remote,
+  # then stored with a cloud provider (Backblaze B2 / Cloudflare R2 / Google Drive...). If the VPS
+  # disk dies, yesterday's database still exists. Start with --profile offsite after creating
+  # ./secrets/rclone.conf (DOCKER.md "Off-site backup").
+  offsite:
+    <<: *hardening
+    image: rclone/rclone:1.68.2
+    entrypoint: ["sh", "/offsite.sh"]
+    environment:
+      OFFSITE_REMOTE: ${OFFSITE_REMOTE:-daovault-crypt:}
+      OFFSITE_KEEP_DAYS: ${OFFSITE_KEEP_DAYS:-30}
+    volumes:
+      - ./docker/backup/offsite.sh:/offsite.sh:ro
+      - ./backups:/backups:ro
+      - ./secrets/rclone.conf:/config/rclone/rclone.conf:ro
+    networks:
+      - app      # outbound internet (cloud storage); no database access
+    depends_on:
+      - backup
+    profiles:
+      - offsite
+    deploy:
+      resources:
+        limits:
+          memory: 256m
 
 networks:
   app:
@@ -239,6 +316,8 @@ networks:
         - subnet: 172.28.0.0/24   # Nginx trusts CF-Connecting-IP only from this subnet
   data:
     internal: true                # no internet: only backend and backup reach the database
+  signer:
+    internal: true                # no internet: only the API reaches the payout signer
 
 volumes:
   pgdata:

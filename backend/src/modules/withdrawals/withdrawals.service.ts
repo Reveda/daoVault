@@ -3,6 +3,7 @@ import { Contract, Interface, JsonRpcProvider, parseUnits } from "ethers";
 import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
 import { serializable } from "../../config/transaction.js";
+import { alert } from "../../config/alerts.js";
 import { fromCents, toCents, withdrawalSplit } from "../plan/plan.js";
 import {
   canPayInstantly,
@@ -52,7 +53,7 @@ const voucherOf = (w: Withdrawal) =>
     }
     : null;
 
-const view = (w: Withdrawal, extra: { reviewReason?: string } = {}) => ({
+const view = (w: Withdrawal) => ({
   id: w.id,
   grossUsd: Number(w.grossAmount),
   feeUsd: Number(w.feeAmount),
@@ -65,7 +66,6 @@ const view = (w: Withdrawal, extra: { reviewReason?: string } = {}) => ({
   rejectReason: w.rejectReason,
   createdAt: w.createdAt,
   updatedAt: w.updatedAt,
-  ...extra,
 });
 
 export class WithdrawalsService {
@@ -132,14 +132,25 @@ export class WithdrawalsService {
 
   /**
    * Member request. Destination is always the signed-in wallet; the amount is checked server-side.
-   * With the payout contract configured, the request gets a signed voucher the member claims at
-   * once; otherwise (or if the contract can't pay it right now) it waits for admin review.
+   * Every request is instant (owner, 2026-10-13: no admin review): it gets a signed voucher the
+   * member claims at once. When the payout contract can't pay it right now, the member gets a
+   * clear message and nothing is created (the balance stays untouched).
    */
   async request(wallet: string, amountUsd: number) {
     const grossCents = toCents(amountUsd);
     if (grossCents < toCents(env.WITHDRAWAL_MIN_USD)) throw httpError(`Minimum withdrawal is $${env.WITHDRAWAL_MIN_USD}.`, 400);
+    if (!instantPayoutsEnabled()) throw httpError("Withdrawals are not open yet. Please try again later.", 503);
     const pre = await prisma.user.findUnique({ where: { walletAddress: wallet }, select: { id: true } });
     if (pre) await this.reconcile(pre.id);
+
+    // limits, float and signer are checked before anything is reserved
+    const netCents = withdrawalSplit(grossCents, env.WITHDRAWAL_FEE_PERCENT).netCents;
+    const check = await canPayInstantly(Number(fromCents(netCents))).catch((error) => {
+      console.error("[withdrawals] payout check failed:", error);
+      alert("critical", "payout-check", `Withdrawals blocked: the payout contract could not be read (${String((error as Error)?.message ?? error).slice(0, 160)}).`);
+      throw httpError("Withdrawals are not available right now. Please try again in a few minutes.", 503);
+    });
+    if (!check.ok) throw httpError(check.message, check.status);
 
     const created = await serializable(async (tx) => {
       const user = await tx.user.findUnique({ where: { walletAddress: wallet } });
@@ -160,10 +171,7 @@ export class WithdrawalsService {
       });
     });
 
-    if (!instantPayoutsEnabled()) return view(created, { reviewReason: "Withdrawals are reviewed by the team" });
     try {
-      const check = await canPayInstantly(Number(created.netAmount));
-      if (!check.ok) return view(created, { reviewReason: check.reason });
       const voucher = await signVoucher(wallet, created.id, check.amount);
       const updated = await prisma.withdrawal.update({
         where: { id: created.id },
@@ -177,8 +185,14 @@ export class WithdrawalsService {
       });
       return view(updated);
     } catch (error) {
-      console.warn("[withdrawals] instant payout unavailable, sent to review:", error);
-      return view(created, { reviewReason: "Instant payout is unavailable right now" });
+      // no voucher exists, so nothing can be paid: release the amount back to the balance at once
+      console.error("[withdrawals] voucher signing failed:", error);
+      alert("critical", "voucher-signing", `Withdrawals blocked: the signer did not sign (${String((error as Error)?.message ?? error).slice(0, 160)}). Check the signer container.`);
+      await prisma.withdrawal.updateMany({
+        where: { id: created.id, status: WithdrawalStatus.PENDING },
+        data: { status: WithdrawalStatus.REJECTED, rejectReason: "Could not prepare the payout. The amount is back in your balance.", reviewedAt: new Date() },
+      });
+      throw httpError("Withdrawals are not available right now. Please try again in a few minutes.", 503);
     }
   }
 
@@ -192,11 +206,12 @@ export class WithdrawalsService {
       throw httpError("That transaction is not the payout for this withdrawal.", 400);
     }
     try {
-      const done = await prisma.withdrawal.update({
-        where: { id: w.id },
+      // guarded on PROCESSING: the worker may settle the same claim at the same moment
+      await prisma.withdrawal.updateMany({
+        where: { id: w.id, status: WithdrawalStatus.PROCESSING },
         data: { status: WithdrawalStatus.COMPLETED, payoutTxHash: txHash.toLowerCase(), reviewedAt: new Date() },
       });
-      return view(done);
+      return view(await prisma.withdrawal.findUniqueOrThrow({ where: { id: w.id } }));
     } catch (error) {
       if ((error as { code?: string })?.code === "P2002") throw httpError("That transaction is already recorded.", 409);
       throw error;
@@ -247,7 +262,7 @@ export class WithdrawalsService {
    * submits the tx hash. It is accepted only if that tx moved exactly the net USDT to the member.
    */
   async complete(id: string, admin: string, payoutTxHash: string) {
-    if (!env.USDT_CONTRACT_ADDRESS) throw httpError("USDT_CONTRACT_ADDRESS is not configured.", 503);
+    if (!env.USDT_CONTRACT_ADDRESS) throw httpError("The USDT token is not set up on the server yet.", 503);
     const w = await prisma.withdrawal.findUnique({ where: { id } });
     if (!w) throw httpError("Withdrawal not found.", 404);
     if (w.voucherId) throw httpError("Instant withdrawal: the payout contract handles it automatically.", 409);

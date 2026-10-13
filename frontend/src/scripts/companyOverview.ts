@@ -39,7 +39,7 @@ export function renderCompanyOverview(target: HTMLElement, s: AdminStats): void 
   const payout = s.payout
     ? tile('bolt', 'amber', 'Instant payout float', s.payout.error ? 'Unreadable' : usd(s.payout.floatUsd ?? 0),
       s.payout.error ?? `${s.payout.paused ? 'PAUSED · ' : ''}max ${usd(s.payout.maxPerClaimUsd ?? 0)} each · ${usd(s.payout.dailyLimitUsd ?? 0)} / day`)
-    : tile('bolt', 'amber', 'Instant payouts', 'Off', 'every withdrawal is reviewed in the admin panel');
+    : tile('bolt', 'amber', 'Instant payouts', 'Off', 'withdrawals stay closed until the payout contract + signer are set');
   target.innerHTML = [
     tile('users', 'violet', 'Members', int(s.members), `${int(s.registered)} wallets registered · ${int(s.payments24h)} payments in 24h · ${int(s.payments7d)} in 7 days`),
     tile('deposit', 'gold', 'Deposits (money in)', usd(s.volumeUsd), `${int(s.packages)} packages × $300 · ${int(s.topUps)} top-ups`),

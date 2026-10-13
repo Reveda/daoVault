@@ -59,11 +59,32 @@ model Package {
   status          PackageStatus @default(ACTIVE)
   activationTxHash String       @unique @map("activation_tx_hash") @db.VarChar(66)
   createdAt       DateTime      @default(now()) @map("created_at")
+  /// set when the plan queue has paid its commissions and added it to the team volumes
+  /// (plan_events); only counted packages make DAO volume / leg totals
+  countedAt       DateTime?     @map("counted_at")
   user            User          @relation(fields: [userId], references: [id])
   earnings        Earning[]
 
   @@index([userId])
   @@map("packages")
+}
+
+/// Plan queue (owner, 2026-10-13: launch-day scaling). A payment only records its package and
+/// one event; ONE runner (Postgres advisory lock) then pays the 20 levels, directs, team volume
+/// (batched: one update per upline per batch) and ranks, in payment order. Many payments at
+/// once never fight over the same upline rows.
+model PlanEvent {
+  id           BigInt    @id @default(autoincrement())
+  packageId    String    @unique @map("package_id") @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  /// first package (activation): the sponsor gains an active direct; a top-up does not
+  isActivation Boolean   @map("is_activation")
+  amountCents  Int       @map("amount_cents")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  processedAt  DateTime? @map("processed_at")
+
+  @@index([processedAt, id])
+  @@map("plan_events")
 }
 
 model Earning {

@@ -122,15 +122,15 @@ describe('DAOvaultPayout', () => {
     expect(await payout.owner()).to.equal(bob.address);
   });
 
-  it('activation contract: sponsor must be activated; approval is used up by the payment', async () => {
-    const act = await (await ethers.getContractFactory('DAOvaultActivation')).deploy(await usdt.getAddress(), owner.address, usd(300));
+  it('activation contract: an unpaid sponsor is accepted; approval is used up by the payment', async () => {
+    const act = await (await ethers.getContractFactory('DAOvaultActivation')).deploy(await usdt.getAddress(), owner.address, await payout.getAddress(), usd(300));
     await usdt.mint(alice.address, usd(300));
     await usdt.mint(bob.address, usd(300));
     await usdt.connect(bob).approve(await act.getAddress(), usd(300));
-    await expect(act.connect(bob).activate(alice.address)).to.be.revertedWithCustomError(act, 'InvalidSponsor');
+    await act.connect(bob).activate(alice.address); // alice has not paid: accepted (owner, 2026-10-13)
     await usdt.connect(alice).approve(await act.getAddress(), usd(300));
     await act.connect(alice).activate(ethers.ZeroAddress);
-    await act.connect(bob).activate(alice.address);
+    await expect(act.connect(bob).activate(alice.address)).to.be.revertedWithCustomError(act, 'AlreadyActivated');
     expect(await act.sponsorOf(bob.address)).to.equal(alice.address);
     expect(await usdt.allowance(bob.address, await act.getAddress())).to.equal(0);
   });

@@ -789,8 +789,8 @@ function updateConnectButtonUI(account: string): void {
 }
 
 /**
- * A visitor arriving with ?ref=CODE learns right away whether that invite can sponsor them
- * (only activated members can), instead of at payment time. Server asleep: says nothing.
+ * A visitor arriving with ?ref=CODE learns right away whether that invite code exists (any
+ * registered wallet can sponsor, owner 2026-10-13). Server asleep: says nothing.
  */
 function checkInviteCode(): void {
   const ref = new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase() ?? '';
@@ -799,7 +799,7 @@ function checkInviteCode(): void {
       () => window.setTimeout(() => showToast(`Invited by ${ref}. Connect your wallet to join.`), 3200),
       (error) => {
         if (error instanceof ApiError && error.status === 404) {
-          window.setTimeout(() => showToast(`Invite code ${ref} is not active yet: its owner must activate first.`, true), 3200);
+          window.setTimeout(() => showToast(`Invite code ${ref} was not found. Check your invite link.`, true), 3200);
         }
       },
     );
@@ -810,8 +810,8 @@ function checkInviteCode(): void {
 
 /**
  * Connect Wallet footer (owner, 2026-10-12): "Joining under DV…", the invite this visitor came
- * with (link or saved), checked with the server; "DAOVAULT" without one; amber when the code's
- * owner has not activated yet. Server asleep: the code is shown as is (payment.ts checks again).
+ * with (link or saved), checked with the server; "DAOVAULT" without one; amber when the code
+ * does not exist. Server asleep: the code is shown as is (payment.ts checks again).
  */
 const joinChecks = new Map<string, boolean>();
 function showJoiningUnder(): void {
@@ -825,7 +825,7 @@ function showJoiningUnder(): void {
     const b = document.createElement('b');
     b.textContent = code || 'DAOVAULT';
     el.appendChild(b);
-    if (!active) el.append(' not active yet');
+    if (!active) el.append(' not found');
   };
   if (!code) { paint(true); return; }
   const known = joinChecks.get(code);

@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { env } from "../../config/env.js";
-import { authRateLimiter } from "../../middlewares/rateLimiter.js";
+import { authRateLimiter, authWalletRateLimiter } from "../../middlewares/rateLimiter.js";
 import { validateRequest } from "../../middlewares/validateRequest.js";
 import { requireAuth } from "../../middlewares/auth.js";
 import { authService, type AccessSession, type RefreshCookie } from "./auth.service.js";
@@ -42,14 +42,14 @@ async function sendSession(res: Response, access: AccessSession, refresh: Refres
 export const authRouter = Router();
 
 // 1. get the message to sign
-authRouter.post("/challenge", authRateLimiter, validateRequest({ body: z.object({ walletAddress: address }) }), async (req, res, next) => {
+authRouter.post("/challenge", authRateLimiter, authWalletRateLimiter, validateRequest({ body: z.object({ walletAddress: address }) }), async (req, res, next) => {
   try {
     res.json({ success: true, data: await authService.createChallenge(req.body.walletAddress, req.get("origin")) });
   } catch (error) { next(error); }
 });
 
 // 2. send the signature back: access token in the body, refresh token as an httpOnly cookie
-authRouter.post("/verify", authRateLimiter, validateRequest({
+authRouter.post("/verify", authRateLimiter, authWalletRateLimiter, validateRequest({
   body: z.object({ walletAddress: address, signature: z.string().regex(/^0x[a-fA-F0-9]{130}$/, "Invalid signature") }),
 }), async (req, res, next) => {
   try {

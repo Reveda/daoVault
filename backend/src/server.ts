@@ -3,6 +3,20 @@ import { env } from "./config/env.js";
 import { prisma } from "./config/prisma.js";
 import { rootWallet } from "./config/root.js";
 import { usersService } from "./modules/users/users.service.js";
+import { alert } from "./config/alerts.js";
+import { startPlanQueueTimer } from "./modules/activation/planQueue.js";
+import { runWatch } from "./jobs/watch.js";
+
+// a crash or a forgotten promise reaches the owner (then the process manager restarts the API)
+process.on("unhandledRejection", (reason) => {
+  console.error("[api] unhandled rejection:", reason);
+  alert("critical", "api-unhandled", `API error not handled: ${String((reason as Error)?.message ?? reason).slice(0, 200)}`);
+});
+process.on("uncaughtException", (error) => {
+  console.error("[api] uncaught exception:", error);
+  alert("critical", "api-crash", `API crashed: ${error.message.slice(0, 200)}. It restarts by itself; check the logs.`);
+  setTimeout(() => process.exit(1), 500).unref(); // let the log line flush
+});
 
 const server = app.listen(env.PORT, () => {
   console.log(`DAOvault API listening on http://localhost:${env.PORT}`);
@@ -20,6 +34,12 @@ const server = app.listen(env.PORT, () => {
     );
   } else {
     console.warn("COMPANY_WALLET_ADDRESS is not set: there is no company root, so no one can join under the company link.");
+  }
+  // plan queue: commissions / volume / ranks for recorded payments (one runner across all copies)
+  startPlanQueueTimer();
+  // no worker without Redis (Render): this API watches the system itself
+  if (!env.REDIS_URL) {
+    setInterval(() => void runWatch().catch((error) => console.error("[watch]", error)), 5 * 60_000).unref();
   }
 });
 

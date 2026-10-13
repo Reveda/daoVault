@@ -4,6 +4,9 @@ export type DashboardData = {
   sponsorCode: string | null;
   /** before payment: the latest invite code opened, saved on the server (null once activated) */
   pendingSponsorCode: string | null;
+  /** pre-launch marketing (owner, 2026-10-13): Pay & Activate opens at this moment (null = open) */
+  paymentsOpenAt?: string | null;
+  paymentsOpen?: boolean;
   /** company root (treasury): active without paying, anyone joins under it, earns nothing itself */
   isRoot?: boolean;
   /** ADMIN_WALLETS (the company wallet): show the company overview */
@@ -13,7 +16,7 @@ export type DashboardData = {
   currentRank: number;
   rankName: string | null;
   teamVolume: number;
-  /** DAO per side; powerMembers / otherMembers = activated members on each side (all depths) */
+  /** DAO per side; powerMembers / otherMembers = members on each side, paid or not (all depths) */
   legs: { total: number; power: number; other: number; count: number; powerMembers?: number; otherMembers?: number };
   nextRank: { rank: number; name: string; volume: number; rewardUsd: number; countedVolume: number } | null;
   totalEarned: number | string;
@@ -49,8 +52,6 @@ export type Withdrawal = {
   instant?: boolean;
   /** open instant voucher the member's wallet can claim (until it expires) */
   voucher?: { contract: string; id: string; amount: string; deadline: number; signature: string } | null;
-  /** why it went to admin review instead of an instant payout */
-  reviewReason?: string;
   payoutTxHash: string | null;
   rejectReason: string | null;
   createdAt: string;
@@ -139,8 +140,8 @@ export function savePendingSponsor(walletAddress: string, sponsorCode: string, t
   return post('/users/pending-sponsor', { walletAddress, sponsorCode }, token);
 }
 
-/** Invite code -> sponsor wallet (404 when the code is unknown or not activated). */
-export function getSponsorByCode(code: string): Promise<{ walletAddress: string; referralCode: string }> {
+/** Invite code -> sponsor wallet (404 when the code is unknown). Any registered wallet can sponsor (owner, 2026-10-13). */
+export function getSponsorByCode(code: string): Promise<{ walletAddress: string; referralCode: string; activated?: boolean }> {
   return request(`/users/referral/${encodeURIComponent(code.trim().toUpperCase())}`);
 }
 

@@ -6,12 +6,31 @@ type Tx = Prisma.TransactionClient;
 
 const ZERO = "0x0000000000000000000000000000000000000000";
 
+/**
+ * One runner at a time for everything that changes commissions, directs, team volume or ranks
+ * (the plan queue and linkUpline). A Postgres advisory lock: it works across every API copy and
+ * the worker, needs no Redis, and is released when the transaction ends.
+ */
+const PLAN_LOCK = 0x44_56_50_51; // "DVPQ"
+const lockPlan = (tx: Tx) => tx.$executeRaw`SELECT pg_advisory_xact_lock(${PLAN_LOCK}::bigint)`;
+async function tryLockPlan(tx: Tx): Promise<boolean> {
+  const [row] = await tx.$queryRaw<Array<{ ok: boolean }>>`SELECT pg_try_advisory_xact_lock(${PLAN_LOCK}::bigint) AS ok`;
+  return Boolean(row?.ok);
+}
+
+/** only packages the plan queue has processed count as DAO volume (see PlanEvent) */
+const COUNTED = { packages: { where: { countedAt: { not: null } } } } as const;
+
 export type ActivationInput = {
   walletAddress: string;   // lowercase
   sponsorAddress: string;  // lowercase, zero address = no sponsor
   transactionHash: string;
   amountUsd: number;
 };
+
+export type Commission = { level: number; wallet: string; amountUsd: number };
+export type Skipped = { level: number; wallet: string; reason: "no_package" | "capped" | "level_locked" };
+export type RankUp = { wallet: string; from: number; to: number; rewardUsd: number };
 
 export type ActivationResult = {
   walletAddress: string;
@@ -20,9 +39,11 @@ export type ActivationResult = {
   status: PackageStatus;
   alreadyProcessed: boolean;
   sponsorLinked: boolean;
-  commissions: Array<{ level: number; wallet: string; amountUsd: number }>;
-  skipped: Array<{ level: number; wallet: string; reason: "no_package" | "capped" | "level_locked" }>;
-  rankUps: Array<{ wallet: string; from: number; to: number; rewardUsd: number }>;
+  /** the plan queue pays the levels a moment later (processPlanEvents); filled only by tests */
+  queued: boolean;
+  commissions: Commission[];
+  skipped: Skipped[];
+  rankUps: RankUp[];
 };
 
 const httpError = (message: string, statusCode: number) => Object.assign(new Error(message), { statusCode });
@@ -49,12 +70,48 @@ async function ancestorsOf(tx: Tx, userId: string): Promise<Array<{ id: string; 
     SELECT id::text AS id, depth FROM chain ORDER BY depth`;
 }
 
+/** adds `delta` DAO to each member: one UPDATE per distinct delta (a batch's root row is written once) */
+async function addVolume(tx: Tx, volume: Map<string, number>) {
+  const byDelta = new Map<number, string[]>();
+  for (const [id, delta] of volume) if (delta) byDelta.set(delta, [...(byDelta.get(delta) ?? []), id]);
+  for (const [delta, ids] of byDelta) {
+    for (let i = 0; i < ids.length; i += 5_000) {
+      await tx.user.updateMany({ where: { id: { in: ids.slice(i, i + 5_000) } }, data: { teamVolume: { increment: delta } } });
+    }
+  }
+}
+
+/**
+ * Puts `userId` (with its whole team) under `sponsorId`. Pre-launch marketing (owner, 2026-10-13):
+ * the tree is built from invite links before anyone pays, so an unpaid wallet can be a sponsor.
+ * Refuses a loop (the sponsor is the user or inside the user's own team). If the user's team
+ * already holds counted packages, that DAO volume moves up to every new ancestor and their ranks
+ * are re-checked. Never touches activeDirectsCount: only a PAID member counts as a direct (the
+ * plan queue adds it). Holds the plan lock, so it never races the queue. Returns false on a loop.
+ */
+export async function linkUpline(tx: Tx, userId: string, sponsorId: string): Promise<boolean> {
+  if (userId === sponsorId) return false;
+  await lockPlan(tx);
+  const above = [sponsorId, ...(await ancestorsOf(tx, sponsorId)).map((a) => a.id)];
+  if (above.includes(userId)) return false;
+  const user = await tx.user.update({
+    where: { id: userId }, data: { uplineId: sponsorId },
+    select: { teamVolume: true, _count: { select: COUNTED } },
+  });
+  const volume = user.teamVolume + user._count.packages;
+  if (volume > 0) {
+    await addVolume(tx, new Map(above.map((id) => [id, volume])));
+    await recomputeRanks(tx, above);
+  }
+  return true;
+}
+
 /**
  * Re-evaluates the rank of each member in `ids` from their legs (50:50 rule). Ranks only
  * go up. Every newly reached tier pays its one-time reward once (rank rewards are a
  * separate pool, so they are not limited by the 25x level-income cap).
  */
-export async function recomputeRanks(tx: Tx, ids: string[]): Promise<ActivationResult["rankUps"]> {
+export async function recomputeRanks(tx: Tx, ids: string[]): Promise<RankUp[]> {
   if (!ids.length) return [];
   const members = await tx.user.findMany({
     where: { id: { in: ids } },
@@ -62,7 +119,7 @@ export async function recomputeRanks(tx: Tx, ids: string[]): Promise<ActivationR
   });
   const directs = await tx.user.findMany({
     where: { uplineId: { in: ids } },
-    select: { uplineId: true, teamVolume: true, _count: { select: { packages: true } } },
+    select: { uplineId: true, teamVolume: true, _count: { select: COUNTED } },
   });
   const legsBy = new Map<string, number[]>();
   for (const d of directs) {
@@ -71,7 +128,7 @@ export async function recomputeRanks(tx: Tx, ids: string[]): Promise<ActivationR
     legsBy.set(d.uplineId!, legs);
   }
 
-  const rankUps: ActivationResult["rankUps"] = [];
+  const rankUps: RankUp[] = [];
   for (const m of members) {
     const reached = rankForLegs(summarizeLegs(legsBy.get(m.id) ?? []));
     if (reached <= m.currentRank) continue;
@@ -94,12 +151,24 @@ export async function recomputeRanks(tx: Tx, ids: string[]): Promise<ActivationR
   return rankUps;
 }
 
+/** adds the package and queues it for the plan (directs, 20 levels, team volume, ranks) */
+async function queuePackage(tx: Tx, userId: string, amountUsd: number, transactionHash: string, isActivation: boolean) {
+  const amountCents = toCents(amountUsd);
+  const pkg = await tx.package.create({
+    data: {
+      userId, packageAmount: amountUsd, maxCapLimit: fromCents(amountCents * CAP_MULTIPLIER),
+      status: PackageStatus.ACTIVE, activationTxHash: transactionHash,
+    },
+  });
+  await tx.planEvent.create({ data: { packageId: pkg.id, userId, isActivation, amountCents } });
+  return pkg;
+}
+
 /**
- * Registers one verified on-chain activation and runs the plan:
- *  1. member + package (upline set once, never overwritten)
- *  2. sponsor's active directs +1
- *  3 + 4. 20-level commissions, team volume and ranks: see distribute().
- * Must run inside a serializable transaction (see config/transaction.ts).
+ * Registers one verified on-chain activation: the member (upline set once, never overwritten:
+ * usually already at registration from the invite link) and its package. The plan itself
+ * (sponsor's direct +1, 20-level commissions, team volume, ranks) runs in the plan queue right
+ * after (processPlanEvents), in payment order. Must run inside a serializable transaction.
  */
 export async function processActivation(tx: Tx, input: ActivationInput): Promise<ActivationResult> {
   const { walletAddress, transactionHash, amountUsd } = input;
@@ -109,7 +178,7 @@ export async function processActivation(tx: Tx, input: ActivationInput): Promise
     if (byHash.user.walletAddress !== walletAddress) throw httpError("Transaction belongs to another wallet.", 409);
     return {
       walletAddress, referralCode: byHash.user.referralCode, transactionHash, status: byHash.status,
-      alreadyProcessed: true, sponsorLinked: Boolean(byHash.user.uplineId), commissions: [], skipped: [], rankUps: [],
+      alreadyProcessed: true, sponsorLinked: Boolean(byHash.user.uplineId), queued: false, commissions: [], skipped: [], rankUps: [],
     };
   }
 
@@ -121,61 +190,45 @@ export async function processActivation(tx: Tx, input: ActivationInput): Promise
   const sponsor = sponsorAddress
     ? await tx.user.findUnique({ where: { walletAddress: sponsorAddress }, include: { _count: { select: { packages: true } } } })
     : null;
-  // only an activated member can sponsor, or the company root (contract: treasury); a root
-  // record missing at this point is created so the member is never left without its upline
-  const rootSponsor = sponsorAddress && isRootWallet(sponsorAddress)
+  // any registered wallet can sponsor, paid or not (owner, 2026-10-13: teams are built during the
+  // pre-launch marketing days; an unpaid sponsor's shares stay with the company until it pays).
+  // A root record missing at this point is created so the member is never left without its upline.
+  const validSponsor = sponsorAddress && isRootWallet(sponsorAddress)
     ? sponsor ?? await tx.user.create({
       data: { walletAddress: sponsorAddress, referralCode: await uniqueReferralCode(tx, sponsorAddress) },
       include: { _count: { select: { packages: true } } },
     })
-    : null;
-  const validSponsor = rootSponsor ?? (sponsor && sponsor._count.packages > 0 ? sponsor : null);
+    : sponsor;
 
   if (!user) {
     user = await tx.user.create({
       data: { walletAddress, referralCode: await uniqueReferralCode(tx, walletAddress), uplineId: validSponsor?.id },
       include: { _count: { select: { packages: true, downline: true } } },
     });
-  } else if (!user.uplineId && validSponsor && user._count.downline === 0) {
-    // a pre-existing record without upline or downline can still be linked (no cycle possible)
-    user = await tx.user.update({
-      where: { id: user.id }, data: { uplineId: validSponsor.id },
-      include: { _count: { select: { packages: true, downline: true } } },
-    });
+  } else if (!user.uplineId && validSponsor) {
+    // registered earlier without a sponsor (maybe with a team below it): link now, unless that
+    // would make a loop; the upline set at registration (invite link) is never overwritten
+    if (await linkUpline(tx, user.id, validSponsor.id)) {
+      user = await tx.user.findUniqueOrThrow({ where: { id: user.id }, include: { _count: { select: { packages: true, downline: true } } } });
+    }
   }
 
-  const amountCents = toCents(amountUsd);
-  const pkg = await tx.package.create({
-    data: {
-      userId: user.id, packageAmount: amountUsd, maxCapLimit: fromCents(amountCents * CAP_MULTIPLIER),
-      status: PackageStatus.ACTIVE, activationTxHash: transactionHash,
-    },
-  });
-
-  const result: ActivationResult = {
+  const pkg = await queuePackage(tx, user.id, amountUsd, transactionHash, true);
+  return {
     walletAddress, referralCode: user.referralCode, transactionHash, status: pkg.status,
-    alreadyProcessed: false, sponsorLinked: Boolean(user.uplineId), commissions: [], skipped: [], rankUps: [],
+    alreadyProcessed: false, sponsorLinked: Boolean(user.uplineId), queued: true, commissions: [], skipped: [], rankUps: [],
   };
-
-  const chain = await ancestorsOf(tx, user.id);
-  if (!chain.length) return result;
-
-  // 2. the sponsor gains an active direct (before commissions, so it can unlock their next level)
-  await tx.user.update({ where: { id: chain[0].id }, data: { activeDirectsCount: { increment: 1 } } });
-
-  await distribute(tx, user.id, amountCents, chain, result);
-  return result;
 }
 
 /**
- * Steps 3 and 4 for one new package (an activation or a top-up):
- *  3. 20-level commissions. Each upline is paid only if the level is unlocked by its directs
- *     and it has an ACTIVE package. The share fills its OLDEST active package first; when that
- *     one reaches its 25x cap it becomes CAPPED and the rest spills into the next active
- *     package (a top-up waiting in line). Unpaid shares stay in the treasury.
- *  4. team volume +1 for every upline (1 DAO = 1 package), then ranks re-evaluated.
+ * 20-level commissions for one package. Each upline is paid only if the level is unlocked by
+ * its directs and it has an ACTIVE package. The share fills its OLDEST active package first;
+ * when that one reaches its 25x cap it becomes CAPPED and the rest spills into the next active
+ * package (a top-up waiting in line). Unpaid shares stay with the company.
  */
-async function distribute(tx: Tx, sourceUserId: string, amountCents: number, chain: Array<{ id: string; depth: number }>, result: ActivationResult) {
+async function payCommissions(tx: Tx, sourceUserId: string, amountCents: number, chain: Array<{ id: string; depth: number }>) {
+  const commissions: Commission[] = [];
+  const skipped: Skipped[] = [];
   const top = chain.slice(0, LEVELS.length);
   const uplines = await tx.user.findMany({
     where: { id: { in: top.map((c) => c.id) } },
@@ -190,9 +243,9 @@ async function distribute(tx: Tx, sourceUserId: string, amountCents: number, cha
     const upline = byId.get(id);
     if (!upline) continue;
     const level = depth;
-    if (!upline._count.packages) { result.skipped.push({ level, wallet: upline.walletAddress, reason: "no_package" }); continue; }
-    if (!upline.packages.length) { result.skipped.push({ level, wallet: upline.walletAddress, reason: "capped" }); continue; }
-    if (!isLevelUnlocked(level, upline.activeDirectsCount)) { result.skipped.push({ level, wallet: upline.walletAddress, reason: "level_locked" }); continue; }
+    if (!upline._count.packages) { skipped.push({ level, wallet: upline.walletAddress, reason: "no_package" }); continue; }
+    if (!upline.packages.length) { skipped.push({ level, wallet: upline.walletAddress, reason: "capped" }); continue; }
+    if (!isLevelUnlocked(level, upline.activeDirectsCount)) { skipped.push({ level, wallet: upline.walletAddress, reason: "level_locked" }); continue; }
 
     let remaining = Math.round((amountCents * LEVELS[level - 1].pct) / 100);
     let paid = 0;
@@ -219,13 +272,52 @@ async function distribute(tx: Tx, sourceUserId: string, amountCents: number, cha
       remaining -= payCents;
       paid += payCents;
     }
-    if (paid > 0) result.commissions.push({ level, wallet: upline.walletAddress, amountUsd: fromCents(paid) });
-    else result.skipped.push({ level, wallet: upline.walletAddress, reason: "capped" });
+    if (paid > 0) commissions.push({ level, wallet: upline.walletAddress, amountUsd: fromCents(paid) });
+    else skipped.push({ level, wallet: upline.walletAddress, reason: "capped" });
   }
+  return { commissions, skipped };
+}
 
-  const allIds = chain.map((c) => c.id);
-  await tx.user.updateMany({ where: { id: { in: allIds } }, data: { teamVolume: { increment: 1 } } });
-  result.rankUps = await recomputeRanks(tx, allIds);
+export type PlanBatch = {
+  busy: boolean;
+  processed: number;
+  events: Array<{ packageId: string; wallet: string; commissions: Commission[]; skipped: Skipped[] }>;
+  rankUps: RankUp[];
+};
+
+/**
+ * The plan queue: takes up to `limit` unprocessed payments, oldest first, and for each one
+ *  1. the sponsor gains an active direct (activations only; before commissions, so it can
+ *     unlock their next level, exactly as when the payment arrived)
+ *  2. 20-level commissions (payCommissions)
+ *  3. +1 DAO for every upline: summed over the batch and written once per upline
+ * then re-checks the ranks of every upline touched. Runs under the plan lock (one runner across
+ * all API copies and the worker); `lock: false` only inside the plan self-test's own transaction.
+ */
+export async function processPlanEvents(tx: Tx, { limit = 100, lock = true } = {}): Promise<PlanBatch> {
+  const batch: PlanBatch = { busy: false, processed: 0, events: [], rankUps: [] };
+  if (lock && !(await tryLockPlan(tx))) return { ...batch, busy: true };
+  const events = await tx.planEvent.findMany({ where: { processedAt: null }, orderBy: { id: "asc" }, take: limit });
+  if (!events.length) return batch;
+
+  const volume = new Map<string, number>();
+  const now = new Date();
+  for (const ev of events) {
+    const user = await tx.user.findUniqueOrThrow({ where: { id: ev.userId }, select: { walletAddress: true } });
+    const chain = await ancestorsOf(tx, ev.userId);
+    if (ev.isActivation && chain.length) {
+      await tx.user.update({ where: { id: chain[0].id }, data: { activeDirectsCount: { increment: 1 } } });
+    }
+    const paid = chain.length ? await payCommissions(tx, ev.userId, ev.amountCents, chain) : { commissions: [], skipped: [] };
+    for (const c of chain) volume.set(c.id, (volume.get(c.id) ?? 0) + 1);
+    await tx.package.update({ where: { id: ev.packageId }, data: { countedAt: now } });
+    await tx.planEvent.update({ where: { id: ev.id }, data: { processedAt: now } });
+    batch.events.push({ packageId: ev.packageId, wallet: user.walletAddress, ...paid });
+  }
+  await addVolume(tx, volume);
+  batch.rankUps = await recomputeRanks(tx, [...volume.keys()]);
+  batch.processed = events.length;
+  return batch;
 }
 
 export type TopUpInput = {
@@ -237,9 +329,9 @@ export type TopUpInput = {
 /**
  * Re-entry (owner, 2026-10-10): a verified on-chain ToppedUp adds a NEW package to an activated
  * member, with its own 25x cap. Same ID, same upline and team; the sponsor gains no new direct
- * (already counted). The uplines are paid the 20-level commissions again and their team volume
- * grows by 1 DAO. Commissions keep filling the oldest active package first (see distribute).
- * Idempotent per transaction hash. Must run inside a serializable transaction.
+ * (already counted). The plan queue pays the uplines the 20 levels again and adds 1 DAO to their
+ * team volume. Commissions keep filling the oldest active package first. Idempotent per
+ * transaction hash. Must run inside a serializable transaction.
  */
 export async function processTopUp(tx: Tx, input: TopUpInput): Promise<ActivationResult> {
   const { walletAddress, transactionHash, amountUsd } = input;
@@ -248,24 +340,15 @@ export async function processTopUp(tx: Tx, input: TopUpInput): Promise<Activatio
     if (byHash.user.walletAddress !== walletAddress) throw httpError("Transaction belongs to another wallet.", 409);
     return {
       walletAddress, referralCode: byHash.user.referralCode, transactionHash, status: byHash.status,
-      alreadyProcessed: true, sponsorLinked: Boolean(byHash.user.uplineId), commissions: [], skipped: [], rankUps: [],
+      alreadyProcessed: true, sponsorLinked: Boolean(byHash.user.uplineId), queued: false, commissions: [], skipped: [], rankUps: [],
     };
   }
   const user = await tx.user.findUnique({ where: { walletAddress }, include: { _count: { select: { packages: true } } } });
   if (!user || user._count.packages === 0) throw httpError("Activate the wallet before a top-up.", 409);
 
-  const amountCents = toCents(amountUsd);
-  const pkg = await tx.package.create({
-    data: {
-      userId: user.id, packageAmount: amountUsd, maxCapLimit: fromCents(amountCents * CAP_MULTIPLIER),
-      status: PackageStatus.ACTIVE, activationTxHash: transactionHash,
-    },
-  });
-  const result: ActivationResult = {
+  const pkg = await queuePackage(tx, user.id, amountUsd, transactionHash, false);
+  return {
     walletAddress, referralCode: user.referralCode, transactionHash, status: pkg.status,
-    alreadyProcessed: false, sponsorLinked: Boolean(user.uplineId), commissions: [], skipped: [], rankUps: [],
+    alreadyProcessed: false, sponsorLinked: Boolean(user.uplineId), queued: true, commissions: [], skipped: [], rankUps: [],
   };
-  const chain = await ancestorsOf(tx, user.id);
-  if (chain.length) await distribute(tx, user.id, amountCents, chain, result);
-  return result;
 }

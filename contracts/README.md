@@ -21,7 +21,8 @@ USDT address, treasury address, and activation amount are fixed at deployment.
 3. In MetaMask select BNB Smart Chain Testnet and connect Remix using Injected Provider.
 4. Deploy with three constructor values:
    - `usdtAddress`: the verified USDT/test token address for the selected network;
-   - `treasuryAddress`: a separate test treasury wallet public address;
+   - `treasuryAddress`: a separate test treasury wallet public address (receives 55%);
+   - `payoutVaultAddress`: the DAOvaultPayout contract, deployed first (receives 45%, the withdrawal float);
    - `amount`: token smallest units, for example `300000000000000000000` for a token with 18 decimals.
 5. After deployment, copy the address shown under **Deployed Contracts**. That is
    `PAYMENT_CONTRACT_ADDRESS`.

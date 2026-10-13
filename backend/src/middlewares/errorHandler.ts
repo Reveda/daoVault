@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler } from "express";
+import { alert } from "../config/alerts.js";
 
 // what a visitor sees when the error is not one of our own messages (owner, 2026-10-11:
 // no internal details, no library / parser text)
@@ -11,12 +12,18 @@ const GENERIC: Record<number, string> = {
   429: "Too many requests. Please try again later.",
 };
 
-export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
+export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   const status = typeof error?.statusCode === "number" ? error.statusCode : 500;
-  if (status >= 500) console.error(error);
   // our services throw Error + statusCode with a message written for members; library errors
-  // (JSON body parser, payload size...) carry a `type` / `expose` and only get the generic text
-  const ours = status < 500 && error instanceof Error && !("type" in error) && !("expose" in error);
+  // (JSON body parser, payload size...) carry a `type` / `expose` and only get the generic text.
+  // 503 is ours too: "try again later" messages (withdrawals paused, daily limit...)
+  const ours = (status < 500 || status === 503) && error instanceof Error && !("type" in error) && !("expose" in error);
+  if (status >= 500 && !ours) {
+    console.error(error);
+    // one [alert] log line per route per ALERT_REPEAT_MINUTES; wallets shortened, no request data
+    const route = `${req.method} ${req.originalUrl.split("?")[0].replace(/0x[0-9a-fA-F]{40}/g, "0x…")}`;
+    alert("critical", `api-500 ${route}`, `Server error on ${route}: ${String(error?.message ?? error).slice(0, 200)}`);
+  }
   res.status(status).json({
     success: false,
     error: ours ? error.message : GENERIC[status] ?? (status >= 500 ? "Something went wrong. Please try again." : "Request failed."),

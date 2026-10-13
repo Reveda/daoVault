@@ -52,3 +52,5 @@ contracts/typechain-types/
 
 # Docker production database backups (on the VPS)
 backups/
+# payout signer keystore + password (Docker secrets, on the VPS only)
+secrets/

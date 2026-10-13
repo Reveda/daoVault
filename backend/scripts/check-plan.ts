@@ -6,7 +6,7 @@
 import "dotenv/config";
 import { randomBytes } from "node:crypto";
 import { PrismaClient, type Prisma } from "@prisma/client";
-import { processActivation, processTopUp } from "../src/modules/activation/activation.engine.js";
+import { linkUpline, processActivation, processPlanEvents, processTopUp, uniqueReferralCode, type ActivationResult } from "../src/modules/activation/activation.engine.js";
 import { rankForLegs, summarizeLegs, withdrawalSplit } from "../src/modules/plan/plan.js";
 import { env } from "../src/config/env.js";
 import { balanceOf } from "../src/modules/withdrawals/withdrawals.service.js";
@@ -40,8 +40,14 @@ class Rollback extends Error {}
 
 try {
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-    const activate = (w: string, sponsor = ZERO, hash = txHash()) =>
-      processActivation(tx, { walletAddress: w, sponsorAddress: sponsor, transactionHash: hash, amountUsd: 300 });
+    // the engine records the payment; the plan queue (same transaction here) pays the levels
+    const withPlan = async (recorded: ActivationResult): Promise<ActivationResult> => {
+      const batch = await processPlanEvents(tx, { lock: false });
+      const mine = batch.events.find((e) => e.wallet === recorded.walletAddress);
+      return { ...recorded, commissions: mine?.commissions ?? [], skipped: mine?.skipped ?? [], rankUps: batch.rankUps };
+    };
+    const activate = async (w: string, sponsor = ZERO, hash = txHash()) =>
+      withPlan(await processActivation(tx, { walletAddress: w, sponsorAddress: sponsor, transactionHash: hash, amountUsd: 300 }));
     const pkgOf = async (w: string) => (await tx.package.findFirst({ where: { user: { walletAddress: w } } }))!;
     const userOf = async (w: string) => (await tx.user.findUnique({ where: { walletAddress: w } }))!;
 
@@ -166,7 +172,7 @@ try {
     check("withdrawal: a $100 request takes exactly $100 off the available balance", before.availableCents - after.availableCents === 10_000 && after.pendingCents === 10_000, `${before.availableCents} -> ${after.availableCents}`);
 
     // ── confirmed rule (owner, 2026-10-10): top-up / re-entry after the cap ──
-    const topUp = (w: string, hash = txHash()) => processTopUp(tx, { walletAddress: w, transactionHash: hash, amountUsd: 300 });
+    const topUp = async (w: string, hash = txHash()) => withPlan(await processTopUp(tx, { walletAddress: w, transactionHash: hash, amountUsd: 300 }));
     const S = wallet(), T = wallet();
     await activate(S); await activate(T, S);
     const tPkg1 = await pkgOf(T);
@@ -217,6 +223,49 @@ try {
     const rootRewards = await tx.earning.count({ where: { recipientId: root.id } });
     check("root: reaches Starter on 25 + 25 but is paid no rank reward", rootAfter.currentRank === 1 && rootRewards === 0, `rank ${rootAfter.currentRank}, earnings ${rootRewards}`);
     env.COMPANY_WALLET_ADDRESS = savedRoot;
+
+    // ── confirmed rule (owner, 2026-10-13): pre-launch teams, unpaid sponsors ──
+    // invite links build the tree before anyone pays; an unpaid sponsor's share stays with the company
+    const register = async (w: string) => tx.user.create({ data: { walletAddress: w, referralCode: await uniqueReferralCode(tx, w) } });
+    const plP = wallet(), plQ = wallet(), plS = wallet();
+    await activate(plP);
+    const plq = await register(plQ), pls = await register(plS);
+    check("pre-launch: unpaid Q joins under paid P by invite link", await linkUpline(tx, plq.id, (await userOf(plP)).id));
+    check("pre-launch: unpaid S joins under unpaid Q", await linkUpline(tx, pls.id, plq.id));
+    check("pre-launch: a loop is refused (Q under its own member S)", !(await linkUpline(tx, plq.id, pls.id)) && (await userOf(plQ)).uplineId === (await userOf(plP)).id);
+    const rPlS = await activate(plS, plQ);
+    check("unpaid sponsor: S pays first and keeps Q as its sponsor", rPlS.sponsorLinked && (await userOf(plS)).uplineId === plq.id);
+    check("unpaid sponsor: Q's L1 share stays with the company", rPlS.skipped.some((e) => e.wallet === plQ && e.reason === "no_package") && !rPlS.commissions.some((c) => c.wallet === plQ));
+    check("unpaid sponsor: Q counts S as an active direct, P gets +1 team volume",
+      (await userOf(plQ)).activeDirectsCount === 1 && (await userOf(plP)).teamVolume === 1, `Q directs ${(await userOf(plQ)).activeDirectsCount}, P volume ${(await userOf(plP)).teamVolume}`);
+    const rPlQ = await activate(plQ, plP);
+    check("unpaid sponsor: Q pays later, keeps its upline P, P earns L1 $30", rPlQ.commissions.some((c) => c.wallet === plP && c.level === 1 && c.amountUsd === 30));
+    const earlyShare = await tx.earning.count({ where: { recipient: { walletAddress: plQ }, source: { walletAddress: plS } } });
+    check("unpaid sponsor: Q gets nothing back from S's earlier payment", earlyShare === 0);
+    // ── plan queue (owner, 2026-10-13: launch-day scaling) ──
+    // a burst of payments is only recorded; one batch then pays them in order and writes each upline once
+    const B0 = wallet();
+    await activate(B0);
+    const burst = [wallet(), wallet(), wallet()];
+    for (const w of burst) await processActivation(tx, { walletAddress: w, sponsorAddress: B0, transactionHash: txHash(), amountUsd: 300 });
+    const b0Before = await userOf(B0);
+    check("queue: recorded payments change nothing until the queue runs",
+      b0Before.activeDirectsCount === 0 && b0Before.teamVolume === 0 && (await tx.package.count({ where: { user: { walletAddress: { in: burst } }, countedAt: null } })) === 3);
+    const burstBatch = await processPlanEvents(tx, { lock: false });
+    const b0After = await userOf(B0);
+    const b0Paid = burstBatch.events.flatMap((e) => e.commissions).filter((c) => c.wallet === B0).reduce((s, c) => s + c.amountUsd, 0);
+    check("queue: one batch pays all three in order (3 directs, 3 DAO, 3 x L1 $30)",
+      burstBatch.processed === 3 && b0After.activeDirectsCount === 3 && b0After.teamVolume === 3 && b0Paid === 90, `paid $${b0Paid}`);
+    check("queue: every package is counted and nothing is left waiting",
+      (await tx.package.count({ where: { user: { walletAddress: { in: burst } }, countedAt: null } })) === 0 && (await tx.planEvent.count({ where: { processedAt: null } })) === 0);
+
+    // a wallet registered with no sponsor whose team already paid: linking it moves that volume up
+    const plX = wallet(), plY = wallet();
+    const plx = await register(plX);
+    await activate(plY, plX);
+    const pVolume = (await userOf(plP)).teamVolume;
+    await linkUpline(tx, plx.id, (await userOf(plP)).id);
+    check("late link: X's team volume (1) moves up to P", (await userOf(plP)).teamVolume === pVolume + 1, `${pVolume} -> ${(await userOf(plP)).teamVolume}`);
 
     throw new Rollback();
   }, { timeout: 180_000, maxWait: 20_000 });

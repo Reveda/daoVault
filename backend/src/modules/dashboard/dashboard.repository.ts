@@ -1,4 +1,8 @@
 import { prisma } from "../../config/prisma.js";
+import { cached } from "../../config/cache.js";
+
+/** member counts walk the whole team: cached for a short while (config/cache.ts) */
+const COUNT_CACHE_SECONDS = 120;
 
 export const dashboardRepository = {
   findUserDashboard(walletAddress: string) {
@@ -27,30 +31,30 @@ export const dashboardRepository = {
     });
   },
 
-  /** each direct's leg volume (their own package + everything below them) */
+  /** each direct's leg volume (their own counted packages + everything below them) */
   directLegs(userId: string) {
     return prisma.user.findMany({
       where: { uplineId: userId },
-      select: { id: true, teamVolume: true, _count: { select: { packages: true } } },
+      select: { id: true, teamVolume: true, _count: { select: { packages: { where: { countedAt: { not: null } } } } } },
     });
   },
 
   /** members in each direct's leg (the direct + everyone below them, all depths), by direct id */
   async membersPerLeg(userId: string) {
-    const rows = await prisma.$queryRaw<Array<{ leg: string; members: bigint }>>`
+    const rows = await cached(`legs:${userId}`, COUNT_CACHE_SECONDS, () => prisma.$queryRaw<Array<{ leg: string; members: number }>>`
       WITH RECURSIVE tree(id, leg) AS (
         SELECT id, id FROM users WHERE upline_id = ${userId}::uuid
         UNION ALL
         SELECT u.id, t.leg FROM users u JOIN tree t ON u.upline_id = t.id
       )
-      SELECT leg::text AS leg, COUNT(*)::bigint AS members FROM tree GROUP BY leg`;
+      SELECT leg::text AS leg, COUNT(*)::int AS members FROM tree GROUP BY leg`);
     return new Map(rows.map((r) => [r.leg, Number(r.members)]));
   },
 
   /**
    * The members exactly `level` generations below the user (1 = directs), oldest first:
-   * DV code, wallet, who sponsored them and when they activated. Everyone in the tree is
-   * activated (an upline is only set at activation).
+   * DV code, wallet, who sponsored them and when they activated (null = registered, not paid yet:
+   * invite links build the tree before payment, owner 2026-10-13).
    */
   async membersAtLevel(userId: string, level: number, limit: number, offset: number) {
     const rows = await prisma.$queryRaw<Array<{ referral_code: string; wallet_address: string; sponsor_code: string | null; joined_at: Date | null; total: bigint }>>`
@@ -73,13 +77,13 @@ export const dashboardRepository = {
 
   /** members at each of the first 20 levels below the user */
   async membersPerLevel(userId: string) {
-    const rows = await prisma.$queryRaw<Array<{ depth: number; members: bigint }>>`
+    const rows = await cached(`levels:${userId}`, COUNT_CACHE_SECONDS, () => prisma.$queryRaw<Array<{ depth: number; members: number }>>`
       WITH RECURSIVE tree(id, depth) AS (
         SELECT id, 1 FROM users WHERE upline_id = ${userId}::uuid
         UNION ALL
         SELECT u.id, t.depth + 1 FROM users u JOIN tree t ON u.upline_id = t.id WHERE t.depth < 20
       )
-      SELECT depth, COUNT(*)::bigint AS members FROM tree GROUP BY depth`;
+      SELECT depth, COUNT(*)::int AS members FROM tree GROUP BY depth`);
     return new Map(rows.map((r) => [Number(r.depth), Number(r.members)]));
   },
 };

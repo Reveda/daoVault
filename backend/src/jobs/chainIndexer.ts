@@ -2,6 +2,7 @@ import { Interface, JsonRpcProvider, type Log } from "ethers";
 import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { activationService } from "../modules/activation/activation.service.js";
+import { alert, shortWallet } from "../config/alerts.js";
 
 /**
  * Chain indexer (background worker): reads the payment contract's Activated / ToppedUp events
@@ -40,6 +41,9 @@ async function record(log: Log): Promise<"recorded" | "skipped"> {
   } catch (error) {
     if (!isPermanent(error)) throw error;
     console.warn(`[indexer] ${parsed.name} ${walletAddress} in ${log.transactionHash} NOT recorded: ${(error as Error).message}`);
+    // an on-chain payment from our contract that our checks refuse for good: someone paid and has no package
+    alert("critical", `unrecorded-${log.transactionHash.toLowerCase()}`, // same key as activation.service: one message per payment
+      `PAID BUT NOT RECORDED: ${parsed.name} by ${shortWallet(walletAddress.toLowerCase())} (tx ${log.transactionHash.slice(0, 10)}…, block ${log.blockNumber}) was refused: ${(error as Error).message.slice(0, 160)}. Needs a look.`);
     return "skipped";
   }
 }

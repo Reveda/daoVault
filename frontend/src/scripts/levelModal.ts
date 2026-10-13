@@ -23,7 +23,7 @@ function memberRows(members: LevelMembers['members'], startIndex: number): strin
       </span>
       <span class="lv-meta">
         <small>Sponsor <b class="mono">${esc(m.sponsorCode ?? '—')}</b></small>
-        <small>${date(m.joinedAt)}</small>
+        <small>${m.joinedAt ? date(m.joinedAt) : 'Not activated yet'}</small>
       </span>
     </li>`).join('');
 }

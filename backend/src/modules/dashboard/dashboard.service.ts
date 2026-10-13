@@ -1,3 +1,4 @@
+import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
 import { isRootWallet } from "../../config/root.js";
 import { isAdminWallet } from "../auth/auth.service.js";
@@ -27,7 +28,7 @@ export class DashboardService {
     const sumOf = (type: string) => Number(byType.find((t) => t.type === type)?._sum.amountUsd ?? 0);
     const levelIncomeUsd = sumOf("LEVEL_COMMISSION");
     const rankRewardsUsd = sumOf("RANK_REWARD");
-    const legVolumes = legs.map((l) => l.teamVolume + l._count.packages); // 1 DAO per package, top-ups included
+    const legVolumes = legs.map((l) => l.teamVolume + l._count.packages); // 1 DAO per counted package, top-ups included
     const legSummary = summarizeLegs(legVolumes);
     // members on each side (owner, 2026-10-11, All Ranks tree): the strong leg is the direct with the
     // most DAO (summarizeLegs), the other side is every other direct's leg together
@@ -49,6 +50,9 @@ export class DashboardService {
       isAdmin: isAdminWallet(user.walletAddress),
       // before payment: the latest invite code opened (users.savePendingSponsor)
       pendingSponsorCode: user.packages.length ? null : user.pendingSponsorCode ?? null,
+      // pre-launch marketing (owner, 2026-10-13): "Pay & Activate" shows only from this moment (server clock)
+      paymentsOpenAt: env.PAYMENTS_OPEN_AT.toISOString(),
+      paymentsOpen: env.PAYMENTS_OPEN_AT.getTime() <= Date.now(),
       activeDirects: user.activeDirectsCount,
       levelsUnlocked: unlockedLevels(user.activeDirectsCount),
       currentRank: user.currentRank,

@@ -10,14 +10,6 @@ export const usersRepository = {
     return prisma.user.findUnique({ where: { walletAddress }, include: { _count: { select: { packages: true } } } });
   },
 
-  async codeExists(referralCode: string) {
-    return (await prisma.user.count({ where: { referralCode } })) > 0;
-  },
-
-  setPendingSponsor(walletAddress: string, pendingSponsorCode: string) {
-    return prisma.user.update({ where: { walletAddress }, data: { pendingSponsorCode } });
-  },
-
   findPublicByWallet(walletAddress: string) {
     return prisma.user.findUnique({
       where: { walletAddress },
@@ -32,13 +24,13 @@ export const usersRepository = {
     });
   },
 
-  /** Sponsor lookup for invite links: only activated members can sponsor. */
-  /** an activated member's code, or the company root's (it sponsors without a package) */
-  findSponsorByCode(referralCode: string) {
-    const root = rootWallet();
-    return prisma.user.findFirst({
-      where: { referralCode, OR: [{ packages: { some: {} } }, ...(root ? [{ walletAddress: root }] : [])] },
-      select: { walletAddress: true, referralCode: true },
+  /** Sponsor lookup for invite links: any registered wallet, paid or not (owner, 2026-10-13). */
+  async findSponsorByCode(referralCode: string) {
+    const user = await prisma.user.findUnique({
+      where: { referralCode },
+      select: { walletAddress: true, referralCode: true, _count: { select: { packages: true } } },
     });
+    if (!user) return null;
+    return { walletAddress: user.walletAddress, referralCode: user.referralCode, activated: user._count.packages > 0 || user.walletAddress === rootWallet() };
   },
 };

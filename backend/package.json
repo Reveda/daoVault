@@ -15,7 +15,10 @@
     "db:seed:local": "tsx prisma/seed.ts",
     "check:plan": "tsx scripts/check-plan.ts",
     "worker": "node dist/worker.js",
-    "worker:dev": "tsx watch src/worker.ts"
+    "worker:dev": "tsx watch src/worker.ts",
+    "signer": "node dist/signer/server.js",
+    "signer:dev": "tsx watch src/signer/server.ts",
+    "signer:keygen": "tsx src/signer/keygen.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",

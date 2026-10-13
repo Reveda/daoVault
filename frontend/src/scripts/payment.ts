@@ -52,7 +52,7 @@ export async function resolveSponsor(code: string, self: string): Promise<{ wall
     return { wallet: sponsor.walletAddress, code: sponsor.referralCode };
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
-      throw new Error(`Invite code ${clean} is not an active DAOvault member. Check your invite link.`);
+      throw new Error(`Invite code ${clean} was not found. Check your invite link.`);
     }
     throw new Error('Could not check your invite code right now. Please try again.');
   }

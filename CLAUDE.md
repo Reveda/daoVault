@@ -8,6 +8,8 @@ Web3 referral/affiliate reward dApp on **BNB Smart Chain (BEP-20)**. Users conne
 **Mainnet (launch) Remix deploy + wallet-role scenarios (MetaMask/Trust/Ledger/Safe, deployer != treasury):** `PRODUCTION-REMIX-DEPLOY.md`.
 **Production hosting plan (owner, 2026-10-10): Hostinger VPS + Docker + Nginx + Cloudflare Tunnel, secrets, signer
 options (KMS / Docker signer / admin review), hardening, backups, emergency plan:** `PRODUCTION-SETUP.md`.
+**Withdrawal + money flow for non-technical readers (owner, Hinglish: 45/55 split, one signer vs a voucher per
+withdrawal, keygen what to note, Remix fields not code):** `WITHDRAWAL-FLOW.md`.
 GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it private); history had no secrets.
 **Design/UX reference:** TPR World (tprworld.org). Its full code teardown (design tokens, sections, 3D scene, wallet flow, API, what not to copy) is in `tpr-reference.md`. Read it for UI, wallet or dashboard work instead of re-fetching the site.
 
@@ -20,15 +22,23 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
 - Earnings cap 25x ($7,500) of level income per package (was 10x; rank rewards outside it); 5% withdrawal fee.
 - Referral: `?ref=CODE` saved to `localStorage['daovault_pending_ref']`; on the next dashboard visit of an unpaid wallet it is saved on the
   server (POST /users/pending-sponsor -> users.pending_sponsor_code) and the browser copy dropped. LATEST invite link
-  opened before paying wins (owner, 2026-10-09); activation pays with that sponsor from any browser. The contract still
-  requires an ACTIVATED sponsor (owner, 2026-10-09: keep it; an unactivated parent cannot sponsor yet). Codes are `DV` + first 6 hex chars of wallet (longer if taken; the server value wins).
+  opened before paying wins (owner, 2026-10-09); activation pays with that sponsor from any browser.
+- Pre-launch marketing (owner, 2026-10-13; replaces "only an ACTIVATED sponsor"): ANY registered wallet can sponsor, paid or
+  not. savePendingSponsor links users.upline_id at once (activation.engine linkUpline: no loops, moves team volume up;
+  sponsor change only while unpaid AND teamVolume 0). Contract has no sponsor check (only != self). An unpaid upline's
+  commission / rank reward stays with the company (engine skips no_package) and is not paid back later.
+  PAYMENTS_OPEN_AT (backend env, ISO; default 2026-11-10T00:00+05:30, owner 2026-10-13; past date = open): dashboard paymentsOpen/paymentsOpenAt -> activation card: only "Activation opens on <date>" + countdown (no other message, owner), button off
+  until then (website only, no contract switch; check-plan has the pre-launch checks). Codes are `DV` + first 6 hex chars of wallet (longer if taken; the server value wins).
 
 ## Layout
 ```
 contracts/production/              mainnet copies of DAOvaultActivation.sol + DAOvaultPayout.sol (no TestUSDT) + README
                                    (values, SHA-256). Keep IDENTICAL to contracts/*.sol: re-copy after any contract fix.
-contracts/DAOvaultActivation.sol   Solidity 0.8.20. activate(sponsor) pulls USDT via transferFrom -> immutable treasury,
-                                   emits Activated(user, sponsor, amount, timestamp). Sponsor must be activated OR the treasury.
+contracts/DAOvaultActivation.sol   Solidity 0.8.20. activate(sponsor) / topUp() pull USDT via transferFrom and split it (owner,
+                                   2026-10-13): 45% (PAYOUT_SHARE_BPS 4500) -> immutable payoutVault (= DAOvaultPayout, the
+                                   withdrawal float, deployed FIRST), 55% -> immutable treasury. Constructor (usdt, treasury,
+                                   payoutVault, amount). Backend refuses a payment contract whose payoutVault != PAYOUT_CONTRACT_ADDRESS.
+                                   Emits Activated(user, sponsor, amount, timestamp). Sponsor must be activated OR the treasury.
                                    Treasury = company ROOT (owner, 2026-10-09): never pays (TreasuryIsRoot), isActivated() true.
                                    Backend config/root.ts (COMPANY_WALLET_ADDRESS = treasury): root record made at server start,
                                    sponsors without a package, gets directs/volume/rank but NO commissions or rank rewards
@@ -61,7 +71,14 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
                 (ADMIN_WALLETS; complete verifies the USDT payout on-chain; no private keys on the server)
                 instant: withdrawals/payout.ts signs EIP-712 vouchers for contracts/DAOvaultPayout.sol (member claims,
                 POST /withdrawals/:id/confirm verifies Claimed). PAYOUT_SIGNER_TESTNET_KEY is a testnet-only exception
-                (env.ts refuses it unless chain 97); mainnet needs a KMS signer. Contract tests: contracts/test/
+                (env.ts refuses it unless chain 97). Contract tests: contracts/test/
+                NO admin review (owner 2026-10-13): request() runs canPayInstantly BEFORE creating a row; contract
+                can't pay (paused / maxPerClaim / daily / float / signer mismatch / nothing configured) -> 4xx/503 with
+                a member message (errorHandler passes our 503 texts), nothing reserved. Signing fails -> row REJECTED.
+                Admin approve/complete only for older PENDING rows. Mainnet signer = Docker service `signer`
+                (src/signer/server.ts: encrypted keystore + password files in ./secrets mounted read-only, own caps,
+                internal network `signer`, profile payouts; keygen: dist/signer/keygen.js) called by
+                withdrawals/voucherSigner.ts via PAYOUT_SIGNER_URL + PAYOUT_SIGNER_TOKEN. Guide: DOCKER.md B12.
   src/modules/plan/plan.ts  LEVELS, RANKS, 50:50 rankForLegs, cents helpers
   src/config/transaction.ts serializable() retry wrapper for money writes
   scripts/check-plan.ts    npm run check:plan: 32 engine checks (incl. owner-confirmed rules) on the real DB, always rolled back
@@ -184,7 +201,27 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   Background worker (owner 2026-10-11): backend/src/worker.ts (BullMQ 5 + ioredis on REDIS_URL, 1 copy): chain-indexer
   (jobs/chainIndexer.ts: Activated/ToppedUp logs -> activationService.verify/verifyTopUp, cursor table chain_cursors,
   INDEXER_START_BLOCK / INDEXER_RPC_URL: bnbchain/binance dataseeds refuse eth_getLogs, publicnode allows 5k blocks),
-  voucher-settle (withdrawalsService.reconcileAllOpen), auth-cleanup. Not on Render (paid worker); Docker service `worker`.
+  voucher-settle (withdrawalsService.reconcileAllOpen), auth-cleanup, watch. Not on Render (paid worker); Docker service `worker`.
+  Plan queue (owner 2026-10-13, launch-day scaling): processActivation / processTopUp only add the package + a plan_events row;
+  activation.engine processPlanEvents (ONE runner: Postgres advisory lock, planQueue.ts kick after each payment + 5s sweep
+  in every API copy and the worker) applies directs, 20-level commissions, team volume (batched per upline) and ranks in
+  payment order. Packages count for volume/legs only once countedAt is set. linkUpline takes the same lock.
+  check-plan runs the queue inside its rollback transaction (processPlanEvents lock:false). Local DB has no
+  _prisma_migrations table: apply new migrations there with prisma db execute --file (never migrate dev / reset).
+  Monitoring: config/alerts.ts = "[alert]" lines in the server log only (owner 2026-10-13 REMOVED Telegram: no bot, no
+  activity messages, no daily summary; do not re-add), deduped, no secrets, from errorHandler 5xx, crashes,
+  payout/signer failures, float low, session theft, admin sign-in, worker job failures; jobs/watch.ts every 2 min in the
+  worker (API every 5 min when no REDIS_URL). config/cache.ts caches dashboard member counts 120s.
+  Backups: docker/backup/backup.sh (gzip -t + alert), offsite.sh (rclone crypt, profile offsite, secrets/rclone.conf),
+  restore-test.sh (throwaway DB). DOCKER.md B13-B16.
+  Also: "PAID BUT NOT RECORDED" (activation.service after the on-chain event checks out + chain indexer refusals, one key per
+  tx), config mismatch alerts. Activation uses the ON-CHAIN sponsor even if the browser sent another one.
+  Launch traffic (owner 2026-10-13, measured on the dev PC, 1 Node copy, 200 conns): health ~2.5k req/s, invite lookup ~1.5k,
+  dashboard ~350 req/s, plan queue ~92 payments/s. Per-IP limits sized for CGNAT shared mobile IPs (API 1200/min, auth
+  600/15min, financial 200/min; Nginx api 100r/s, auth 20r/s) + per-wallet sign-in limiter (authWalletRateLimiter,
+  AUTH_WALLET_RATE_LIMIT_MAX 20), also in render.yaml (owner asked, 2026-10-13). VPS env: backend/.env.prd (= backend/.env.production
+  on the server; its old PAYMENT_CONTRACT_ADDRESS was an example address, cleared) + root .env.production (generated secrets). activation.service caches the payment contract's immutable config per address.
+  Render backend is the free plan: not for launch traffic (VPS / paid plan + paid RPC).
   Dashboard 20-level rows open the level modal only when unlocked.
   Phones (owner 2026-10-12): html.lite = no .lvl-row / .reward-box entrance (a row stayed unpainted), finished entrances dropped
   via tbody/.reward-boxes.is-settled, particleScene skips frames while scrolling on LITE. Tap feedback site-wide: core.ts
@@ -237,6 +274,7 @@ sponsor's activation never reached the backend. See document.md section 4.
 ## Rules
 - Never put private keys or seed phrases in `.env`, code, or the DB. Never trust amounts or status sent by the browser; the chain is the source of truth.
   Only exception (owner-approved): PAYOUT_SIGNER_TESTNET_KEY, a fundless voucher signer, on BSC Testnet only.
+  Mainnet voucher key: only in the `signer` container (encrypted keystore file), never in .env / API / DB / git.
 - Testnet = chain 97, Mainnet = 56. Don't mix token/contract addresses between them.
 - Still in development: no real-money payment may happen. payment.ts REAL_PAYMENTS_LOCKED refuses the activation and
   payout claim on any chain but 97 unless VITE_ALLOW_MAINNET_PAYMENTS=true (render.yaml: "false"). Never flip it

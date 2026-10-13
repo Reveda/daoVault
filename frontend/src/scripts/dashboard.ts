@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initReferralLink(account, dashboardData, serverDown);
   initActivation(account, Boolean(pkg) || isRoot, serverDown, dashboardData?.pendingSponsorCode ?? getPendingReferral(),
-    Boolean(dashboardData?.canTopUp), dashboardData?.packageCount ?? 0);
+    Boolean(dashboardData?.canTopUp), dashboardData?.packageCount ?? 0, dashboardData?.paymentsOpenAt ?? null, dashboardData?.paymentsOpen ?? true);
   updateOverviewMetrics(activeDirects, totalEarned, capEarned, maxCap, dashboardData?.currentRank, pkg?.status);
   updateMemberDetails(dashboardData, Boolean(pkg) || isRoot, capEarned, maxCap);
 
@@ -282,7 +282,31 @@ function initDashboardNavigation(): void {
  * The $300 card: activation for a new wallet, or a top-up (re-entry, owner 2026-10-10) once
  * every package of an active member has reached its 25x cap. Hidden otherwise.
  */
-function initActivation(account: string, activated: boolean, serverDown = false, sponsorCode = '', canTopUp = false, packageCount = 0): void {
+/**
+ * Pre-launch marketing (owner, 2026-10-13): until PAYMENTS_OPEN_AT (server clock) the card shows
+ * only the opening date and a live countdown (no other message, owner), with the button off; the
+ * page reloads by itself at that moment.
+ */
+function showPaymentsCountdown(button: HTMLButtonElement, openAt: string): void {
+  const title = document.getElementById('activationTitle');
+  const status = document.getElementById('activationStatus');
+  const at = new Date(openAt);
+  button.disabled = true;
+  button.textContent = 'Opens soon';
+  if (title) title.textContent = `Activation opens on ${at.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
+  const tick = () => {
+    const left = at.getTime() - Date.now();
+    if (left <= 0) { window.location.reload(); return; }
+    const d = Math.floor(left / 86_400_000), h = Math.floor(left / 3_600_000) % 24, m = Math.floor(left / 60_000) % 60;
+    const inText = d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m` : `${Math.max(1, m)}m`;
+    if (status) status.textContent = `Opens in ${inText}`;
+  };
+  tick();
+  window.setInterval(tick, 30_000);
+}
+
+function initActivation(account: string, activated: boolean, serverDown = false, sponsorCode = '', canTopUp = false, packageCount = 0,
+  paymentsOpenAt: string | null = null, paymentsOpen = true): void {
   const card = document.getElementById('activationCard');
   const button = document.getElementById('dashActivateBtn') as HTMLButtonElement | null;
   const status = document.getElementById('activationStatus');
@@ -291,6 +315,7 @@ function initActivation(account: string, activated: boolean, serverDown = false,
   // the $300 payment on a guess
   if ((activated && !topUp) || serverDown) { card?.setAttribute('hidden', ''); return; }
   if (!button) return;
+  if (!paymentsOpen && paymentsOpenAt) { showPaymentsCountdown(button, paymentsOpenAt); return; }
   if (topUp) {
     const title = document.getElementById('activationTitle');
     if (title) title.textContent = 'Cap reached: top up to keep earning';
@@ -449,8 +474,8 @@ function initReferralLink(account: string, data: DashboardData | null, serverDow
   }
   const idEl = document.getElementById('dashMemberId');
   if (idEl) idEl.textContent = data ? refCode : '–';
-  // every wallet gets its permanent link on its first visit; invites through it only
-  // work once the wallet is activated (the contract accepts activated sponsors only)
+  // every wallet gets its permanent link on its first visit, and it works at once, paid or not
+  // (owner, 2026-10-13: teams are built during the pre-launch marketing days)
   const activated = Boolean(data?.packages?.length) || Boolean(data?.isRoot); // the root sponsors without paying
   // the member's own invite code is never their sponsor (they opened their own link)
   // before payment the sponsor is the latest invite saved on the server (browser copy if offline)
@@ -460,20 +485,18 @@ function initReferralLink(account: string, data: DashboardData | null, serverDow
     // before activation the sponsor is still the invite code this visitor arrived with
     const sponsor = data?.sponsorCode ?? (activated ? null : pendingRef);
     sponsorTag.innerHTML = sponsor ? `Sponsor <b>${sponsor.replace(/[^A-Za-z0-9]/g, '')}</b>` : 'Joined direct';
-    // say it now, not at payment time, when the invite code cannot sponsor yet
+    // say it now, not at payment time, when the invite code does not exist
     if (!data?.sponsorCode && !activated && pendingRef) {
       getSponsorByCode(pendingRef).catch((error) => {
         if (!(error instanceof ApiError && error.status === 404)) return;
-        sponsorTag.innerHTML = `Invite <b>${pendingRef}</b> not active yet`;
+        sponsorTag.innerHTML = `Invite <b>${pendingRef}</b> not found`;
         sponsorTag.classList.add('is-warn');
-        showToast(`Invite code ${pendingRef} is not active yet: its owner must activate first. Ask them, or use another invite link.`, true);
+        showToast(`Invite code ${pendingRef} was not found. Check your invite link.`, true);
       });
     }
   }
   if (!data && copyBtn) (copyBtn as HTMLButtonElement).disabled = true;
-  const copiedMsg = activated
-    ? 'Referral link copied to clipboard!'
-    : 'Link copied. It starts working for your invites once you activate your $300 ID.';
+  const copiedMsg = 'Referral link copied to clipboard!';
 
   if (copyBtn && inputEl) {
     copyBtn.addEventListener('click', async () => {
@@ -561,8 +584,9 @@ function renderLevelTable(data: DashboardData | null): void {
 // ── Withdrawals: wallet-signature session, request, history ─────────────
 
 const STATUS_LABEL: Record<string, string> = {
-  PENDING: 'Waiting for review',
-  PROCESSING: 'Approved · paying out',
+  // every new withdrawal is instant (owner, 2026-10-13); these two only show on older requests
+  PENDING: 'Processing',
+  PROCESSING: 'Paying out',
   COMPLETED: 'Paid',
   REJECTED: 'Rejected',
 };
@@ -647,8 +671,8 @@ function initWithdrawals(wallet: string, availableBalance: number, data: Dashboa
     feePercent = summary.feePercent;
     items = summary.items;
     if (note) note.textContent = summary.instant
-      ? '• Instant: your wallet receives the USDT in seconds (a tiny BNB network fee applies). Signing in costs no gas.'
-      : '• Paid after a quick review. Signing in only proves wallet ownership: no gas, no transaction.';
+      ? '• Instant: confirm once in your wallet and the USDT arrives in seconds (a tiny BNB network fee applies). Signing in costs no gas.'
+      : '• Withdrawals open soon. Your balance stays safe here until then.';
     renderWithdrawalSummary(summary);
     updateMath();
   };
@@ -693,8 +717,8 @@ function initWithdrawals(wallet: string, availableBalance: number, data: Dashboa
         await refresh(session);
         await receive(session, created, submitBtn);
       } else {
-        showToast(`Withdrawal of ${formatUsd(created.grossUsd)} sent for review${created.reviewReason ? ` (${created.reviewReason})` : ''}. You will receive ${formatUsd(created.netUsd)} USDT.`);
-        celebrate(submitBtn, 24);
+        // the server always returns a voucher (no review queue); refresh to show what it recorded
+        showToast('Withdrawal recorded. Open "Your withdrawals" below to receive it.');
         await refresh(session);
       }
     } catch (error) {

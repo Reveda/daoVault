@@ -2,7 +2,7 @@
 
 This document explains how to test and deploy the DAOvault payment contract safely.
 
-> Important: the current `DAOvaultActivation.sol` contract is a basic activation-payment receiver. It transfers an approved ERC-20 token from the user to a configured treasury and emits an `Activated` event. It does **not** yet implement the complete 20-level commission, reward distribution, or withdrawal engine.
+> Important: the current `DAOvaultActivation.sol` contract is a basic activation-payment receiver. It transfers an approved ERC-20 token from the user, 45% to the payout contract (withdrawal float) and 55% to a configured treasury (owner, 2026-10-13), and emits an `Activated` event. Constructor: usdt, treasury, payoutVault (deploy DAOvaultPayout first), amount. It does **not** yet implement the complete 20-level commission, reward distribution, or withdrawal engine.
 
 ## 0. Which IDE should be used?
 
