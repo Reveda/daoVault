@@ -194,7 +194,7 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   calculator card #rankCalcCard has its own data-scene "rankcalc" (dial + lightning behind the card via .scene-slot--calc, also on
   phones); bindSectionScenes returns to the parent section scene when a nested scene leaves the middle band. 25x cap card
   #retopupCycleCard: data-scene "retopup" (DV mark + lightning), gold-themed simulator (matrixVisualizer.ts texts: "Package #N",
-  no emojis / "platform protected"), compact icon-beside-title steps on phones.
+  no emojis / "platform protected"); its 4 step cards (.cycle-station) are commented out (owner 2026-10-13).
   Live pulse (owner 2026-10-12): the strip under the hero is gone; signal card 3 (was 25x Cap, commented out) = #livePulseCard
   (liveActivity.ts): real events from GET /activity/recent (modules/activity: packages / rank rewards / paid withdrawals, short
   wallets, 30s cache) + live BSC block number; until a real event exists it shows labelled SAMPLE events ("SAMPLE PREVIEW",
@@ -204,6 +204,11 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   Rank calculator: data-unfold (unfoldCard.ts): scrolling down it drops in from above and its content opens top-down,
   scrolling up it rises from below and opens bottom-up (clip-path, replays after it leaves); gold-only internals,
   slider gold fill via --fill (rankCalculator.ts); texts plain (no literal &bull;, no "instant cash", no emoji).
+  Mobile nav (owner 2026-10-13): <=960px the header is one floating gold capsule (logo, Connect Wallet, 2-line menu
+  button #mnavToggle); landingFx initMobileNav opens #mnavPanel (numbered sections with icons, active highlight, Connect
+  CTA), tap = close + smooth scroll below the header. Tap glow never changes the transform of .matrix-stack-card,
+  #rankDisplayCard or .flip-card-wrap (scroll animations own it; changing it made the level cards vanish on tap).
+  Four pillars (#about) retitled "Four Rules That Keep It Fair & Balanced", gold-only.
   #matrix level cards (owner 2026-10-11): matrixAutoDeck.ts revealCard on every active-card change (after the deck
   reaches 70% of the screen): .mx-scan light sweeps down, content drops in piece by piece, % and USDT count up; CSS
   `.mx-reveal` block at the end of main.css, removed after 2.4s so the cards' own loops return; off for reduced motion.
