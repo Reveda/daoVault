@@ -9,7 +9,7 @@ import { PrismaClient, type Prisma } from "@prisma/client";
 import { linkUpline, processActivation, processPlanEvents, processTopUp, uniqueReferralCode, type ActivationResult } from "../src/modules/activation/activation.engine.js";
 import { rankForLegs, summarizeLegs, withdrawalSplit } from "../src/modules/plan/plan.js";
 import { env } from "../src/config/env.js";
-import { balanceOf } from "../src/modules/withdrawals/withdrawals.service.js";
+import { balanceOf, reservedPayout } from "../src/modules/withdrawals/withdrawals.service.js";
 
 const prisma = new PrismaClient();
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -258,6 +258,37 @@ try {
       burstBatch.processed === 3 && b0After.activeDirectsCount === 3 && b0After.teamVolume === 3 && b0Paid === 90, `paid $${b0Paid}`);
     check("queue: every package is counted and nothing is left waiting",
       (await tx.package.count({ where: { user: { walletAddress: { in: burst } }, countedAt: null } })) === 0 && (await tx.planEvent.count({ where: { processedAt: null } })) === 0);
+
+    // ── on-chain sponsor differs from the invite link (owner review, 2026-10-14) ──
+    const SA = wallet(), SB = wallet(), SM = wallet(), SN = wallet(), SC = wallet();
+    await activate(SA); await activate(SB);
+    const sm = await register(SM), sn = await register(SN);
+    await linkUpline(tx, sm.id, (await userOf(SA)).id);           // SM's invite link: SA
+    const rSM = await activate(SM, SB);                           // ...but SM pays on-chain under SB
+    check("chain sponsor: an unpaid team follows the on-chain sponsor", rSM.sponsorMismatch === "moved" && (await userOf(SM)).uplineId === (await userOf(SB)).id);
+    await linkUpline(tx, sn.id, (await userOf(SA)).id);           // SN under SA, and SC (paid) under SN
+    await activate(SC, SN);
+    const rSN = await activate(SN, SB);                           // SN pays under SB, but its team already paid
+    check("chain sponsor: a team that already paid keeps the recorded tree", rSN.sponsorMismatch === "kept" && (await userOf(SN)).uplineId === (await userOf(SA)).id);
+
+    // ── withdrawal reservations (owner review, 2026-10-14) ──
+    const RW = await userOf(SA);
+    const base = await reservedPayout(tx);
+    const mk = (data: Partial<Prisma.WithdrawalUncheckedCreateInput>) => tx.withdrawal.create({ data: {
+      userId: RW.id, grossAmount: 10, feeAmount: 0.5, netAmount: 9.5, destinationWallet: RW.walletAddress, ...data } as Prisma.WithdrawalUncheckedCreateInput });
+    const now = Date.now();
+    await mk({ status: "PROCESSING", voucherId: txHash(), voucherAmount: "100", voucherDeadline: new Date(now + 600_000) }); // open: counts
+    await mk({ status: "PROCESSING", voucherId: txHash(), voucherAmount: "1000", voucherDeadline: new Date(now - 600_000) }); // expired: no
+    await mk({ status: "PENDING", voucherAmount: "10" });                                                                      // being signed: counts
+    await mk({ status: "PENDING", voucherAmount: "5000", createdAt: new Date(now - 3_600_000) });                              // stale unsigned: no
+    await mk({ status: "COMPLETED", voucherId: txHash(), voucherAmount: "7", voucherDeadline: new Date(now + 600_000) });        // paid: no
+    check("withdrawals: open and in-signing vouchers are reserved, expired / stale / paid ones are not", (await reservedPayout(tx)) - base === 110n, `${(await reservedPayout(tx)) - base}`);
+    // 2nd review: a voucher claimed AND settled after the chain was read is missing from the chain numbers too
+    const readAt = new Date(now - 10_000);
+    const beforeRead = await reservedPayout(tx, readAt);
+    await mk({ status: "COMPLETED", voucherId: txHash(), voucherAmount: "40", voucherDeadline: new Date(now + 600_000), reviewedAt: new Date(now) });          // settled after the read: counts
+    await mk({ status: "COMPLETED", voucherId: txHash(), voucherAmount: "900", voucherDeadline: new Date(now - 3_000_000), reviewedAt: new Date(now - 3_600_000) }); // settled long before: no
+    check("withdrawals: a voucher settled after the chain read is still counted", (await reservedPayout(tx, readAt)) - beforeRead === 40n, `${(await reservedPayout(tx, readAt)) - beforeRead}`);
 
     // a wallet registered with no sponsor whose team already paid: linking it moves that volume up
     const plX = wallet(), plY = wallet();

@@ -322,13 +322,14 @@ export function initDropCards(): void {
     cards.forEach((c) => c.classList.add('is-dropped'));
     return;
   }
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const io = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (!entry.isIntersecting) return;
       groups.get(entry.target)?.forEach((c) => c.classList.add('is-dropped'));
       io.unobserve(entry.target);
     });
-  }, { threshold: 0.2, rootMargin: '0px 0px -8% 0px' });
+  }, { threshold: isMobile ? 0.32 : 0.2, rootMargin: isMobile ? '0px 0px -15% 0px' : '0px 0px -8% 0px' });
   groups.forEach((_, group) => io.observe(group));
 }
 
@@ -340,6 +341,7 @@ export function initDropCards(): void {
 export function initSignalCardFlips(): void {
   const cards = [...document.querySelectorAll<HTMLElement>('#heroMetricsGrid .crypto-exchange-card')];
   if (!cards.length || !('IntersectionObserver' in window)) return;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const io = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       const card = entry.target as HTMLElement;
@@ -352,7 +354,7 @@ export function initSignalCardFlips(): void {
         card.classList.toggle('fx-flip-past', above);
       }
     });
-  }, { threshold: 0.3 });
+  }, { threshold: isMobile ? 0.45 : 0.3 });
   cards.forEach((c) => io.observe(c));
 }
 

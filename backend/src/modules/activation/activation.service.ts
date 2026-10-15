@@ -1,4 +1,4 @@
-import { Contract, JsonRpcProvider, getAddress, Interface, ZeroAddress, type LogDescription } from 'ethers';
+import { Contract, JsonRpcProvider, formatUnits, getAddress, Interface, ZeroAddress, type LogDescription } from 'ethers';
 import { env } from '../../config/env.js';
 import { serializable } from '../../config/transaction.js';
 import { processActivation, processTopUp } from './activation.engine.js';
@@ -56,13 +56,25 @@ const transactionHashOf = (input: { transactionHash: string }) => shortTx(input.
  * setter): read them once per contract address instead of 4 RPC calls on every payment (launch
  * traffic, public RPCs rate-limit). A failed read is not cached.
  */
-type ContractConfig = { tokenAddress: string; treasuryAddress: string; activationAmount: bigint; payoutVault: string };
+type ContractConfig = { tokenAddress: string; treasuryAddress: string; activationAmount: bigint; payoutVault: string; amountUsd: number };
 const contractConfigs = new Map<string, Promise<ContractConfig>>();
-function contractConfig(payment: Contract, address: string): Promise<ContractConfig> {
+function contractConfig(payment: Contract, address: string, provider: JsonRpcProvider): Promise<ContractConfig> {
   let config = contractConfigs.get(address);
   if (!config) {
     config = Promise.all([payment.usdt(), payment.treasury(), payment.activationAmount(), payment.payoutVault()])
-      .then(([tokenAddress, treasuryAddress, activationAmount, payoutVault]) => ({ tokenAddress, treasuryAddress, activationAmount, payoutVault }));
+      .then(async ([tokenAddress, treasuryAddress, activationAmount, payoutVault]) => {
+        // a wrong token is reported as such (config-usdt) before any call to it
+        if (env.USDT_CONTRACT_ADDRESS && String(tokenAddress).toLowerCase() !== env.USDT_CONTRACT_ADDRESS.toLowerCase()) {
+          return { tokenAddress, treasuryAddress, activationAmount, payoutVault, amountUsd: NaN };
+        }
+        // the package is worth what the contract really takes (not what an env value says)
+        const decimals = Number(await new Contract(tokenAddress, ['function decimals() view returns (uint8)'], provider).decimals());
+        const amountUsd = Number(formatUnits(activationAmount, decimals));
+        if (amountUsd !== Number(env.ACTIVATION_AMOUNT_USDT)) {
+          alert('critical', 'config-amount', `The payment contract takes $${amountUsd} but ACTIVATION_AMOUNT_USDT is ${env.ACTIVATION_AMOUNT_USDT}: packages are recorded at $${amountUsd} (the contract). Fix the setting (and VITE_ACTIVATION_AMOUNT_USDT).`);
+        }
+        return { tokenAddress, treasuryAddress, activationAmount, payoutVault, amountUsd };
+      });
     config.catch(() => contractConfigs.delete(address));
     contractConfigs.set(address, config);
   }
@@ -75,7 +87,7 @@ export class ActivationService {
    * the member's wallet and call our payment contract, whose token and treasury must match
    * this backend. Returns the named event emitted BY OUR CONTRACT in that transaction.
    */
-  private async contractEvent(walletAddress: string, transactionHash: string, eventName: 'Activated' | 'ToppedUp'): Promise<{ event: LogDescription; activationAmount: bigint }> {
+  private async contractEvent(walletAddress: string, transactionHash: string, eventName: 'Activated' | 'ToppedUp'): Promise<{ event: LogDescription; activationAmount: bigint; amountUsd: number }> {
     if (!env.PAYMENT_CONTRACT_ADDRESS) throw fail('Payments are not open yet. Please try again later.', 503);
     const contractAddress = env.PAYMENT_CONTRACT_ADDRESS.toLowerCase();
     const provider = new JsonRpcProvider(env.BSC_RPC_URL, env.BSC_CHAIN_ID);
@@ -86,7 +98,7 @@ export class ActivationService {
     }
 
     const payment = new Contract(env.PAYMENT_CONTRACT_ADDRESS, PAYMENT_ABI, provider);
-    const { tokenAddress, treasuryAddress, activationAmount, payoutVault } = await contractConfig(payment, contractAddress);
+    const { tokenAddress, treasuryAddress, activationAmount, payoutVault, amountUsd } = await contractConfig(payment, contractAddress, provider);
     if (env.USDT_CONTRACT_ADDRESS && tokenAddress.toLowerCase() !== env.USDT_CONTRACT_ADDRESS.toLowerCase()) {
       alert('critical', 'config-usdt', 'Payments cannot be recorded: the payment contract uses another USDT than USDT_CONTRACT_ADDRESS. Fix the server setting.');
       throw fail('Payment token does not match backend configuration.');
@@ -106,30 +118,39 @@ export class ActivationService {
       .map((log) => { try { return iface.parseLog(log); } catch { return null; } })
       .find((parsed): parsed is LogDescription => parsed?.name === eventName);
     if (!event) throw fail(`${eventName} event was not found in the transaction.`);
-    return { event, activationAmount };
+    return { event, activationAmount, amountUsd };
   }
 
   async verify(input: { walletAddress: string; transactionHash: string; sponsorAddress: string }) {
     const walletAddress = getAddress(input.walletAddress).toLowerCase();
     const requestedSponsor = getAddress(input.sponsorAddress || ZeroAddress).toLowerCase();
-    const { event, activationAmount } = await this.contractEvent(walletAddress, input.transactionHash, 'Activated');
+    const { event, activationAmount, amountUsd } = await this.contractEvent(walletAddress, input.transactionHash, 'Activated');
     const eventUser = String(event.args[0]).toLowerCase();
     const eventSponsor = String(event.args[1]).toLowerCase();
     if (eventUser !== walletAddress || event.args[2] !== activationAmount) {
       throw fail('Activation event data failed verification.');
     }
-    // the member paid with the sponsor written on-chain: that one counts, whatever the browser sent
+    // the on-chain sponsor is recorded, whatever the browser sent (the engine decides the tree)
     if (eventSponsor !== requestedSponsor) {
-      console.warn(`[activation] ${transactionHashOf(input)}: browser sent sponsor ${requestedSponsor}, chain says ${eventSponsor}; using the chain`);
+      console.warn(`[activation] ${transactionHashOf(input)}: browser sent sponsor ${requestedSponsor}, chain says ${eventSponsor}`);
     }
     const activation = {
       walletAddress,
       sponsorAddress: eventSponsor,
       transactionHash: input.transactionHash.toLowerCase(),
-      amountUsd: Number(env.ACTIVATION_AMOUNT_USDT),
+      amountUsd, // from the contract, not the env
     };
     try {
-      return await settle(await once(() => serializable((tx) => processActivation(tx, activation))));
+      const result = await settle(await once(() => serializable((tx) => processActivation(tx, activation))));
+      if (result.sponsorMismatch) {
+        alert(result.sponsorMismatch === 'kept' ? 'warning' : 'info', `sponsor-mismatch-${activation.transactionHash}`,
+          result.sponsorMismatch === 'moved'
+            ? `${shortWallet(walletAddress)} paid under another sponsor (${shortWallet(eventSponsor)}) than its invite link; the team tree now follows the chain.`
+            : result.sponsorMismatch === 'loop'
+              ? `${shortWallet(walletAddress)} paid on-chain under ${shortWallet(eventSponsor)}, a member of its OWN team (a loop): the recorded tree was kept. Check tx ${transactionHashOf(activation)}.`
+              : `${shortWallet(walletAddress)} paid under ${shortWallet(eventSponsor)} on-chain, but its team has already paid under the recorded sponsor: the recorded tree was kept. Check tx ${transactionHashOf(activation)}.`);
+      }
+      return result;
     } catch (error) {
       paidButNotRecorded('activation', walletAddress, activation.transactionHash, error);
       throw error;
@@ -139,11 +160,11 @@ export class ActivationService {
   /** Re-entry: a verified ToppedUp from the member adds a new package (activation.engine processTopUp). */
   async verifyTopUp(input: { walletAddress: string; transactionHash: string }) {
     const walletAddress = getAddress(input.walletAddress).toLowerCase();
-    const { event, activationAmount } = await this.contractEvent(walletAddress, input.transactionHash, 'ToppedUp');
+    const { event, activationAmount, amountUsd } = await this.contractEvent(walletAddress, input.transactionHash, 'ToppedUp');
     if (String(event.args[0]).toLowerCase() !== walletAddress || event.args[1] !== activationAmount) {
       throw fail('Top-up event data failed verification.');
     }
-    const topUp = { walletAddress, transactionHash: input.transactionHash.toLowerCase(), amountUsd: Number(env.ACTIVATION_AMOUNT_USDT) };
+    const topUp = { walletAddress, transactionHash: input.transactionHash.toLowerCase(), amountUsd };
     try {
       return await settle(await once(() => serializable((tx) => processTopUp(tx, topUp))));
     } catch (error) {

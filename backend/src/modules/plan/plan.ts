@@ -33,6 +33,16 @@ export const RANKS = [
 /** Level income cap per package: 25x ($7,500 on $300); owner 2026-10-09, was 10x. Rank rewards sit outside it. */
 export const CAP_MULTIPLIER = 25;
 
+/**
+ * DAOVAULT token (DV) allocation (owner, 2026-10-15): every $300 package (activation or top-up)
+ * records 1,500 DV for the member, to be credited when DV launches on BNB Smart Chain (planned
+ * March 2028). Shown on the dashboard only; nothing is minted or paid now.
+ */
+export const DV_TOKENS_PER_PACKAGE = 1_500;
+export const DV_TOKEN_LAUNCH = "March 2028";
+/** first day of the planned launch month, for the "about N months away" line */
+export const DV_TOKEN_LAUNCH_DATE = "2028-03-01";
+
 /** Is `level` (1-based) open for a member with `activeDirects`? */
 export const isLevelUnlocked = (level: number, activeDirects: number): boolean =>
   activeDirects >= (LEVELS[level - 1]?.reqDirects ?? Infinity);
@@ -41,7 +51,21 @@ export const unlockedLevels = (activeDirects: number): number =>
   LEVELS.filter((l) => activeDirects >= l.reqDirects).length;
 
 /** Money is kept in whole cents to avoid float drift. */
-export const toCents = (usd: number | string): number => Math.round(Number(usd) * 100);
+/**
+ * Dollars -> integer cents, exact: a decimal string ("1234567.89", what Postgres DECIMAL gives)
+ * is parsed digit by digit, never through a float multiply; a 3rd decimal rounds half up.
+ * Refuses amounts beyond Number's exact integer range (about $90 trillion) instead of losing cents.
+ */
+export function toCents(usd: number | string): number {
+  const text = typeof usd === "number" ? (Number.isFinite(usd) ? usd.toFixed(6) : "NaN") : usd.trim();
+  const m = /^(-)?(\d+)(?:\.(\d*))?$/.exec(text);
+  if (!m) throw new Error(`Not a money amount: ${String(usd).slice(0, 40)}`);
+  const frac = (m[3] ?? "").padEnd(3, "0");
+  let cents = BigInt(m[2]) * 100n + BigInt(frac.slice(0, 2));
+  if (Number(frac[2]) >= 5) cents += 1n;
+  if (cents > BigInt(Number.MAX_SAFE_INTEGER)) throw new Error("Money amount too large");
+  return Number(m[1] ? -cents : cents);
+}
 export const fromCents = (cents: number): number => cents / 100;
 
 export type LegSummary = { total: number; power: number; other: number };

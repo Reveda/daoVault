@@ -43,13 +43,14 @@ export function isPaymentConfigured(): boolean {
  * Invite code -> sponsor wallet. Empty code = no sponsor. Throws a clear message when the
  * code is unknown, so a member never pays without the sponsor they were invited by.
  */
-export async function resolveSponsor(code: string, self: string): Promise<{ wallet: string; code: string | null }> {
+export async function resolveSponsor(code: string, self: string): Promise<{ wallet: string; code: string | null; activated: boolean }> {
   const clean = code.trim().toUpperCase();
-  if (!clean) return { wallet: ZeroAddress, code: null };
+  if (!clean) return { wallet: ZeroAddress, code: null, activated: true };
   try {
     const sponsor = await getSponsorByCode(clean);
-    if (sponsor.walletAddress.toLowerCase() === self.toLowerCase()) return { wallet: ZeroAddress, code: null };
-    return { wallet: sponsor.walletAddress, code: sponsor.referralCode };
+    if (sponsor.walletAddress.toLowerCase() === self.toLowerCase()) return { wallet: ZeroAddress, code: null, activated: true };
+    // activated = paid (or the company root); an unpaid sponsor can sponsor (pre-launch teams)
+    return { wallet: sponsor.walletAddress, code: sponsor.referralCode, activated: sponsor.activated !== false };
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       throw new Error(`Invite code ${clean} was not found. Check your invite link.`);

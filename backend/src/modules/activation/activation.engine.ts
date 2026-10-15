@@ -41,6 +41,11 @@ export type ActivationResult = {
   sponsorLinked: boolean;
   /** the plan queue pays the levels a moment later (processPlanEvents); filled only by tests */
   queued: boolean;
+  /**
+   * the on-chain sponsor differed from the recorded one: "moved" = tree follows the chain,
+   * "kept" = the member's team already paid, "loop" = the on-chain sponsor is inside the member's own team
+   */
+  sponsorMismatch?: "moved" | "kept" | "loop";
   commissions: Commission[];
   skipped: Skipped[];
   rankUps: RankUp[];
@@ -49,7 +54,7 @@ export type ActivationResult = {
 const httpError = (message: string, statusCode: number) => Object.assign(new Error(message), { statusCode });
 
 /** "DV" + first 6 hex chars; longer if that code is already taken (codes must stay unique). */
-export async function uniqueReferralCode(tx: Tx, wallet: string): Promise<string> {
+export async function uniqueReferralCode(tx: Pick<Tx, "user">, wallet: string): Promise<string> {
   for (let len = 6; len <= 14; len += 2) {
     const code = `DV${wallet.slice(2, 2 + len).toUpperCase()}`;
     if (!(await tx.user.findUnique({ where: { referralCode: code }, select: { id: true } }))) return code;
@@ -68,6 +73,22 @@ async function ancestorsOf(tx: Tx, userId: string): Promise<Array<{ id: string; 
        WHERE c.depth < 100000
     )
     SELECT id::text AS id, depth FROM chain ORDER BY depth`;
+}
+
+/**
+ * Has anyone below this member paid (a package, counted or still in the plan queue)? One rule for
+ * the sponsor-change checks (users.service) and the on-chain sponsor branch below. Depth-guarded
+ * like ancestorsOf, so a corrupt loop in upline_id can never recurse forever.
+ */
+export async function teamHasPayment(tx: Tx, userId: string): Promise<boolean> {
+  const [row] = await tx.$queryRaw<Array<{ paid: boolean }>>`
+    WITH RECURSIVE tree(id, depth) AS (
+      SELECT id, 1 FROM users WHERE upline_id = ${userId}::uuid
+      UNION ALL
+      SELECT u.id, t.depth + 1 FROM users u JOIN tree t ON u.upline_id = t.id WHERE t.depth < 100000
+    )
+    SELECT EXISTS (SELECT 1 FROM packages p JOIN tree t ON p.user_id = t.id) AS paid`;
+  return Boolean(row?.paid);
 }
 
 /** adds `delta` DAO to each member: one UPDATE per distinct delta (a batch's root row is written once) */
@@ -165,8 +186,9 @@ async function queuePackage(tx: Tx, userId: string, amountUsd: number, transacti
 }
 
 /**
- * Registers one verified on-chain activation: the member (upline set once, never overwritten:
- * usually already at registration from the invite link) and its package. The plan itself
+ * Registers one verified on-chain activation: the member (upline usually set at registration from
+ * the invite link; it follows a different on-chain sponsor only while nobody in the member's team
+ * has paid, see the sponsorMismatch branch) and its package. The plan itself
  * (sponsor's direct +1, 20-level commissions, team volume, ranks) runs in the plan queue right
  * after (processPlanEvents), in payment order. Must run inside a serializable transaction.
  */
@@ -184,6 +206,7 @@ export async function processActivation(tx: Tx, input: ActivationInput): Promise
 
   let user = await tx.user.findUnique({ where: { walletAddress }, include: { _count: { select: { packages: true, downline: true } } } });
   if (user && user._count.packages > 0) throw httpError("This wallet already has an activation package.", 409);
+  let sponsorMismatch: ActivationResult["sponsorMismatch"];
 
   const sponsorAddress = input.sponsorAddress && input.sponsorAddress !== ZERO && input.sponsorAddress !== walletAddress
     ? input.sponsorAddress : null;
@@ -207,16 +230,29 @@ export async function processActivation(tx: Tx, input: ActivationInput): Promise
     });
   } else if (!user.uplineId && validSponsor) {
     // registered earlier without a sponsor (maybe with a team below it): link now, unless that
-    // would make a loop; the upline set at registration (invite link) is never overwritten
+    // would make a loop
     if (await linkUpline(tx, user.id, validSponsor.id)) {
       user = await tx.user.findUniqueOrThrow({ where: { id: user.id }, include: { _count: { select: { packages: true, downline: true } } } });
     }
+  } else if (user.uplineId && validSponsor && user.uplineId !== validSponsor.id) {
+    // the member paid on-chain under another sponsor than the invite link recorded (the website
+    // always pays with the recorded one; this is a direct contract call). The chain wins while it
+    // is safe: nobody in the member's team has paid (no volume to move). Otherwise the platform
+    // tree stays, so commissions already paid through it remain consistent.
+    // (a rare path: only a direct contract call reaches it; the website pays with the recorded sponsor)
+    if (await teamHasPayment(tx, user.id)) sponsorMismatch = "kept";
+    else if (await linkUpline(tx, user.id, validSponsor.id)) {
+      sponsorMismatch = "moved";
+      await tx.user.update({ where: { id: user.id }, data: { pendingSponsorCode: validSponsor.referralCode } });
+    } else sponsorMismatch = "loop";
+    if (sponsorMismatch === "moved") user = await tx.user.findUniqueOrThrow({ where: { id: user.id }, include: { _count: { select: { packages: true, downline: true } } } });
   }
 
   const pkg = await queuePackage(tx, user.id, amountUsd, transactionHash, true);
   return {
     walletAddress, referralCode: user.referralCode, transactionHash, status: pkg.status,
     alreadyProcessed: false, sponsorLinked: Boolean(user.uplineId), queued: true, commissions: [], skipped: [], rankUps: [],
+    ...(sponsorMismatch ? { sponsorMismatch } : {}),
   };
 }
 

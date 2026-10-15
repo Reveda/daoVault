@@ -5,7 +5,7 @@ import { RANKS } from "../plan/plan.js";
 
 const DAYS = 30;
 
-type DayRow = { day: Date; activations: bigint; topups: bigint };
+type DayRow = { day: Date; activations: bigint; topups: bigint; money_in: string | null };
 type MoneyRow = { day: Date; level: string | null; rank: string | null };
 type PaidRow = { day: Date; paid: string | null };
 type RegRow = { day: Date; n: bigint };
@@ -27,11 +27,12 @@ export async function adminAnalytics() {
     // a wallet's first package is its activation, any later one a top-up
     prisma.$queryRaw<DayRow[]>`
       WITH p AS (
-        SELECT created_at, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at) AS n FROM packages
+        SELECT created_at, package_amount, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at) AS n FROM packages
       )
       SELECT date_trunc('day', created_at) AS day,
              COUNT(*) FILTER (WHERE n = 1) AS activations,
-             COUNT(*) FILTER (WHERE n > 1) AS topups
+             COUNT(*) FILTER (WHERE n > 1) AS topups,
+             SUM(package_amount)::text AS money_in
         FROM p WHERE created_at >= ${since} GROUP BY 1 ORDER BY 1`,
     prisma.$queryRaw<MoneyRow[]>`
       SELECT date_trunc('day', created_at) AS day,
@@ -56,8 +57,8 @@ export async function adminAnalytics() {
         SELECT depth, COUNT(*) AS n FROM t GROUP BY depth ORDER BY depth`
       : Promise.resolve([] as Array<{ depth: number; n: bigint }>),
     prisma.earning.groupBy({ by: ["recipientId"], _sum: { amountUsd: true }, orderBy: { _sum: { amountUsd: "desc" } }, take: 50 }),
-    // treasury before the window: every $300 received minus every payout made
-    prisma.package.count({ where: { createdAt: { lt: since } } }),
+    // treasury before the window: every package paid (its real amount) minus every payout made
+    prisma.package.aggregate({ where: { createdAt: { lt: since } }, _sum: { packageAmount: true } }),
     prisma.$queryRaw<Array<{ paid: string | null }>>`
       SELECT SUM(net_amount)::text AS paid FROM withdrawals WHERE status = 'COMPLETED' AND COALESCE(reviewed_at, created_at) < ${since}`,
   ]);
@@ -66,7 +67,6 @@ export async function adminAnalytics() {
   const days = Array.from({ length: DAYS }, (_, i) => dayKey(new Date(since.getTime() + i * 86_400_000)));
   const at = <T extends { day: Date }>(rows: T[]) => new Map(rows.map((r) => [dayKey(new Date(r.day)), r]));
   const j = at(joins), c = at(credited), p = at(paid), r = at(regs);
-  const amount = Number(env.ACTIVATION_AMOUNT_USDT);
   const series = days.map((d) => {
     const activations = Number(j.get(d)?.activations ?? 0);
     const topups = Number(j.get(d)?.topups ?? 0);
@@ -74,7 +74,7 @@ export async function adminAnalytics() {
       day: d,
       activations,
       topups,
-      moneyInUsd: (activations + topups) * amount,
+      moneyInUsd: Number(j.get(d)?.money_in ?? 0), // the packages' recorded amounts (= what the contract took)
       levelUsd: Number(c.get(d)?.level ?? 0),
       rankUsd: Number(c.get(d)?.rank ?? 0),
       paidOutUsd: Number(p.get(d)?.paid ?? 0),
@@ -91,7 +91,7 @@ export async function adminAnalytics() {
   return {
     days: DAYS,
     // treasury on the first day of the window (money in minus payouts so far)
-    openingTreasuryUsd: packagesBefore * amount - Number(paidBefore[0]?.paid ?? 0),
+    openingTreasuryUsd: Number(packagesBefore._sum.packageAmount ?? 0) - Number(paidBefore[0]?.paid ?? 0),
     series,
     commissionsByLevel: Array.from({ length: 20 }, (_, i) => {
       const row = byLevel.find((b) => b.level === i + 1);

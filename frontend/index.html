@@ -59,8 +59,9 @@
       <nav class="nav-pill" aria-label="Main Navigation">
         <ul class="nav-links">
           <li><a href="#vision">Vision</a></li>
-          <li><a href="#about">Ecosystem</a></li>
           <li><a href="#ranks">Rank Rewards</a></li>
+          <li><a href="#matrix">Level Plan</a></li>
+          <li><a href="#about">Ecosystem</a></li>
           <li><a href="#how">How to Join</a></li>
           <li><a href="#faq">FAQs</a></li>
           <li class="nav-dash"><a href="dashboard.html">Dashboard</a></li>
@@ -183,7 +184,7 @@
           </div>
         </div>
 
-        <!-- Right Column: Interactive 3D Holographic Vault & Orbiting Crypto Exchange Cards -->
+        <!-- Right Column: Interactive 3D Holographic Vault -->
         <div class="hero-right" data-reveal>
           <div class="hero-visual-card glass border-beam-card" id="heroVisualCard">
             <div class="hero-core-canvas-wrap" aria-label="3D Holographic Cyber Vault">
@@ -194,92 +195,10 @@
                 <span class="hero-brand-caption mono">YOUR ASSETS &middot; YOUR COMMUNITY &middot; YOUR DECISIONS</span>
               </div>
             </div>
-
-            <!-- Alex Bender Inspired 3D Crypto Exchange Live Cards -->
-            <!-- live BNB / USDT market rate (liveMarket.ts): Binance spot, refreshed every 60s -->
-            <div class="crypto-exchange-card ex-card-1 glass-v2" id="mkCard">
-              <div class="ex-card-top">
-                <span class="ex-pair mono"><i class="ex-dot gold"></i> BNB / USDT &middot; LIVE</span>
-                <span class="ex-badge-green mono" id="mkChange">24H</span>
-              </div>
-              <div class="ex-card-val-row">
-                <span class="ex-val" id="mkPrice">&mdash;</span>
-                <span class="ex-sub mono">BINANCE SPOT</span>
-              </div>
-              <div class="ex-sparkline">
-                <svg viewBox="0 0 120 28" fill="none">
-                  <path id="mkSparkLine" d="M0,14 L120,14" stroke="#ffb800" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path id="mkSparkFill" d="M0,14 L120,14 L120,28 L0,28 Z" fill="url(#exGoldGrad)" opacity="0.25"/>
-                  <defs>
-                    <linearGradient id="exGoldGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stop-color="#ffb800" stop-opacity="0.8"/>
-                      <stop offset="100%" stop-color="#ffb800" stop-opacity="0"/>
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
-            </div>
-
-            <div class="crypto-exchange-card ex-card-2 glass-v2">
-              <div class="ex-card-top">
-                <span class="ex-pair mono"><i class="ex-dot cyan"></i> L1 DIRECT REWARD</span>
-                <span class="ex-badge-cyan mono">10% &middot; LEVEL 1</span>
-              </div>
-              <div class="ex-card-val-row">
-                <span class="ex-val text-cyan">+$30.00</span>
-                <span class="ex-sub mono">USDT / DIRECT</span>
-              </div>
-              <div class="ex-footer-meta mono">
-                <span>Withdraw to your wallet</span> &bull; <span id="mkGas">Gas: live</span>
-              </div>
-            </div>
-
-            <!-- 25x Cap card replaced by the live pulse (owner, 2026-10-12). Kept for reference:
-              <div class="crypto-exchange-card ex-card-3 glass-v2">
-                <div class="ex-card-top">
-                  <span class="ex-pair mono"><i class="ex-dot violet"></i> EARNING CAP</span>
-                  <span class="ex-badge-violet mono">PER PACKAGE</span>
-                </div>
-                <div class="ex-card-val-row">
-                  <span class="ex-val text-violet">25&times; CAP</span>
-                  <span class="ex-sub mono">LEVEL INCOME</span>
-                </div>
-                <div class="ex-footer-meta mono">
-                  <span>Up to $7,500 per $300 package</span>
-                </div>
-              </div>
-            -->
-            <!-- Live on-chain pulse: real events only (liveActivity.ts + GET /activity/recent) and the live BSC block -->
-            <div class="crypto-exchange-card ex-card-3 glass-v2 live-pulse-card" id="livePulseCard">
-              <div class="ex-card-top">
-                <span class="ex-pair mono"><i class="ex-dot lp-live"></i> LIVE ON-CHAIN</span>
-                <span class="lp-block mono" title="Latest BNB Smart Chain block"><b id="lpBlock">#&hellip;</b></span>
-              </div>
-              <div class="lp-feed" id="lpFeed" aria-live="polite"></div>
-              <div class="ex-footer-meta mono">
-                <span id="lpCount">Loading&hellip;</span><span>BSC</span>
-              </div>
-            </div>
-
-            <div class="crypto-exchange-card ex-card-4 glass-v2">
-              <div class="ex-card-top">
-                <span class="ex-pair mono"><i class="ex-dot green"></i> INSTANT WITHDRAWAL</span>
-                <span class="ex-badge-green mono">USDT &middot; BEP-20</span>
-              </div>
-              <div class="ex-card-val-row">
-                <span class="ex-val text-green">Instant</span>
-                <span class="ex-sub mono">TO YOUR WALLET</span>
-              </div>
-              <div class="ex-footer-meta mono">
-                <span>Request, confirm, received in seconds</span>
-              </div>
-            </div>
           </div>
         </div>
       </div>
     </section>
- 
-    <!-- the "Live on-chain pulse" strip that sat here is now the 3rd signal card below (owner, 2026-10-12) -->
 
     <!-- Dedicated protocol signal cards below the hero -->
     <section class="hero-metrics-section" id="heroMetrics" data-scene="metrics" aria-labelledby="heroMetricsTitle">
@@ -290,7 +209,73 @@
           <h2 class="section-title" id="heroMetricsTitle">Built for transparent <span class="grad-text">performance.</span></h2>
           <p class="section-sub">Every rule that moves money is published here, and it applies to every member in exactly the same way.</p>
         </header>
-        <div class="hero-metrics-grid" id="heroMetricsGrid"></div>
+        <div class="hero-metrics-grid" id="heroMetricsGrid">
+          <!-- Card 1: Live BNB/USDT market rate (liveMarket.ts): Binance spot, refreshed every 60s -->
+          <div class="crypto-exchange-card ex-card-1 glass-v2" id="mkCard">
+            <div class="ex-card-top">
+              <span class="ex-pair mono"><i class="ex-dot gold"></i> BNB / USDT &middot; LIVE</span>
+              <span class="ex-badge-green mono" id="mkChange">24H</span>
+            </div>
+            <div class="ex-card-val-row">
+              <span class="ex-val" id="mkPrice">&mdash;</span>
+              <span class="ex-sub mono">BINANCE SPOT</span>
+            </div>
+            <div class="ex-sparkline">
+              <svg viewBox="0 0 120 28" fill="none">
+                <path id="mkSparkLine" d="M0,14 L120,14" stroke="#ffb800" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path id="mkSparkFill" d="M0,14 L120,14 L120,28 L0,28 Z" fill="url(#exGoldGrad)" opacity="0.25"/>
+                <defs>
+                  <linearGradient id="exGoldGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#ffb800" stop-opacity="0.8"/>
+                    <stop offset="100%" stop-color="#ffb800" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+          </div>
+
+          <!-- Card 2: L1 Direct Reward -->
+          <div class="crypto-exchange-card ex-card-2 glass-v2">
+            <div class="ex-card-top">
+              <span class="ex-pair mono"><i class="ex-dot cyan"></i> L1 DIRECT REWARD</span>
+              <span class="ex-badge-cyan mono">10% &middot; LEVEL 1</span>
+            </div>
+            <div class="ex-card-val-row">
+              <span class="ex-val text-cyan">+$30.00</span>
+              <span class="ex-sub mono">USDT / DIRECT</span>
+            </div>
+            <div class="ex-footer-meta mono">
+              <span>Withdraw to your wallet</span> &bull; <span id="mkGas">Gas: live</span>
+            </div>
+          </div>
+
+          <!-- Card 3: Live on-chain pulse: real events only (liveActivity.ts + GET /activity/recent) and the live BSC block -->
+          <div class="crypto-exchange-card ex-card-3 glass-v2 live-pulse-card" id="livePulseCard">
+            <div class="ex-card-top">
+              <span class="ex-pair mono"><i class="ex-dot lp-live"></i> LIVE ON-CHAIN</span>
+              <span class="lp-block mono" title="Latest BNB Smart Chain block"><b id="lpBlock">#&hellip;</b></span>
+            </div>
+            <div class="lp-feed" id="lpFeed" aria-live="polite"></div>
+            <div class="ex-footer-meta mono">
+              <span id="lpCount">Loading&hellip;</span><span>BSC</span>
+            </div>
+          </div>
+
+          <!-- Card 4: Instant Withdrawal -->
+          <div class="crypto-exchange-card ex-card-4 glass-v2">
+            <div class="ex-card-top">
+              <span class="ex-pair mono"><i class="ex-dot green"></i> INSTANT WITHDRAWAL</span>
+              <span class="ex-badge-green mono">USDT &middot; BEP-20</span>
+            </div>
+            <div class="ex-card-val-row">
+              <span class="ex-val text-green">Instant</span>
+              <span class="ex-sub mono">TO YOUR WALLET</span>
+            </div>
+            <div class="ex-footer-meta mono">
+              <span>Request, confirm, received in seconds</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1161,6 +1146,15 @@
               </div>
             </div>
 
+            <!-- 25× Cap Alert Notification -->
+            <div class="retopup-cap-alert mono" id="retopupCapAlert">
+              <span class="cap-alert-icon" aria-hidden="true">&#9888;</span>
+              <div class="cap-alert-text">
+                <strong>25&times; Earning Cap Reached ($7,500 USDT)</strong>
+                <span>Level income paused for this package. Your ID, team &amp; rank remain 100% active. A $300 top-up from your wallet starts the next $7,500 cycle.</span>
+              </div>
+            </div>
+
             <!-- Cap Alert & Manual Re-topup Action Strip -->
             <div class="retopup-actions-row">
               <button type="button" class="btn retopup-test-btn" id="retopupSimulateBtn">
@@ -1700,11 +1694,13 @@
               </span>
             </button>
             <div class="faq-answer">
-              <p>
-                DAOVAULT is a community-driven rewards platform on BNB Smart Chain. You join once with a fixed <b>$300 USDT (BEP-20)</b>
-                package, paid through a public smart contract. Each package shares <b>40%</b> across 20 levels of uplines, and
-                11 rank rewards are paid as your team grows on both sides. Earnings go to your balance and you withdraw to your own wallet.
-              </p>
+              <div class="faq-answer-inner">
+                <p>
+                  DAOVAULT is a community-driven rewards platform on BNB Smart Chain. You join once with a fixed <b>$300 USDT (BEP-20)</b>
+                  package, paid through a public smart contract. Each package shares <b>40%</b> across 20 levels of uplines, and
+                  11 rank rewards are paid as your team grows on both sides. Earnings go to your balance and you withdraw to your own wallet.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1717,10 +1713,12 @@
               </span>
             </button>
             <div class="faq-answer">
-              <p>
-                Exactly <b>$300 USDT (BEP-20)</b>, plus a little BNB for the BNB Smart Chain network fee (usually a few cents).
-                There is no subscription, no sign-up fee and no other charge.
-              </p>
+              <div class="faq-answer-inner">
+                <p>
+                  Exactly <b>$300 USDT (BEP-20)</b>, plus a little BNB for the BNB Smart Chain network fee (usually a few cents).
+                  There is no subscription, no sign-up fee and no other charge.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1733,17 +1731,19 @@
               </span>
             </button>
             <div class="faq-answer">
-              <p>
-                Every $300 package shares exactly <b>40% ($120 USDT)</b> across 20 levels of uplines. Each level opens with a
-                number of active direct referrals:
-              </p>
-              <ul>
-                <li><b>Level 1:</b> 10% ($30) &bull; open from your activation.</li>
-                <li><b>Level 2:</b> 5% ($15) &bull; 2 active directs.</li>
-                <li><b>Levels 3&ndash;4:</b> 3% each ($9) &bull; 3 and 5 active directs.</li>
-                <li><b>Levels 5&ndash;7:</b> 2% each ($6) &bull; 7, 9 and 10 active directs.</li>
-                <li><b>Levels 8&ndash;20:</b> 1% each ($3) &bull; 15 active directs open all 20 levels.</li>
-              </ul>
+              <div class="faq-answer-inner">
+                <p>
+                  Every $300 package shares exactly <b>40% ($120 USDT)</b> across 20 levels of uplines. Each level opens with a
+                  number of active direct referrals:
+                </p>
+                <ul>
+                  <li><b>Level 1:</b> 10% ($30) &bull; open from your activation.</li>
+                  <li><b>Level 2:</b> 5% ($15) &bull; 2 active directs.</li>
+                  <li><b>Levels 3&ndash;4:</b> 3% each ($9) &bull; 3 and 5 active directs.</li>
+                  <li><b>Levels 5&ndash;7:</b> 2% each ($6) &bull; 7, 9 and 10 active directs.</li>
+                  <li><b>Levels 8&ndash;20:</b> 1% each ($3) &bull; 15 active directs open all 20 levels.</li>
+                </ul>
+              </div>
             </div>
           </div>
 
@@ -1756,11 +1756,13 @@
               </span>
             </button>
             <div class="faq-answer">
-              <p>
-                Each $300 package earns up to <b>25&times; ($7,500 USDT)</b> in level income. When it reaches the cap, level income
-                for that package stops. <b>You keep your ID, your team and your rank.</b> A new $300 top-up from your wallet starts
-                the next package, with its own $7,500 cap. Rank rewards are separate and do not count toward the cap.
-              </p>
+              <div class="faq-answer-inner">
+                <p>
+                  Each $300 package earns up to <b>25&times; ($7,500 USDT)</b> in level income. When it reaches the cap, level income
+                  for that package stops. <b>You keep your ID, your team and your rank.</b> A new $300 top-up from your wallet starts
+                  the next package, with its own $7,500 cap. Rank rewards are separate and do not count toward the cap.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1773,10 +1775,12 @@
               </span>
             </button>
             <div class="faq-answer">
-              <p>
-                <b>No.</b> Nothing is ever taken from your wallet automatically. When a package reaches its cap, you decide if and when
-                to top up, and you approve the $300 payment yourself in your wallet.
-              </p>
+              <div class="faq-answer-inner">
+                <p>
+                  <b>No.</b> Nothing is ever taken from your wallet automatically. When a package reaches its cap, you decide if and when
+                  to top up, and you approve the $300 payment yourself in your wallet.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1789,11 +1793,13 @@
               </span>
             </button>
             <div class="faq-answer">
-              <p>
-                There are 11 ranks, from <b>Starter ($150)</b> to <b>Crown President ($200,000)</b>. Each rank needs its DAO target
-                on <b>both sides</b>: your Strong Leg (your biggest team) and your Other Leg (all your other teams together).
-                1 DAO = 1 activated $300 package. Each reward is paid once, to your balance, and ranks never go down.
-              </p>
+              <div class="faq-answer-inner">
+                <p>
+                  There are 11 ranks, from <b>Starter ($150)</b> to <b>Crown President ($200,000)</b>. Each rank needs its DAO target
+                  on <b>both sides</b>: your Strong Leg (your biggest team) and your Other Leg (all your other teams together).
+                  1 DAO = 1 activated $300 package. Each reward is paid once, to your balance, and ranks never go down.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1806,11 +1812,13 @@
               </span>
             </button>
             <div class="faq-answer">
-              <p>
-                <b>No.</b> DAOVAULT pays no fixed daily return and no interest on your deposit. Income comes only from real activity:
-                level commissions when people join your team, and one-time rank rewards when your team grows on both sides. Every
-                rule is public and every activation is recorded on BNB Smart Chain, where anyone can check it.
-              </p>
+              <div class="faq-answer-inner">
+                <p>
+                  <b>No.</b> DAOVAULT pays no fixed daily return and no interest on your deposit. Income comes only from real activity:
+                  level commissions when people join your team, and one-time rank rewards when your team grows on both sides. Every
+                  rule is public and every activation is recorded on BNB Smart Chain, where anyone can check it.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -1823,10 +1831,12 @@
               </span>
             </button>
             <div class="faq-answer">
-              <p>
-                Request a withdrawal from your dashboard at any time. It is paid in USDT (BEP-20) to your own wallet. A flat
-                <b>5% fee</b> applies, so you receive 95% of the amount you withdraw.
-              </p>
+              <div class="faq-answer-inner">
+                <p>
+                  Request a withdrawal from your dashboard at any time. It is paid in USDT (BEP-20) to your own wallet. A flat
+                  <b>5% fee</b> applies, so you receive 95% of the amount you withdraw.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -1853,9 +1863,9 @@
           <h4>Navigation</h4>
           <ul>
             <li><a href="#vision">Our Vision</a></li>
-            <li><a href="#about">Ecosystem</a></li>
             <li><a href="#ranks">Rank Rewards</a></li>
             <li><a href="#matrix">Level Plan</a></li>
+            <li><a href="#about">Ecosystem</a></li>
             <li><a href="#how">How to Join</a></li>
             <li><a href="#faq">FAQs</a></li>
           </ul>

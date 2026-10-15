@@ -46,7 +46,13 @@ export const voucherIdFor = (withdrawalId: string) => keccakText(`daovault-withd
  * Can the contract pay `netUsd` right now? There is no admin review (owner, 2026-10-13): when it
  * cannot, the member gets a clear message and no withdrawal is created.
  */
-export async function canPayInstantly(netUsd: number): Promise<{ ok: true; amount: bigint } | { ok: false; status: number; message: string }> {
+export type PayCheck =
+  | { ok: true; amount: bigint; dailyLeft: bigint; float: bigint; checkedAt: Date }
+  | { ok: false; status: number; message: string };
+
+export async function canPayInstantly(netUsd: number): Promise<PayCheck> {
+  // taken BEFORE the chain reads: a voucher settled after this moment may be missing from them
+  const checkedAt = new Date();
   const c = payout();
   const decimals = await tokenDecimals();
   const amount = parseUnits(netUsd.toFixed(2), decimals);
@@ -74,7 +80,8 @@ export async function canPayInstantly(netUsd: number): Promise<{ ok: true; amoun
     alert("critical", "float-empty", `A member could not withdraw ${usd(amount)}: the payout contract holds only ${usd(float)}. Send USDT to the payout contract.`);
     return { ok: false, status: 503, message: "Withdrawals are being topped up. Please try again in a little while." };
   }
-  return { ok: true, amount };
+  // what is left on-chain right now; the caller subtracts vouchers already handed out (reservations)
+  return { ok: true, amount, dailyLeft: dailyLimit - spent, float, checkedAt };
 }
 
 /** Signs the one-time voucher the member's wallet submits to claim(). */

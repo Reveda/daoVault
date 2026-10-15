@@ -173,6 +173,7 @@ export function initMatrixAutoDeck(): void {
 
   // the first card plays its arrival animation when the deck comes on screen (not at page load)
   if ('IntersectionObserver' in window) {
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     const seen = new IntersectionObserver((entries) => {
       if (!entries.some((e) => e.isIntersecting)) return;
       seen.disconnect();
@@ -180,7 +181,7 @@ export function initMatrixAutoDeck(): void {
       revealActive(document.querySelectorAll<HTMLElement>('.matrix-stack-card'));
       // the deck is very tall (spread cards + reserved space): watch its top reaching 70% of
       // the screen, where the scroll deck starts (scrollAnimations 'top 72%'), not a share of it
-    }, { threshold: 0, rootMargin: '0px 0px -30% 0px' });
+    }, { threshold: 0, rootMargin: isMobile ? '0px 0px -40% 0px' : '0px 0px -30% 0px' });
     seen.observe(deck);
   }
 

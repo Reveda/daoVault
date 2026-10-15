@@ -20,11 +20,14 @@ export function initUnfoldCards(): void {
     lastY = y;
   }, { passive: true });
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  const triggerRatio = isMobile ? 0.28 : 0.16;
+
   cards.forEach((c) => c.classList.add('unfold-ready'));
   const io = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       const card = entry.target as HTMLElement;
-      if (entry.isIntersecting && entry.intersectionRatio >= 0.12 && !card.classList.contains('is-unfolded')) {
+      if (entry.isIntersecting && entry.intersectionRatio >= triggerRatio && !card.classList.contains('is-unfolded')) {
         // which side it came from decides the direction: from below while scrolling down -> drops from above
         card.dataset.from = dir === 'down' ? 'top' : 'bottom';
         card.style.setProperty('--unfold-h', `${card.offsetHeight}px`); // the seam runs the full height
@@ -34,6 +37,6 @@ export function initUnfoldCards(): void {
         card.classList.remove('is-unfolded'); // off screen again: ready to play next time
       }
     });
-  }, { threshold: [0, 0.12] });
+  }, { threshold: [0, triggerRatio] });
   cards.forEach((c) => io.observe(c));
 }

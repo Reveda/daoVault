@@ -61,7 +61,11 @@ export function initLiveActivityStream(): void {
   if (!card || !feed) return;
 
   let items: ActivityItem[] = [];
-  let sample = true; // labelled SAMPLE until the first real event
+  // labelled SAMPLE only BEFORE launch: once payments are open (server says live) never again,
+  // also on a later visit with the server asleep (remembered in this browser)
+  const LIVE_KEY = 'dv_pulse_live';
+  let live = (() => { try { return localStorage.getItem(LIVE_KEY) === '1'; } catch { return false; } })();
+  let sample = !live;
   const title = card.querySelector<HTMLElement>('.ex-pair');
   let index = 0;
   let visible = false;
@@ -88,15 +92,17 @@ export function initLiveActivityStream(): void {
 
   const loadEvents = async () => {
     try {
-      const next = await getRecentActivity();
+      const { items: next, live: isLive } = await getRecentActivity();
       const changed = JSON.stringify(next) !== JSON.stringify(items);
       items = next;
+      if (isLive && !live) { live = true; try { localStorage.setItem(LIVE_KEY, '1'); } catch { /* storage blocked */ } }
       const wasSample = sample;
-      sample = items.length === 0;
-      if (count) count.textContent = sample ? 'Live data at launch' : `${items.length} recent`;
+      sample = items.length === 0 && !live; // after launch: real events or the honest "waiting" line
+      if (count) count.textContent = sample ? 'Live data at launch' : items.length ? `${items.length} recent` : 'Waiting for the first activation';
       if (changed || wasSample !== sample) { index = 0; render(false); }
     } catch {
-      if (!items.length) { sample = true; if (count) count.textContent = 'Live data at launch'; render(false); } // server asleep: the labelled sample
+      // server asleep: before launch the labelled sample, after launch the honest empty line
+      if (!items.length) { sample = !live; if (count) count.textContent = live ? 'Waiting for the first activation' : 'Live data at launch'; render(false); }
     }
   };
   const loadBlock = async () => {

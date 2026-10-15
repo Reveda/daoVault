@@ -65,7 +65,8 @@ model Package {
   user            User          @relation(fields: [userId], references: [id])
   earnings        Earning[]
 
-  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([createdAt])
   @@map("packages")
 }
 
@@ -103,6 +104,7 @@ model Earning {
 
   @@index([recipientId, createdAt])
   @@index([packageId])
+  @@index([type, createdAt])
   @@map("earnings")
 }
 
@@ -128,6 +130,11 @@ model Withdrawal {
   user              User             @relation(fields: [userId], references: [id])
 
   @@index([userId, status])
+  @@index([status, createdAt])
+  @@index([status, updatedAt])
+  @@index([status, voucherId, userId])
+  @@index([status, voucherDeadline])
+  @@index([status, reviewedAt])
   @@map("withdrawals")
 }
 
@@ -137,6 +144,8 @@ model AuthNonce {
   message       String
   expiresAt     DateTime @map("expires_at")
   createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([expiresAt])
 
   @@map("auth_nonces")
 }
@@ -163,6 +172,8 @@ model RefreshToken {
   expiresAt     DateTime  @map("expires_at")
   usedAt        DateTime? @map("used_at")
   createdAt     DateTime  @default(now()) @map("created_at")
+
+  @@index([expiresAt])
 
   @@index([walletAddress])
   @@index([familyId])

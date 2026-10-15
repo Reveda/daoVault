@@ -151,15 +151,15 @@ function recordAutoRedirect(): boolean {
   return true;
 }
 
-/** Moves the four protocol cards into their dedicated section below the hero. */
+/** Protocol signal cards in their dedicated section below the hero. */
 function initHeroMetricsSection(): void {
   const source = document.getElementById('heroVisualCard');
   const target = document.getElementById('heroMetricsGrid');
-  if (!source || !target) return;
-
-  source.querySelectorAll<HTMLElement>('.crypto-exchange-card').forEach((card) => {
-    target.appendChild(card);
-  });
+  if (source && target && source.querySelector('.crypto-exchange-card')) {
+    source.querySelectorAll<HTMLElement>('.crypto-exchange-card').forEach((card) => {
+      target.appendChild(card);
+    });
+  }
 
   const section = document.getElementById('heroMetrics');
   if (!section || !('IntersectionObserver' in window)) {

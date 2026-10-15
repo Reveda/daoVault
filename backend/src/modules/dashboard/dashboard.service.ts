@@ -2,7 +2,7 @@ import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
 import { isRootWallet } from "../../config/root.js";
 import { isAdminWallet } from "../auth/auth.service.js";
-import { LEVELS, RANKS, fromCents, isLevelUnlocked, matchedVolume, summarizeLegs, toCents, unlockedLevels } from "../plan/plan.js";
+import { DV_TOKENS_PER_PACKAGE, DV_TOKEN_LAUNCH, DV_TOKEN_LAUNCH_DATE, LEVELS, RANKS, fromCents, isLevelUnlocked, matchedVolume, summarizeLegs, toCents, unlockedLevels } from "../plan/plan.js";
 import { balanceOf } from "../withdrawals/withdrawals.service.js";
 import { dashboardRepository } from "./dashboard.repository.js";
 
@@ -25,7 +25,8 @@ export class DashboardService {
       balanceOf(prisma, user.id),
     ]);
 
-    const sumOf = (type: string) => Number(byType.find((t) => t.type === type)?._sum.amountUsd ?? 0);
+    // money: DECIMAL from Postgres -> exact integer cents -> dollars (never a float sum)
+    const sumOf = (type: string) => fromCents(toCents(String(byType.find((t) => t.type === type)?._sum.amountUsd ?? 0)));
     const levelIncomeUsd = sumOf("LEVEL_COMMISSION");
     const rankRewardsUsd = sumOf("RANK_REWARD");
     const legVolumes = legs.map((l) => l.teamVolume + l._count.packages); // 1 DAO per counted package, top-ups included
@@ -78,6 +79,14 @@ export class DashboardService {
       packages: user.packages, // oldest first: [0] is the activation
       currentPackage,
       packageCount: user.packages.length,
+      // DV token allocation (owner, 2026-10-15): 1,500 DV per package; the company root holds none
+      dvToken: {
+        perPackage: DV_TOKENS_PER_PACKAGE,
+        allocated: isRoot ? 0 : user.packages.length * DV_TOKENS_PER_PACKAGE,
+        launch: DV_TOKEN_LAUNCH,
+        launchDate: DV_TOKEN_LAUNCH_DATE,
+        network: "BNB Smart Chain",
+      },
       // re-entry (owner, 2026-10-10): a new $300 package once every package has reached its cap
       canTopUp: !isRoot && user.packages.length > 0 && user.packages.every((p) => p.status !== "ACTIVE"),
       levels: LEVELS.map((l) => {
@@ -88,13 +97,13 @@ export class DashboardService {
           reqDirects: l.reqDirects,
           unlocked: isLevelUnlocked(l.level, user.activeDirectsCount),
           members: perLevel.get(l.level) ?? 0,
-          earnedUsd: Number(earned?._sum.amountUsd ?? 0),
+          earnedUsd: fromCents(toCents(String(earned?._sum.amountUsd ?? 0))),
         };
       }),
       recentEarnings: recent.map((e) => ({
         type: e.type,
         level: e.level,
-        amountUsd: Number(e.amountUsd),
+        amountUsd: fromCents(toCents(e.amountUsd.toString())),
         from: e.source.walletAddress,
         at: e.createdAt,
       })),

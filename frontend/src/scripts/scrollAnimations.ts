@@ -25,13 +25,15 @@ const ANIMATED_PROPS = 'transform,translate,rotate,scale,opacity,filter';
 export function initScrollAnimations(): void {
   if (typeof window === 'undefined') return;
 
+  const isMobile = window.innerWidth <= 768;
+
   // ─────────────────────────────────────────────────────────────────────────
   // 1. GLOBAL: Section Header Laser Beams & Title Reveals (Every .section-head)
   // ─────────────────────────────────────────────────────────────────────────
   document.querySelectorAll('.section-head').forEach((head) => {
     ScrollTrigger.create({
       trigger: head,
-      start: 'top 85%',
+      start: isMobile ? 'top 80%' : 'top 85%',
       onEnter: () => {
         head.classList.add('revealed');
       },
@@ -46,7 +48,7 @@ export function initScrollAnimations(): void {
     const headTl = gsap.timeline({
       scrollTrigger: {
         trigger: head,
-        start: 'top 85%',
+        start: isMobile ? 'top 80%' : 'top 85%',
         once: true,
       },
       defaults: { ease: 'power3.out' },
@@ -152,7 +154,7 @@ export function initScrollAnimations(): void {
         tabBtns,
         { x: -35, opacity: 0 },
         {
-          scrollTrigger: { trigger: '#rankTabs', start: 'top 88%', once: true },
+          scrollTrigger: { trigger: '#rankTabs', start: isMobile ? 'top 75%' : 'top 88%', once: true },
           x: 0,
           opacity: 1,
           duration: 0.45,
@@ -170,24 +172,31 @@ export function initScrollAnimations(): void {
         rankDisplayCard,
         { y: 50, opacity: 0, scale: 0.96 },
         {
-          scrollTrigger: { trigger: rankDisplayCard, start: 'top 85%', once: true },
+          scrollTrigger: { trigger: rankDisplayCard, start: isMobile ? 'top 65%' : 'top 85%', once: true },
           y: 0,
           opacity: 1,
           scale: 1,
           duration: 0.75,
           ease: 'power3.out',
           clearProps: ANIMATED_PROPS,
-          onComplete: () => {
-            // Animate 50:50 leg meter bars filling up
-            const legPower = ranksSection.querySelector('.leg-power') as HTMLElement;
-            const legOther = ranksSection.querySelector('.leg-other') as HTMLElement;
-            if (legPower && legOther) {
-              gsap.fromTo(legPower, { width: '0%' }, { width: '50%', duration: 1.2, ease: 'power2.out' });
-              gsap.fromTo(legOther, { width: '0%' }, { width: '50%', duration: 1.2, ease: 'power2.out' });
-            }
-          },
         }
       );
+
+      // Animate 50:50 leg meter bars filling up when they actually enter the viewport
+      const legPower = ranksSection.querySelector('.leg-power') as HTMLElement;
+      const legOther = ranksSection.querySelector('.leg-other') as HTMLElement;
+      const legSplitBar = ranksSection.querySelector('.leg-split-bar') || rankDisplayCard;
+      if (legPower && legOther) {
+        ScrollTrigger.create({
+          trigger: legSplitBar,
+          start: isMobile ? 'top 82%' : 'top 88%',
+          once: true,
+          onEnter: () => {
+            gsap.fromTo(legPower, { width: '0%' }, { width: '50%', duration: 1.2, ease: 'power2.out' });
+            gsap.fromTo(legOther, { width: '0%' }, { width: '50%', duration: 1.2, ease: 'power2.out' });
+          },
+        });
+      }
     }
   }
 
@@ -258,7 +267,7 @@ export function initScrollAnimations(): void {
         scrollTrigger: {
           id: 'matrixDeckST',
           trigger: deck,
-          start: isMobile ? 'top 72%' : 'top 70%',
+          start: isMobile ? 'top 55%' : 'top 70%',
           end: isMobile ? '+=800' : '+=1000',
           // Direct scroll-linked motion: every scroll movement moves the cards
           // immediately while the document continues to scroll normally.
@@ -334,12 +343,9 @@ export function initScrollAnimations(): void {
 
       ScrollTrigger.create({
         trigger: calcBox,
-        start: 'top 84%',
-        end: 'bottom 12%',
-        onEnter: () => calcReveal.restart(),
-        onLeave: () => calcReveal.reverse(),
-        onEnterBack: () => calcReveal.restart(),
-        onLeaveBack: () => calcReveal.reverse(),
+        start: isMobile ? 'top 78%' : 'top 88%',
+        once: true,
+        onEnter: () => calcReveal.play(),
       });
     }
   }

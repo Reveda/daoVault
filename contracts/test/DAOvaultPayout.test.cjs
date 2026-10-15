@@ -122,6 +122,19 @@ describe('DAOvaultPayout', () => {
     expect(await payout.owner()).to.equal(bob.address);
   });
 
+  it('transferOwnership(address(0)) never loses the owner: it only cancels a pending transfer', async () => {
+    await payout.transferOwnership(bob.address);
+    await payout.transferOwnership(ethers.ZeroAddress); // "accidental" zero = cancel
+    expect(await payout.owner()).to.equal(owner.address); // owner unchanged
+    expect(await payout.pendingOwner()).to.equal(ethers.ZeroAddress);
+    await expect(payout.connect(bob).acceptOwnership()).to.be.revertedWithCustomError(payout, 'NotOwner'); // bob's offer is gone
+    await payout.setPaused(true); // the owner still controls everything
+    expect(await payout.paused()).to.equal(true);
+    await payout.transferOwnership(alice.address); // and can hand over again
+    await payout.connect(alice).acceptOwnership();
+    expect(await payout.owner()).to.equal(alice.address);
+  });
+
   it('activation contract: an unpaid sponsor is accepted; approval is used up by the payment', async () => {
     const act = await (await ethers.getContractFactory('DAOvaultActivation')).deploy(await usdt.getAddress(), owner.address, await payout.getAddress(), usd(300));
     await usdt.mint(alice.address, usd(300));

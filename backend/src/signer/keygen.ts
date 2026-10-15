@@ -1,8 +1,9 @@
 /**
  * Creates the payout signer key (owner, 2026-10-13). Run ONCE on the VPS:
  *
- *   docker run --rm -v "$PWD/secrets:/out" daovault-backend:prod node dist/signer/keygen.js /out
- *   (or on a PC: npx tsx src/signer/keygen.ts ../secrets)
+ *   docker run --rm -v "$PWD/secrets/signer:/out" daovault-backend:prod node dist/signer/keygen.js /out
+ *   (or on a PC: npx tsx src/signer/keygen.ts ../secrets/signer). Only that folder is mounted into the
+ *   signer container (docker-compose.prod.yml), never the rest of ./secrets.
  *
  * Writes into the folder:
  *   payout_keystore.json           the key, encrypted (scrypt) with the password below

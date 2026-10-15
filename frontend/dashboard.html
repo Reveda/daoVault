@@ -53,6 +53,23 @@
 
 
       <div class="dash-head-actions">
+      <!-- DV token allocation: total + per-package calculation (owner, 2026-10-15; dashboard.ts initDvToken) -->
+      <div class="dv-menu" id="dvMenu" hidden>
+        <button class="dv-menu-btn" id="dvMenuBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="dvMenuPanel">
+          <!-- 3D DV coin (dvToken3d.ts); the logo stays as the fallback -->
+          <span class="dv-token-slot dv-token-slot--sm" id="dvMenuCoin"><img src="/favicon.png" alt="" width="28" height="28" /></span>
+          <span class="dv-menu-label">DV Token</span>
+          <b class="dv-menu-total mono" id="dvMenuTotal">0</b>
+        </button>
+        <div class="dv-menu-panel" id="dvMenuPanel" role="dialog" aria-label="DV token allocation" hidden>
+          <div class="dv-panel-head">
+            <span class="mono dv-token-tag">DAOVAULT TOKEN &middot; DV</span>
+            <div class="dv-panel-total"><span id="dvPanelTotal">0</span><span class="dv-token-unit">DV</span></div>
+          </div>
+          <ol class="dv-panel-rows" id="dvPanelRows"></ol>
+          <p class="dv-panel-foot mono" id="dvPanelFoot">1,500 DV per $300 package &middot; planned launch March 2028 on BNB Smart Chain</p>
+        </div>
+      </div>
       <!-- wallet chip with a menu: section shortcuts, copy address, BscScan, log out -->
       <div class="wallet-menu" id="walletMenu">
         <button class="dash-user-badge mono wallet-menu-btn" id="walletMenuBtn" type="button" aria-haspopup="menu" aria-expanded="false">
@@ -151,6 +168,26 @@
           </div>
         </div>
       </div>
+
+      <!-- DV token allocation (owner, 2026-10-15): 1,500 DV per $300 package, planned launch March 2028 (dashboard.ts initDvToken) -->
+      <section class="glass dv-token-card" id="dvTokenCard" hidden>
+        <div class="dv-coin" aria-hidden="true">
+          <span class="dv-coin-ring"></span>
+          <span class="dv-token-slot dv-token-slot--lg" id="dvCardCoin"><img src="/favicon.png" alt="" width="56" height="56" /></span>
+        </div>
+        <div class="dv-token-main">
+          <span class="mono dv-token-tag">DAOVAULT TOKEN &middot; DV</span>
+          <h3>Your <span class="grad-text">DV Token</span> Allocation</h3>
+          <div class="dv-token-amount"><span id="dvTokenAmount">0</span><span class="dv-token-unit">DV</span></div>
+          <!-- packages x 1,500 = total (dashboard.ts initDvToken) -->
+          <div class="dv-calc mono" id="dvTokenCalc" aria-label="How your DV allocation is counted"></div>
+        </div>
+        <div class="dv-token-side">
+          <span class="dv-token-badge mono"><span class="dv-badge-dot"></span><span id="dvTokenLaunch">Planned launch &middot; March 2028</span></span>
+          <span class="dv-token-net mono" id="dvTokenNet">BNB Smart Chain</span>
+          <p class="dv-token-note">Credited to this wallet at the planned DV launch.</p>
+        </div>
+      </section>
 
       <!-- Rank reward vaults: one sealed DAOvault box per rank (giftBox.ts) -->
       <section class="glass rewards-card" id="rewardsSection">

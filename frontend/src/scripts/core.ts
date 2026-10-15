@@ -137,6 +137,7 @@ export function initScrollReveal(): void {
 
   // Items that arrive together cascade in one after another (TPR's reveal stagger).
   // The delay is cleared afterwards so it never slows hover transitions.
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const observer = new IntersectionObserver((entries) => {
     entries.filter((entry) => entry.isIntersecting).forEach((entry, i) => {
       const el = entry.target as HTMLElement;
@@ -146,7 +147,7 @@ export function initScrollReveal(): void {
       window.setTimeout(() => { el.style.transitionDelay = ''; }, delay + 900);
       observer.unobserve(el);
     });
-  }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+  }, { threshold: isMobile ? 0.22 : 0.12, rootMargin: isMobile ? '0px 0px -12% 0px' : '0px 0px -6% 0px' });
 
   elements.forEach((el) => observer.observe(el));
 
@@ -218,6 +219,7 @@ export function initOffscreenPause(): void {
 export function initTrophyBoom(): void {
   const card = document.getElementById('trophyCard');
   if (!card || !('IntersectionObserver' in window)) return;
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
@@ -227,7 +229,7 @@ export function initTrophyBoom(): void {
         card.classList.remove('boomed');
       }
     });
-  }, { threshold: 0.15 });
+  }, { threshold: isMobile ? 0.35 : 0.15 });
 
   observer.observe(card);
 }
@@ -310,6 +312,62 @@ export function showLaunchNotice(
     else open();
   };
   wait();
+}
+
+/**
+ * Themed confirm popup (same card as the launch notice) with a main action and "Cancel".
+ * Resolves true on the main action, false on Cancel / Escape / a click outside. Texts are set
+ * as text, never HTML; `highlight` (e.g. a DV code) is shown in gold inside the message.
+ */
+export function confirmNotice(options: {
+  kicker?: string;
+  title: string;
+  message: string;
+  highlight?: string;
+  confirm: string;
+  cancel?: string;
+}): Promise<boolean> {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.className = 'launch-notice';
+    const card = document.createElement('div');
+    card.className = 'launch-notice-card';
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+    card.setAttribute('aria-labelledby', 'confirmNoticeTitle');
+    const logo = Object.assign(document.createElement('img'), { className: 'launch-notice-logo', src: '/favicon.png', alt: '', width: 56, height: 56 });
+    card.append(logo);
+    if (options.kicker) card.append(Object.assign(document.createElement('span'), { className: 'launch-notice-kicker mono', textContent: options.kicker }));
+    card.append(Object.assign(document.createElement('h3'), { id: 'confirmNoticeTitle', textContent: options.title }));
+    const p = document.createElement('p');
+    const parts = options.highlight ? options.message.split('{highlight}') : [options.message];
+    parts.forEach((part, i) => {
+      p.append(part);
+      if (i < parts.length - 1) p.append(Object.assign(document.createElement('b'), { className: 'launch-notice-sponsor', textContent: options.highlight! }));
+    });
+    card.append(p);
+    const actions = Object.assign(document.createElement('div'), { className: 'launch-notice-actions' });
+    const cancel = Object.assign(document.createElement('button'), { type: 'button', className: 'launch-notice-cancel', textContent: options.cancel ?? 'Cancel' });
+    const ok = Object.assign(document.createElement('button'), { type: 'button', className: 'btn btn-grad launch-notice-btn', textContent: options.confirm });
+    actions.append(cancel, ok);
+    card.append(actions);
+    overlay.append(card);
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add('is-open'));
+    ok.focus({ preventScroll: true });
+
+    const close = (answer: boolean) => {
+      overlay.classList.remove('is-open');
+      document.removeEventListener('keydown', onKey);
+      window.setTimeout(() => overlay.remove(), 350);
+      resolve(answer);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(false); };
+    ok.addEventListener('click', () => close(true));
+    cancel.addEventListener('click', () => close(false));
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+    document.addEventListener('keydown', onKey);
+  });
 }
 
 const TOAST_MS = 4200;

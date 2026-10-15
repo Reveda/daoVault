@@ -27,10 +27,18 @@ export async function runWatch({ indexer = false } = {}): Promise<{ problems: st
     return { problems: [...problems] };
   }
 
+  // each check on its own: one failing (RPC down...) never hides the others
+  const step = async (name: string, run: () => Promise<void>) => {
+    try { await run(); } catch (error) {
+      report(`watch-${name}`, true, "warning", `Watch check "${name}" failed: ${String((error as Error)?.message ?? error).slice(0, 160)}`);
+    }
+  };
+  await step("plan-queue", async () => {
   const q = await planQueueBacklog();
   report("plan-queue", q.oldestSeconds > 300, q.oldestSeconds > 900 ? "critical" : "warning",
     `Plan queue is behind: ${q.waiting} payments waiting, the oldest for ${Math.round(q.oldestSeconds / 60)} min. Commissions are delayed (nothing is lost).`);
-
+  });
+  await step("payout", async () => {
   const payout = await payoutContractStatus();
   if (payout) {
     if ("error" in payout && payout.error) {
@@ -49,11 +57,12 @@ export async function runWatch({ indexer = false } = {}): Promise<{ problems: st
     }
   }
 
-  if (indexer && env.PAYMENT_CONTRACT_ADDRESS) {
+  });
+  if (indexer && env.PAYMENT_CONTRACT_ADDRESS) await step("indexer", async () => {
     const cursor = await prisma.chainCursor.findUnique({ where: { name: "payment-contract" } });
     const staleMin = cursor ? (Date.now() - cursor.updatedAt.getTime()) / 60_000 : 0;
     report("chain-indexer", staleMin > 10, "warning",
       `Chain indexer has not moved for ${Math.round(staleMin)} min (RPC limit or error). Payments reported by the website still work.`);
-  }
+  });
   return { problems: [...problems] };
 }

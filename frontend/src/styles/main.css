@@ -4,6 +4,11 @@
    ========================================================================== */
 
 :root {
+  /* status-bar space above the fixed header (owner bug 2026-10-15): 0 in a browser or a wallet app's
+     browser (their own bar already sits above the page; Android 15 edge-to-edge WebViews still REPORT
+     the status bar as a safe area, which pushed the header down and let the page show above it);
+     the real inset only when the site runs installed / fullscreen (see the display-mode rule below) */
+  --safe-top: 0px;
   /* Core Theme Colors (Zero Eye-Strain Velvet Dark) */
   --bg-dark: #050505;
   --bg-card: rgba(16, 16, 16, 0.88);
@@ -2939,7 +2944,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Web3 Toast (core.ts showToast): top right, DAOvault dark + gold (owner 2026-10-10) */
 .toast-msg {
   position: fixed;
-  top: calc(5.25rem + env(safe-area-inset-top, 0px));
+  top: calc(5.25rem + var(--safe-top));
   right: 1.1rem;
   width: min(380px, calc(100vw - 2rem));
   display: flex;
@@ -3027,7 +3032,7 @@ h1, h2, h3, h4, h5, h6 {
   /* phones (owner, 2026-10-11): a compact card in the top-right corner, like a native
      notification: just under the status bar, small type, quick slide in from the right */
   .toast-msg {
-    top: calc(0.6rem + env(safe-area-inset-top, 0px));
+    top: calc(0.6rem + var(--safe-top));
     right: 0.6rem;
     left: auto;
     width: auto;
@@ -3103,6 +3108,25 @@ h1, h2, h3, h4, h5, h6 {
   line-height: 1.6;
 }
 .launch-notice-btn { min-width: 160px; justify-content: center; }
+/* confirm popup (core.ts confirmNotice): main action + a quiet gold-outline "Cancel" */
+.launch-notice-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.7rem; }
+.launch-notice-actions .launch-notice-btn { flex: 1 1 160px; }
+.launch-notice-cancel {
+  flex: 1 1 120px;
+  min-height: 44px;
+  padding: 0.7rem 1.2rem;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gold);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.launch-notice-cancel:hover,
+.launch-notice-cancel:focus-visible { background: rgba(212, 175, 55, 0.1); border-color: var(--gold); }
+.launch-notice-sponsor { color: var(--gold); font-weight: 700; }
 
 /* Footer */
 .main-footer {
@@ -8062,6 +8086,46 @@ html.lite .hw-wallet { animation: none; filter: none; }
   cursor: not-allowed;
 }
 
+.retopup-cap-alert {
+  display: none;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.85rem 1.15rem;
+  border-radius: 14px;
+  background: rgba(255, 184, 0, 0.08);
+  border: 1px solid rgba(255, 184, 0, 0.4);
+  box-shadow: 0 0 20px rgba(255, 184, 0, 0.15);
+  margin-bottom: 0.85rem;
+  animation: capAlertPulse 2s infinite ease-in-out;
+}
+@keyframes capAlertPulse {
+  0%, 100% { border-color: rgba(255, 184, 0, 0.4); box-shadow: 0 0 16px rgba(255, 184, 0, 0.15); }
+  50% { border-color: rgba(255, 184, 0, 0.85); box-shadow: 0 0 26px rgba(255, 184, 0, 0.35); }
+}
+.retopup-cap-alert.is-visible {
+  display: flex;
+}
+.cap-alert-icon {
+  font-size: 1.35rem;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.cap-alert-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.cap-alert-text strong {
+  color: #ffb800;
+  font-size: 0.84rem;
+  letter-spacing: 0.04em;
+}
+.cap-alert-text span {
+  color: #d1d5db;
+}
+
 .retopup-manual-prompt {
   display: none;
   align-items: center;
@@ -8238,16 +8302,7 @@ html.lite .hw-wallet { animation: none; filter: none; }
   box-shadow: 0 0 12px rgba(255, 184, 0, 0.6);
 }
 .faq-answer {
-  max-height: 0;
   overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s ease, padding 0.35s ease;
-  padding: 0 1.6rem 0;
-}
-.faq-item.is-open .faq-answer {
-  max-height: 700px;
-  opacity: 1;
-  padding: 0 1.6rem 1.6rem;
 }
 .faq-answer p {
   color: #cbd5e1;
@@ -8523,11 +8578,18 @@ a.lp-item[href]:hover .lp-text b { text-decoration: underline; }
 .faq-item.is-open .faq-icon { transform: rotate(135deg); background: var(--grad-gold); color: #1a1404; border-color: transparent; box-shadow: 0 0 14px rgba(212, 175, 55, 0.5); }
 
 /* open / close */
-.faq-answer, .faq-item.is-open .faq-answer {
-  display: grid; grid-template-rows: 0fr; max-height: none; padding: 0 1.4rem; opacity: 1;
-  transition: grid-template-rows 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+.faq-answer {
+  display: grid;
+  grid-template-rows: 0fr;
+  max-height: none;
+  overflow: hidden;
+  padding: 0 1.4rem;
+  opacity: 1;
+  transition: grid-template-rows 0.45s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.faq-item.is-open .faq-answer { grid-template-rows: 1fr; }
+.faq-item.is-open .faq-answer {
+  grid-template-rows: 1fr;
+}
 .faq-answer-inner {
   min-height: 0; overflow: hidden;
   opacity: 0; transform: translateY(-6px);
@@ -8665,7 +8727,7 @@ a.lp-item[href]:hover .lp-text b { text-decoration: underline; }
   .mnav-backdrop { position: absolute; inset: 0; background: rgba(3, 3, 5, 0.6); opacity: 0; transition: opacity 0.4s ease; }
   .mnav.is-open .mnav-backdrop { opacity: 1; }
   .mnav-sheet {
-    position: absolute; left: 0.75rem; right: 0.75rem; top: calc(4.6rem + env(safe-area-inset-top, 0px));
+    position: absolute; left: 0.75rem; right: 0.75rem; top: calc(4.6rem + var(--safe-top));
     max-height: calc(100dvh - 5.6rem); overflow-y: auto; overscroll-behavior: contain;
     padding: 1rem 0.9rem 0.9rem; border-radius: 20px;
     background: radial-gradient(120% 60% at 50% 0%, rgba(212, 175, 55, 0.16), transparent 60%), linear-gradient(180deg, #17150f, #0a0907);
@@ -8725,7 +8787,7 @@ a.lp-item[href]:hover .lp-text b { text-decoration: underline; }
    ========================================================================== */
 @media (max-width: 960px) {
   .top-header, .top-header.scrolled {
-    padding: calc(0.55rem + env(safe-area-inset-top, 0px)) 0 0.4rem !important;
+    padding: calc(0.55rem + var(--safe-top)) 0 0.4rem !important;
     background: transparent !important;
     border-bottom: 0 !important;
     backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
@@ -8752,7 +8814,7 @@ a.lp-item[href]:hover .lp-text b { text-decoration: underline; }
   .mnav-toggle.is-open span:nth-child(1) { transform: translateY(3px) rotate(45deg); }
   .mnav-toggle.is-open span:nth-child(3) { transform: translateY(-3px) rotate(-45deg); }
 
-  .mnav-sheet { top: calc(4.2rem + env(safe-area-inset-top, 0px)); }
+  .mnav-sheet { top: calc(4.2rem + var(--safe-top)); }
 }
 @media (max-width: 380px) {
   .top-header .btn.btn-wallet--nav { padding-right: 0.65rem; font-size: 0.72rem; }
@@ -8790,4 +8852,9 @@ a.lp-item[href]:hover .lp-text b { text-decoration: underline; }
   #rankCalcCard .rcalc-results-grid { gap: 0.6rem; }
   #rankCalcCard .rcalc-stat { padding: 0.9rem 0.9rem; }
   #rankCalcCard .rcalc-stat-title { font-size: 1.45rem; }
+}
+
+/* installed (home screen) / fullscreen: the page really sits under the status bar, so keep the header below it */
+@media (display-mode: standalone), (display-mode: fullscreen) {
+  :root { --safe-top: env(safe-area-inset-top, 0px); }
 }

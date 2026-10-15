@@ -18,7 +18,8 @@
     "worker:dev": "tsx watch src/worker.ts",
     "signer": "node dist/signer/server.js",
     "signer:dev": "tsx watch src/signer/server.ts",
-    "signer:keygen": "tsx src/signer/keygen.ts"
+    "signer:keygen": "tsx src/signer/keygen.ts",
+    "check:env": "tsx src/tools/checkEnv.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",

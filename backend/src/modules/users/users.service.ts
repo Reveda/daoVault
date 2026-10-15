@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { serializable } from "../../config/transaction.js";
-import { linkUpline, uniqueReferralCode } from "../activation/activation.engine.js";
+import { prisma } from "../../config/prisma.js";
+import { linkUpline, teamHasPayment, uniqueReferralCode } from "../activation/activation.engine.js";
 import { usersRepository } from "./users.repository.js";
 import { isRootWallet } from "../../config/root.js";
 
@@ -36,25 +37,24 @@ export class UsersService {
     const view = (u: { walletAddress: string; referralCode: string; _count: { packages: number } }) =>
       ({ walletAddress: u.walletAddress, referralCode: u.referralCode, activated: u._count.packages > 0 || isRootWallet(u.walletAddress) });
 
-    const existing = await usersRepository.findWithPackageCount(wallet);
-    if (existing) return view(existing);
-    try {
-      return view(await serializable(async (tx) => {
-        const again = await tx.user.findUnique({ where: { walletAddress: wallet }, include: { _count: { select: { packages: true } } } });
-        if (again) return again;
-        return tx.user.create({
-          data: { walletAddress: wallet, referralCode: await uniqueReferralCode(tx, wallet) },
+    // No serializable transaction here (load test, 2026-10-14: 40 sign-ups at once made Postgres
+    // abort some as write conflicts -> 500s). The unique wallet and code constraints already stop
+    // doubles: a duplicate wallet means another tab won (return its record); a duplicate code means
+    // two wallets share the first hex chars, so pick the code again (it grows longer).
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const existing = await usersRepository.findWithPackageCount(wallet);
+      if (existing) return view(existing);
+      try {
+        return view(await prisma.user.create({
+          data: { walletAddress: wallet, referralCode: await uniqueReferralCode(prisma, wallet) },
           include: { _count: { select: { packages: true } } },
-        });
-      }));
-    } catch (error) {
-      // two tabs registering the same wallet at once: the other one won, return its record
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-        const winner = await usersRepository.findWithPackageCount(wallet);
-        if (winner) return view(winner);
+        }));
+      } catch (error) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002")) throw error;
+        // loop: the wallet now exists (return it) or the code was just taken (try another)
       }
-      throw error;
     }
+    throw Object.assign(new Error("Could not register this wallet right now. Please try again."), { statusCode: 503 });
   }
 
   /**
@@ -79,14 +79,7 @@ export class UsersService {
       if (!sponsor) throw fail("Invite code not found.", 404);
       if (user.uplineId === sponsor.id) return { pendingSponsorCode: code, activated: false };
       // any package below (counted or still in the plan queue) fixes the sponsor
-      const [paidBelow] = user.uplineId ? await tx.$queryRaw<Array<{ paid: boolean }>>`
-        WITH RECURSIVE tree(id) AS (
-          SELECT id FROM users WHERE upline_id = ${user.id}::uuid
-          UNION ALL
-          SELECT u.id FROM users u JOIN tree t ON u.upline_id = t.id
-        )
-        SELECT EXISTS (SELECT 1 FROM packages p JOIN tree t ON p.user_id = t.id) AS paid` : [{ paid: false }];
-      if (user.uplineId && (user.teamVolume > 0 || paidBelow?.paid)) {
+      if (user.uplineId && (user.teamVolume > 0 || (await teamHasPayment(tx, user.id)))) {
         throw fail(`Your sponsor stays ${user.upline?.referralCode}: your team has already started paying.`, 409);
       }
       if (!(await linkUpline(tx, user.id, sponsor.id))) throw fail("That invite code belongs to someone in your own team.", 400);

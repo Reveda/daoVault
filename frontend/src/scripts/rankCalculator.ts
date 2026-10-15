@@ -124,7 +124,8 @@ export function initRankCalculator(): void {
   // Direct Team Size input -> sync slider & calculate
   if (teamInput) {
     teamInput.addEventListener('input', () => {
-      const team = parseInt(teamInput.value, 10) || 0;
+      const raw = parseInt(teamInput.value, 10);
+      const team = isNaN(raw) ? 0 : Math.max(0, Math.min(100000, raw));
       const vol = Math.floor(team / 2);
       updateFromVolume(vol, true, false);
     });
@@ -133,7 +134,7 @@ export function initRankCalculator(): void {
   // Stepper buttons
   if (stepMinus) {
     stepMinus.addEventListener('click', () => {
-      const currentTeam = parseInt(teamInput?.value || slider.value, 10) || 0;
+      const currentTeam = parseInt(teamInput?.value || '0', 10) || 0;
       const newTeam = Math.max(0, currentTeam - 50);
       if (teamInput) teamInput.value = String(newTeam);
       updateFromVolume(Math.floor(newTeam / 2), true, false);
@@ -142,8 +143,8 @@ export function initRankCalculator(): void {
 
   if (stepPlus) {
     stepPlus.addEventListener('click', () => {
-      const currentTeam = parseInt(teamInput?.value || slider.value, 10) || 0;
-      const newTeam = currentTeam + 50;
+      const currentTeam = parseInt(teamInput?.value || '0', 10) || 0;
+      const newTeam = Math.min(100000, currentTeam + 50);
       if (teamInput) teamInput.value = String(newTeam);
       updateFromVolume(Math.floor(newTeam / 2), true, false);
     });

@@ -50,17 +50,18 @@ async function record(log: Log): Promise<"recorded" | "skipped"> {
 
 export async function indexPaymentEvents(): Promise<{ from?: number; to?: number; events: number; skipped: number }> {
   if (!env.PAYMENT_CONTRACT_ADDRESS) return { events: 0, skipped: 0 };
-  const provider = new JsonRpcProvider(env.INDEXER_RPC_URL ?? env.BSC_RPC_URL, env.BSC_CHAIN_ID, { staticNetwork: true });
-  const safeHead = (await provider.getBlockNumber()) - env.INDEXER_CONFIRMATIONS;
-
   const cursor = await prisma.chainCursor.findUnique({ where: { name: CURSOR } });
   let from: number;
   if (cursor) from = Number(cursor.block) + 1;
   else if (env.INDEXER_START_BLOCK !== undefined) from = env.INDEXER_START_BLOCK;
   else {
-    console.warn("[indexer] INDEXER_START_BLOCK is not set: reading new blocks only (set it to the contract's deploy block to catch up past payments)");
-    from = safeHead;
+    // starting "from now" would save a cursor past every earlier payment and skip them for good:
+    // wait for the deploy block instead (payments reported by the website are still recorded)
+    alert("critical", "indexer-no-start-block", "Chain indexer is NOT running: set INDEXER_START_BLOCK to the activation contract's deploy block (BscScan -> contract -> first transaction), then restart the worker.");
+    return { events: 0, skipped: 0 };
   }
+  const provider = new JsonRpcProvider(env.INDEXER_RPC_URL ?? env.BSC_RPC_URL, env.BSC_CHAIN_ID, { staticNetwork: true });
+  const safeHead = (await provider.getBlockNumber()) - env.INDEXER_CONFIRMATIONS;
 
   const firstBlock = from;
   let events = 0;

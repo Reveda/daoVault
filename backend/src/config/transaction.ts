@@ -9,7 +9,7 @@ type Tx = Prisma.TransactionClient;
  * go through here, so two requests touching the same upline or balance can never
  * both read the old value and double-pay.
  */
-export async function serializable<T>(fn: (tx: Tx) => Promise<T>, attempts = 5): Promise<T> {
+export async function serializable<T>(fn: (tx: Tx) => Promise<T>, attempts = 10): Promise<T> {
   for (let attempt = 1; ; attempt++) {
     try {
       return await prisma.$transaction(fn, {
@@ -21,7 +21,9 @@ export async function serializable<T>(fn: (tx: Tx) => Promise<T>, attempts = 5):
       const code = (error as { code?: string })?.code;
       const conflict = code === "P2034" || /could not serialize|40001/i.test(String((error as Error)?.message));
       if (!conflict || attempt >= attempts) throw error;
-      await new Promise((r) => setTimeout(r, 40 * attempt + Math.random() * 60));
+      // exponential backoff with jitter (launch bursts: many requests retrying at once must spread out)
+      const base = Math.min(2_000, 25 * 2 ** attempt);
+      await new Promise((r) => setTimeout(r, base / 2 + Math.random() * base));
     }
   }
 }

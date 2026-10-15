@@ -31,10 +31,13 @@ export type DashboardData = {
     maxCapLimit: number | string;
     activationTxHash?: string;
     status: string;
+    createdAt?: string;
   }>;
   /** the package earning now: the oldest still ACTIVE, else the latest */
   currentPackage: DashboardData['packages'][number] | null;
   packageCount: number;
+  /** DV token allocation: 1,500 DV per package, credited at the planned DV launch */
+  dvToken?: { perPackage: number; allocated: number; launch: string; launchDate?: string; network: string };
   /** every package reached its cap: offer a $300 top-up (re-entry) */
   canTopUp: boolean;
   levels: Array<{ level: number; pct: number; reqDirects: number; unlocked: boolean; members: number; earnedUsd: number }>;
@@ -243,4 +246,8 @@ export function wakeBackend(): void {
 
 // ── landing live pulse (real events only) ──
 export type ActivityItem = { type: 'activation' | 'topup' | 'rank' | 'withdrawal'; wallet: string; detail: string; amountUsd: number; at: string; txHash: string | null };
-export const getRecentActivity = () => request<ActivityItem[]>('/activity/recent');
+/** latest real events + whether the business is live (payments open): then the landing shows no samples */
+export async function getRecentActivity(): Promise<{ items: ActivityItem[]; live: boolean }> {
+  const data = await request<ActivityItem[] | { items: ActivityItem[]; live: boolean }>('/activity/recent?v=2');
+  return Array.isArray(data) ? { items: data, live: false } : data;
+}

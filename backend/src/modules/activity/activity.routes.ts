@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
 import { RANKS } from "../plan/plan.js";
 
@@ -51,8 +52,18 @@ async function recentActivity(): Promise<Activity[]> {
 
 export const activityRouter = Router();
 
-activityRouter.get("/recent", async (_req, res, next) => {
+/**
+ * ?v=2 (owner, 2026-10-15: "everything real at launch"): { items, live }. live = payments are open
+ * (PAYMENTS_OPEN_AT, server clock): from then on the landing never shows sample events, only real
+ * ones or "waiting for the first activation". Without ?v=2 the plain list (an older cached page).
+ */
+activityRouter.get("/recent", async (req, res, next) => {
   try {
-    res.json({ success: true, data: await recentActivity() });
+    const items = await recentActivity();
+    if (req.query.v === "2") {
+      res.json({ success: true, data: { items, live: env.PAYMENTS_OPEN_AT.getTime() <= Date.now() } });
+    } else {
+      res.json({ success: true, data: items });
+    }
   } catch (error) { next(error); }
 });

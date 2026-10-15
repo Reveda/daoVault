@@ -27,7 +27,13 @@ const gateOptions = { httpOnly: true, secure: env.NODE_ENV === "production", sam
 
 function readCookie(req: Request, name: string): string | undefined {
   const part = (req.headers.cookie ?? "").split(";").map((c) => c.trim()).find((c) => c.startsWith(`${name}=`));
-  return part ? decodeURIComponent(part.slice(name.length + 1)) : undefined;
+  if (!part) return undefined;
+  try {
+    return decodeURIComponent(part.slice(name.length + 1));
+  } catch {
+    // A malformed cookie must behave like a missing/invalid session, never crash the route.
+    return undefined;
+  }
 }
 const readRefreshCookie = (req: Request) => readCookie(req, REFRESH_COOKIE);
 
@@ -59,7 +65,7 @@ authRouter.post("/verify", authRateLimiter, authWalletRateLimiter, validateReque
 });
 
 // 3. new access token from the refresh cookie (rotated on every use)
-authRouter.post("/refresh", async (req, res, next) => {
+authRouter.post("/refresh", authRateLimiter, async (req, res, next) => {
   try {
     const { access, refresh } = await authService.refresh(readRefreshCookie(req));
     await sendSession(res, access, refresh);
@@ -74,7 +80,7 @@ authRouter.post("/refresh", async (req, res, next) => {
 });
 
 // log out this device: its refresh tokens are deleted and the cookie cleared
-authRouter.post("/logout", async (req, res, next) => {
+authRouter.post("/logout", authRateLimiter, async (req, res, next) => {
   try {
     await authService.logout(readRefreshCookie(req));
     res.clearCookie(REFRESH_COOKIE, cookieOptions);

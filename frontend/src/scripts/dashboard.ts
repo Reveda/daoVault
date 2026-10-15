@@ -9,6 +9,7 @@ import {
   bootPreloader,
   formatAddress,
   showToast,
+  confirmNotice,
   showLaunchNotice,
   getPendingReferral,
   clearPendingReferral,
@@ -40,6 +41,7 @@ import {
   type WithdrawalSummary,
   type Withdrawal,
 } from './api.ts';
+import { mountDvToken3D } from './dvToken3d.ts';
 import { activateWallet, isPaymentConfigured, resolveSponsor, retryPendingActivation, topUpWallet, REAL_PAYMENTS_LOCKED, REAL_PAYMENTS_LOCKED_MSG } from './payment.ts';
 import {
   prepareDashboardReveal,
@@ -249,9 +251,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   initReferralLink(account, dashboardData, serverDown);
-  initActivation(account, Boolean(pkg) || isRoot, serverDown, dashboardData?.pendingSponsorCode ?? getPendingReferral(),
+  // admin / company wallet (owner, 2026-10-15): never offered Pay & Activate or a withdrawal, in any
+  // view (also ?view=member); the server refuses an admin withdrawal too
+  const adminWallet = Boolean(dashboardData?.isAdmin);
+  if (adminWallet) {
+    document.getElementById('activationCard')?.setAttribute('hidden', '');
+    document.getElementById('withdrawSection')?.setAttribute('hidden', '');
+    document.querySelector('.dash-content-grid')?.classList.add('is-single');
+  }
+  // pay with the sponsor the server recorded (the team tree), so the on-chain sponsor always matches it
+  if (!adminWallet) initActivation(account, Boolean(pkg) || isRoot, serverDown, dashboardData?.sponsorCode ?? dashboardData?.pendingSponsorCode ?? getPendingReferral(),
     Boolean(dashboardData?.canTopUp), dashboardData?.packageCount ?? 0, dashboardData?.paymentsOpenAt ?? null, dashboardData?.paymentsOpen ?? true);
   updateOverviewMetrics(activeDirects, totalEarned, capEarned, maxCap, dashboardData?.currentRank, pkg?.status);
+  initDvToken(dashboardData);
   updateMemberDetails(dashboardData, Boolean(pkg) || isRoot, capEarned, maxCap);
 
   // 7. 25x capping gauge
@@ -267,7 +279,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderIncome(dashboardData);
 
   // 9. Withdrawals (wallet-signature sign-in)
-  initWithdrawals(account, hasLiveData ? dashboardData!.availableUsd : 0, dashboardData);
+  if (!adminWallet) initWithdrawals(account, hasLiveData ? dashboardData!.availableUsd : 0, dashboardData);
 });
 
 /** No section nav on the dashboard: the logo just takes the member back to the top. */
@@ -342,7 +354,21 @@ function initActivation(account: string, activated: boolean, serverDown = false,
     button.disabled = true;
     try {
       // invite code -> sponsor wallet, checked before any payment
-      const txHash = topUp ? await topUpWallet() : await activateWallet((await resolveSponsor(code, account)).wallet);
+      const sponsor = topUp ? null : await resolveSponsor(code, account);
+      // the sponsor has not activated yet (owner, 2026-10-13): say it plainly before paying. Their
+      // share of this payment is not paid to them; the member's own ID and earnings are not affected.
+      if (sponsor?.code && !sponsor.activated) {
+        const go = await confirmNotice({
+          kicker: 'Before you activate',
+          title: "Your sponsor's ID is not active yet",
+          message: 'You are joining under {highlight}. Their ID has not been activated yet, so they will not receive a reward from your activation. Your own ID, team and earnings are not affected, and they receive rewards from new activations once their ID is active.',
+          highlight: sponsor.code,
+          confirm: 'Continue to activation',
+          cancel: 'Not now',
+        });
+        if (!go) { button.disabled = false; return; }
+      }
+      const txHash = topUp ? await topUpWallet() : await activateWallet(sponsor!.wallet);
       if (status) status.textContent = `Confirmed: ${txHash.slice(0, 10)}...`;
       showToast(`${topUp ? 'Top-up' : 'Activation'} verified on-chain. Refreshing dashboard...`);
       document.getElementById('activationCard')?.classList.add('fx-celebrate');
@@ -353,6 +379,95 @@ function initActivation(account: string, activated: boolean, serverDown = false,
       button.disabled = false;
     }
   });
+}
+
+/**
+ * DV token allocation (owner, 2026-10-15): 1,500 DV for every $300 package (activation or top-up),
+ * credited at the planned DV launch (March 2028, BNB Smart Chain). The card under the metrics and
+ * the "DV Token" header button show the server's numbers: packages x 1,500, one line per package.
+ * Hidden for the company root and when the server is unreachable (never a guessed number).
+ */
+function initDvToken(data: DashboardData | null): void {
+  const card = document.getElementById('dvTokenCard');
+  const menu = document.getElementById('dvMenu');
+  const dv = data?.dvToken;
+  if (!data || !dv || data.isRoot) return;
+  const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
+  const packages = data.packages ?? [];
+  const count = packages.length;
+  const el = (tag: string, className: string, text?: string) => Object.assign(document.createElement(tag), { className, ...(text !== undefined ? { textContent: text } : {}) });
+
+  // months to the planned launch (from the server's date), shown as "about N months away"
+  const launchAt = dv.launchDate ? new Date(`${dv.launchDate}T00:00:00Z`) : null;
+  const months = launchAt ? Math.max(0, Math.round((launchAt.getTime() - Date.now()) / (30.44 * 86_400_000))) : null;
+
+  if (card) {
+    card.hidden = false;
+    card.classList.toggle('is-empty', count === 0);
+    rollNumber(document.getElementById('dvTokenAmount'), dv.allocated, fmt);
+    const calc = document.getElementById('dvTokenCalc');
+    if (calc) {
+      calc.replaceChildren();
+      if (count > 0) {
+        calc.append(el('span', 'dv-calc-chip', `${count} package${count === 1 ? '' : 's'}`), el('span', 'dv-calc-op', '\u00d7'),
+          el('span', 'dv-calc-chip', `${fmt(dv.perPackage)} DV`), el('span', 'dv-calc-op', '='), el('span', 'dv-calc-chip is-total', `${fmt(dv.allocated)} DV`));
+      } else {
+        calc.append(el('span', 'dv-calc-hint', `Activate your $300 package to receive ${fmt(dv.perPackage)} DV`));
+      }
+    }
+    const launch = document.getElementById('dvTokenLaunch');
+    if (launch) launch.textContent = `Planned launch \u00b7 ${dv.launch}`;
+    const net = document.getElementById('dvTokenNet');
+    if (net) net.textContent = months !== null && months > 0 ? `${dv.network} \u00b7 about ${months} months away` : dv.network;
+  }
+
+  // the token as a minted 3D coin (falls back to the flat logo + CSS spin on lite phones)
+  const cardCoin = document.getElementById('dvCardCoin');
+  if (card && cardCoin) void mountDvToken3D(cardCoin, 76, true);
+
+  if (!menu) return;
+  menu.hidden = false;
+  const menuCoin = document.getElementById('dvMenuCoin');
+  if (menuCoin) void mountDvToken3D(menuCoin, 34);
+  const total = document.getElementById('dvMenuTotal');
+  if (total) total.textContent = fmt(dv.allocated);
+  const panelTotal = document.getElementById('dvPanelTotal');
+  if (panelTotal) panelTotal.textContent = fmt(dv.allocated);
+  const rows = document.getElementById('dvPanelRows');
+  if (rows) {
+    rows.replaceChildren();
+    if (!count) {
+      rows.append(el('li', 'dv-row is-empty', `No package yet. Each $300 package adds ${fmt(dv.perPackage)} DV.`));
+    } else {
+      packages.forEach((p, i) => {
+        const li = el('li', 'dv-row');
+        const when = p.createdAt ? new Date(p.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        const left = el('span', 'dv-row-what');
+        left.append(el('b', '', `Package #${i + 1}`), el('small', 'mono', [i === 0 ? 'Activation' : 'Top-up', when].filter(Boolean).join(' \u00b7 ')));
+        li.append(left, el('span', 'dv-row-amt mono', `+${fmt(dv.perPackage)} DV`));
+        rows.append(li);
+      });
+      const sum = el('li', 'dv-row is-sum');
+      sum.append(el('span', 'dv-row-what', `${count} \u00d7 ${fmt(dv.perPackage)} DV`), el('span', 'dv-row-amt mono', `${fmt(dv.allocated)} DV`));
+      rows.append(sum);
+    }
+  }
+  const foot = document.getElementById('dvPanelFoot');
+  if (foot) foot.textContent = `${fmt(dv.perPackage)} DV per $300 package \u00b7 planned launch ${dv.launch} on ${dv.network}`;
+
+  // open / close like the wallet menu: click, outside click, Escape
+  const btn = document.getElementById('dvMenuBtn');
+  const panel = document.getElementById('dvMenuPanel');
+  if (!btn || !panel || btn.dataset.bound) return;
+  btn.dataset.bound = '1';
+  const setOpen = (open: boolean) => {
+    panel.hidden = !open;
+    btn.setAttribute('aria-expanded', String(open));
+    menu.classList.toggle('is-open', open);
+  };
+  btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(panel.hidden); });
+  document.addEventListener('click', (e) => { if (!panel.hidden && !menu.contains(e.target as Node)) setOpen(false); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) setOpen(false); });
 }
 
 function formatUsd(n: number): string {

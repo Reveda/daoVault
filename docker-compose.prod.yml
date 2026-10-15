@@ -173,7 +173,8 @@ services:
   # Payout voucher signer (owner, 2026-10-13: instant withdrawals, no admin review). Holds the ONE
   # key the DAOvaultPayout contract trusts; it never sends money and holds none. Only the API can
   # reach it (network `signer`: internal, no port on the VPS). Key = encrypted keystore + password,
-  # files in ./secrets (made by dist/signer/keygen.js), mounted read-only into this container only. Start it with
+  # files in ./secrets/signer (made by dist/signer/keygen.js), mounted read-only into this container only:
+  # it never sees anything else in ./secrets (rclone.conf belongs to the offsite service). Start it with
   # --profile payouts once the payout contract is deployed (DOCKER.md, "Instant withdrawals").
   signer:
     <<: *hardening
@@ -195,7 +196,7 @@ services:
       SIGNER_KEYSTORE_PASSWORD_FILE: /run/secrets/payout_keystore_password.txt
     volumes:
       # read-only; only this container mounts it (files owned by uid 1000 = the image's node user)
-      - ./secrets:/run/secrets:ro
+      - ./secrets/signer:/run/secrets:ro
     networks:
       - signer
     read_only: true
@@ -208,7 +209,7 @@ services:
       start_period: 30s
       retries: 3
     profiles:
-      - payouts    # start with --profile payouts (needs ./secrets and the payout contract)
+      - payouts    # start with --profile payouts (needs ./secrets/signer and the payout contract)
     deploy:
       replicas: 1
       resources:

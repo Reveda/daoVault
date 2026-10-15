@@ -6,6 +6,7 @@ import { usersService } from "./modules/users/users.service.js";
 import { alert } from "./config/alerts.js";
 import { startPlanQueueTimer } from "./modules/activation/planQueue.js";
 import { runWatch } from "./jobs/watch.js";
+import { withdrawalsService } from "./modules/withdrawals/withdrawals.service.js";
 
 // a crash or a forgotten promise reaches the owner (then the process manager restarts the API)
 process.on("unhandledRejection", (reason) => {
@@ -40,6 +41,8 @@ const server = app.listen(env.PORT, () => {
   // no worker without Redis (Render): this API watches the system itself
   if (!env.REDIS_URL) {
     setInterval(() => void runWatch().catch((error) => console.error("[watch]", error)), 5 * 60_000).unref();
+    // the worker's voucher-settle job: claimed vouchers become paid, expired ones free the balance
+    setInterval(() => void withdrawalsService.reconcileAllOpen().catch((error) => console.error("[settle]", error)), 60_000).unref();
   }
 });
 
