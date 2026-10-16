@@ -8,7 +8,14 @@ import { env } from "./env.js";
  * queueing, and the rate limiters let requests through until Redis is back (passOnStoreError).
  */
 export const redis = env.REDIS_URL
-  ? createClient({ url: env.REDIS_URL, disableOfflineQueue: true })
+  ? createClient({
+      url: env.REDIS_URL,
+      disableOfflineQueue: true,
+      socket: {
+        connectTimeout: 5_000,
+        reconnectStrategy: (retries) => Math.min(5_000, 250 * 2 ** Math.min(retries, 5)),
+      },
+    })
   : null;
 
 if (redis) {

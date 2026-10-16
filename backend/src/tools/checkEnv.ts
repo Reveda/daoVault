@@ -11,10 +11,11 @@
  * the database has every migration, Redis answers. Prints only names, short addresses and
  * numbers, never a secret. Exit code 1 if anything is wrong.
  */
-import { Contract, JsonRpcProvider, formatUnits, getAddress } from "ethers";
+import { Contract, formatUnits, getAddress } from "ethers";
 import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { signerAddress } from "../modules/withdrawals/voucherSigner.js";
+import { chainProvider, indexerProvider } from "../config/rpc.js";
 
 const MAINNET_USDT = "0x55d398326f99059fF775485246999027B3197955";
 let failures = 0;
@@ -63,7 +64,7 @@ async function main() {
   } else warn("REDIS_URL not set: one API copy only, no background worker");
 
   console.log("\nBlockchain");
-  const provider = new JsonRpcProvider(env.BSC_RPC_URL, env.BSC_CHAIN_ID, { staticNetwork: true });
+  const provider = chainProvider();
   const head = await provider.getBlockNumber().catch(() => null);
   if (head === null) { fail(`BSC_RPC_URL does not answer for chain ${env.BSC_CHAIN_ID}`); return; }
   ok(`BSC_RPC_URL answers (block ${head})`);
@@ -110,7 +111,7 @@ async function main() {
   }
 
   if (env.PAYMENT_CONTRACT_ADDRESS && env.INDEXER_START_BLOCK !== undefined) {
-    const indexer = new JsonRpcProvider(env.INDEXER_RPC_URL ?? env.BSC_RPC_URL, env.BSC_CHAIN_ID, { staticNetwork: true });
+    const indexer = indexerProvider();
     if (env.INDEXER_START_BLOCK > head) fail(`INDEXER_START_BLOCK ${env.INDEXER_START_BLOCK} is in the future (head ${head})`);
     else {
       try {

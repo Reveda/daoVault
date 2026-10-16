@@ -43,6 +43,7 @@ const MAX_PER_DAY = parseUnits(setting("SIGNER_MAX_PER_DAY_USD", "10000"), DECIM
 const MAX_DEADLINE_S = Number(setting("SIGNER_MAX_DEADLINE_MINUTES", "60")) * 60;
 const TOKEN = Buffer.from(setting("PAYOUT_SIGNER_TOKEN"));
 const PORT = Number(setting("SIGNER_PORT", "7000"));
+const MAX_REQUESTS_PER_MINUTE = Number(setting("SIGNER_MAX_REQUESTS_PER_MINUTE", "120"));
 if (![56, 97].includes(CHAIN_ID)) throw new Error("signer: SIGNER_CHAIN_ID must be 56 (BSC) or 97 (BSC Testnet)");
 if (TOKEN.length < 32) throw new Error("signer: PAYOUT_SIGNER_TOKEN must be at least 32 characters");
 
@@ -55,10 +56,24 @@ const domain = { name: "DAOvaultPayout", version: "1", chainId: CHAIN_ID, verify
 let day = -1;
 let signedToday = 0n;
 const signedIds = new Map<string, string>(); // voucher id -> member|amount|deadline
+const requests = new Map<string, { window: number; count: number }>();
 
 const authorised = (req: IncomingMessage) => {
   const given = Buffer.from((req.headers.authorization ?? "").replace(/^Bearer\s+/i, ""));
   return given.length === TOKEN.length && timingSafeEqual(given, TOKEN);
+};
+
+const requestAllowed = (req: IncomingMessage) => {
+  const now = Date.now();
+  const window = Math.floor(now / 60_000);
+  const ip = req.socket.remoteAddress ?? "unknown";
+  const current = requests.get(ip);
+  if (!current || current.window !== window) {
+    requests.set(ip, { window, count: 1 });
+    return true;
+  }
+  current.count += 1;
+  return current.count <= MAX_REQUESTS_PER_MINUTE;
 };
 
 const send = (res: ServerResponse, status: number, body: unknown) => {
@@ -105,6 +120,7 @@ createServer(async (req, res) => {
   try {
     if (req.method === "GET" && req.url === "/health") return send(res, 200, { ok: true });
     if (!authorised(req)) return send(res, 401, { error: "unauthorised" });
+    if (!requestAllowed(req)) return send(res, 429, { error: "signer rate limit exceeded" });
     if (req.method === "GET" && req.url === "/address") return send(res, 200, { address: wallet.address });
     if (req.method === "POST" && req.url === "/sign") {
       const { status, ...out } = await sign(await readJson(req));

@@ -10,7 +10,7 @@ const sharedStore = (name: string) =>
     ? new RedisStore({ prefix: `rl:${name}:`, sendCommand: (...args: string[]) => redis!.sendCommand(args) })
     : undefined;
 
-const createLimiter = (name: string, windowMs: number, limit: number, message: string, keyGenerator?: (req: Request) => string) =>
+const createLimiter = (name: string, windowMs: number, limit: number, message: string, keyGenerator?: (req: Request) => string, passOnStoreError = true) =>
   rateLimit({
     windowMs,
     limit,
@@ -20,8 +20,9 @@ const createLimiter = (name: string, windowMs: number, limit: number, message: s
     skip: (req) => req.method === "OPTIONS" || req.path.endsWith("/health"),
     message: { success: false, error: message },
     store: sharedStore(name),
-    // Redis down: serve the request (Nginx still limits per IP) rather than fail the whole API
-    passOnStoreError: Boolean(redis),
+    // Public reads can fail open for availability; authentication and financial routes below
+    // fail closed when the shared limiter cannot be reached.
+    passOnStoreError: !redis || passOnStoreError,
   });
 
 export const apiRateLimiter = createLimiter(
@@ -36,6 +37,8 @@ export const authRateLimiter = createLimiter(
   env.AUTH_RATE_LIMIT_WINDOW_MS,
   env.AUTH_RATE_LIMIT_MAX,
   "Too many authentication attempts. Please try again later.",
+  undefined,
+  false,
 );
 
 /**
@@ -51,6 +54,7 @@ export const authWalletRateLimiter = createLimiter(
     const wallet = typeof req.body?.walletAddress === "string" ? req.body.walletAddress.trim().toLowerCase() : "";
     return /^0x[0-9a-f]{40}$/.test(wallet) ? `w:${wallet}` : `ip:${ipKeyGenerator(req.ip ?? "")}`;
   },
+  false,
 );
 
 export const financialRateLimiter = createLimiter(
@@ -58,4 +62,6 @@ export const financialRateLimiter = createLimiter(
   env.FINANCIAL_RATE_LIMIT_WINDOW_MS,
   env.FINANCIAL_RATE_LIMIT_MAX,
   "Too many financial requests. Please try again later.",
+  undefined,
+  false,
 );

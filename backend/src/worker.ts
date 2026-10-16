@@ -19,7 +19,7 @@ import { indexPaymentEvents } from "./jobs/chainIndexer.js";
 import { cleanupAuthTables } from "./jobs/maintenance.js";
 import { runWatch } from "./jobs/watch.js";
 import { alert } from "./config/alerts.js";
-import { startPlanQueueTimer } from "./modules/activation/planQueue.js";
+import { startPlanQueueTimer, stopPlanQueueTimer } from "./modules/activation/planQueue.js";
 import { withdrawalsService } from "./modules/withdrawals/withdrawals.service.js";
 
 if (!env.REDIS_URL) {
@@ -77,6 +77,7 @@ console.log(`[worker] running: chain-indexer every ${env.INDEXER_INTERVAL_SECOND
 
 const shutdown = async (signal: string) => {
   console.log(`[worker] ${signal} received, finishing the current job...`);
+  stopPlanQueueTimer();
   await worker.close();
   await queue.close();
   await connection.quit();

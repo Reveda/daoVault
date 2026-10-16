@@ -87,6 +87,31 @@ export class UsersService {
       return { pendingSponsorCode: code, activated: false };
     });
   }
+
+  /**
+   * Self-repair, run at every server start: an UNPAID wallet whose invite code is saved but which
+   * is not in the tree (upline_id empty) is linked under that sponsor. Wallets that saved a code
+   * before 2026-10-13 were left like this (the old rule linked only at payment), so they and their
+   * teams were missing from the sponsor's downline. Same linkUpline as an invite link (loop check,
+   * plan lock); safe to run from several API copies at once (re-checked inside the transaction).
+   */
+  async linkSavedSponsors() {
+    const rows = await prisma.user.findMany({
+      where: { uplineId: null, pendingSponsorCode: { not: null }, packages: { none: {} } },
+      select: { id: true, referralCode: true, pendingSponsorCode: true },
+      orderBy: { createdAt: "asc" },
+    });
+    const result = { found: rows.length, linked: [] as string[], skipped: [] as string[] };
+    for (const row of rows) {
+      const sponsor = await prisma.user.findUnique({ where: { referralCode: row.pendingSponsorCode! }, select: { id: true } });
+      const ok = sponsor && await serializable(async (tx) => {
+        const now = await tx.user.findUniqueOrThrow({ where: { id: row.id }, select: { uplineId: true } });
+        return now.uplineId ? true : linkUpline(tx, row.id, sponsor.id);
+      });
+      (ok ? result.linked : result.skipped).push(`${row.referralCode} -> ${row.pendingSponsorCode}`);
+    }
+    return result;
+  }
 }
 
 export const usersService = new UsersService();

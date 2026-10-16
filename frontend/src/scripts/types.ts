@@ -38,6 +38,8 @@ export interface WalletOption {
   provider?: any;
   appLink?: (url: string) => string;
   webLink?: string;
+  /** official store listings: Google Play package + App Store app id (opened when the app is not installed) */
+  store?: { android: string; ios: string };
 }
 
 export interface UserStats {

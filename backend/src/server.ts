@@ -4,7 +4,7 @@ import { prisma } from "./config/prisma.js";
 import { rootWallet } from "./config/root.js";
 import { usersService } from "./modules/users/users.service.js";
 import { alert } from "./config/alerts.js";
-import { startPlanQueueTimer } from "./modules/activation/planQueue.js";
+import { startPlanQueueTimer, stopPlanQueueTimer } from "./modules/activation/planQueue.js";
 import { runWatch } from "./jobs/watch.js";
 import { withdrawalsService } from "./modules/withdrawals/withdrawals.service.js";
 
@@ -36,6 +36,14 @@ const server = app.listen(env.PORT, () => {
   } else {
     console.warn("COMPANY_WALLET_ADDRESS is not set: there is no company root, so no one can join under the company link.");
   }
+  // unpaid wallets with a saved invite code but no upline (data from before 2026-10-13) join their sponsor's tree
+  usersService.linkSavedSponsors().then(
+    (r) => {
+      if (r.linked.length) console.log(`Saved invite codes linked into the tree: ${r.linked.join(", ")}`);
+      if (r.skipped.length) console.warn(`Saved invite codes not linked (sponsor missing or a loop): ${r.skipped.join(", ")}`);
+    },
+    (error) => console.error("Linking saved invite codes failed:", error),
+  );
   // plan queue: commissions / volume / ranks for recorded payments (one runner across all copies)
   startPlanQueueTimer();
   // no worker without Redis (Render): this API watches the system itself
@@ -48,8 +56,15 @@ const server = app.listen(env.PORT, () => {
 
 const shutdown = async (signal: string) => {
   console.log(`${signal} received. Shutting down...`);
+  stopPlanQueueTimer();
+  const force = setTimeout(() => {
+    console.error("[api] graceful shutdown timed out; exiting so the orchestrator can replace this replica");
+    process.exit(1);
+  }, 15_000);
+  force.unref();
   server.close(async () => {
     await prisma.$disconnect();
+    clearTimeout(force);
     process.exit(0);
   });
 };

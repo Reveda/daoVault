@@ -1,7 +1,7 @@
 /**
  * Dashboard level modal (owner, 2026-10-09): tap a row of the 20-Level Downline and a modal
- * lists everyone who joined at that level - DV code, short wallet, who sponsored them and
- * when they activated - 50 at a time with "Load more". Centred on every screen (phones too).
+ * lists everyone who joined at that level - DV code, their rank (once they have one), who
+ * sponsored them and when they activated - 50 at a time with "Load more". Centred on every screen (phones too).
  * Closes with the X, a tap outside the card or Escape; focus returns to the row.
  */
 import { getLevelMembers, type LevelMembers } from './api.ts';
@@ -12,19 +12,22 @@ let lastFocus: HTMLElement | null = null;
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
+const MEMBER_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c.5-4.1 3.3-6 8-6s7.5 1.9 8 6"/></svg>';
 
 function memberRows(members: LevelMembers['members'], startIndex: number): string {
   return members.map((m, i) => `
     <li class="lv-member" style="--i:${Math.min(startIndex + i, 12)}">
-      <span class="lv-avatar mono">${esc(m.referralCode.slice(2, 4))}</span>
+      <span class="lv-avatar" aria-hidden="true">${MEMBER_ICON}</span>
       <span class="lv-who">
-        <b class="mono">${esc(m.referralCode)}</b>
-        <small class="mono">${esc(m.wallet)}</small>
+        <span class="lv-id">
+          <b class="mono">${esc(m.referralCode)}</b>
+          ${m.rank > 0 && m.rankName ? `<span class="lv-rank"><i class="mono">R${m.rank}</i>${esc(m.rankName)}</span>` : ''}
+        </span>
       </span>
-      <span class="lv-meta">
-        <small>Sponsor <b class="mono">${esc(m.sponsorCode ?? '—')}</b></small>
-        <small>${m.joinedAt ? date(m.joinedAt) : 'Not activated yet'}</small>
-      </span>
+      <dl class="lv-facts">
+        <div><dt>Sponsor</dt><dd class="mono">${esc(m.sponsorCode ?? '—')}</dd></div>
+        <div><dt>Status</dt><dd class="lv-state ${m.joinedAt ? 'is-active' : 'is-pending'}"><i aria-hidden="true"></i>${m.joinedAt ? `Active since ${date(m.joinedAt)}` : 'Not activated'}</dd></div>
+      </dl>
     </li>`).join('');
 }
 
@@ -43,7 +46,7 @@ function onKey(e: KeyboardEvent): void {
   if (e.key === 'Escape') close();
 }
 
-export function openLevelModal(wallet: string, level: number, pct: number, usd: number): void {
+export function openLevelModal(wallet: string, level: number): void {
   close();
   lastFocus = document.activeElement as HTMLElement | null;
   overlay = document.createElement('div');
@@ -51,12 +54,11 @@ export function openLevelModal(wallet: string, level: number, pct: number, usd: 
   overlay.innerHTML = `
     <div class="lv-card" role="dialog" aria-modal="true" aria-labelledby="lvTitle">
       <header class="lv-head">
-        <div>
+        <div class="lv-head-text">
           <span class="lv-kicker mono">Your downline</span>
           <h3 id="lvTitle">Level ${level} <span class="grad-text">members</span></h3>
-          <p class="lv-sub mono">${pct}% · $${usd} per member</p>
+          <span class="lv-count mono" id="lvCount">…</span>
         </div>
-        <span class="lv-count mono" id="lvCount">…</span>
         <button type="button" class="lv-close" aria-label="Close">&times;</button>
       </header>
       <div class="lv-body">

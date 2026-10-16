@@ -14,6 +14,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(16),
   BSC_RPC_URL: z.string().url().default("https://bsc-dataseed.binance.org/"),
+  /** Comma-separated RPC fallbacks. The first URL remains BSC_RPC_URL for backwards compatibility. */
+  BSC_RPC_URLS: z.string().default(""),
   BSC_CHAIN_ID: z.coerce.number().int().default(56),
   PAYMENT_CONTRACT_ADDRESS: address(),
   USDT_CONTRACT_ADDRESS: address(),
@@ -48,6 +50,8 @@ const envSchema = z.object({
   INDEXER_START_BLOCK: optional(z.coerce.number().int().min(0)),
   /** RPC that answers eth_getLogs (BNB Chain's own public dataseed refuses it); empty = BSC_RPC_URL */
   INDEXER_RPC_URL: optional(z.string().url()),
+  /** Comma-separated indexer RPC fallbacks; when empty, BSC_RPC_URLS is used. */
+  INDEXER_RPC_URLS: z.string().default(""),
   INDEXER_CONFIRMATIONS: z.coerce.number().int().min(0).max(100).default(3),
   INDEXER_BLOCK_CHUNK: z.coerce.number().int().min(10).max(50_000).default(2_000),
   INDEXER_INTERVAL_SECONDS: z.coerce.number().int().min(5).max(3_600).default(15),

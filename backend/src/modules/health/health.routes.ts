@@ -10,9 +10,9 @@ export const healthRouter = Router();
  * when a migration creates one. Startup already refuses to run after a failed migration
  * (scripts/start.mjs); this also catches a database swapped or changed under a running API.
  */
-const NEWEST_TABLES = ["plan_events", "chain_cursors"] as const;
+const NEWEST_TABLES = ["plan_events", "chain_cursors", "power_businesses"] as const;
 
-healthRouter.get("/", async (_req, res) => {
+async function readiness(_req: Parameters<Parameters<typeof healthRouter.get>[1]>[0], res: Parameters<Parameters<typeof healthRouter.get>[1]>[1]) {
   let database: "up" | "down" = "up";
   let schema: "ok" | "outdated" | "unknown" = "unknown";
   try {
@@ -32,4 +32,11 @@ healthRouter.get("/", async (_req, res) => {
     schema,
     timestamp: new Date().toISOString(),
   });
-});
+}
+
+// Liveness never touches dependencies: a process that is alive can be restarted gracefully.
+healthRouter.get("/live", (_req, res) => res.status(200).json({ success: true, service: "daovault-backend", timestamp: new Date().toISOString() }));
+// Readiness is dependency-aware and is used by Docker/load balancers before sending traffic.
+healthRouter.get("/ready", readiness);
+// Backwards-compatible endpoint used by Render/UptimeRobot.
+healthRouter.get("/", readiness);

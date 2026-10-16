@@ -24,6 +24,7 @@ import {
   formatAddress,
   showToast,
   showLaunchNotice,
+  confirmNotice,
   getPendingReferral,
   BSC_CHAIN_ID,
 } from './core.ts';
@@ -580,6 +581,7 @@ function renderWalletList(): void {
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21.5 7.5L13.8 2.2a3 3 0 00-3.6 0L2.5 7.5a1.5 1.5 0 00-.6 1.4l1.8 8.2a3 3 0 002.3 2.3l4.8 1.1a3 3 0 002.4-.4l1.2-.8 1.2.8a3 3 0 002.4.4l4.8-1.1a3 3 0 002.3-2.3l1.8-8.2a1.5 1.5 0 00-.6-1.4z" fill="#E2761B"/><path d="M7 11.5l2-3.5 3 2-2 3.5H7z" fill="#F6851B"/><path d="M17 11.5l-2-3.5-3 2 2 3.5h3z" fill="#F6851B"/></svg>`,
       appLink: (url) => `https://metamask.app.link/dapp/${url.replace(/^https?:\/\//, '')}`,
       webLink: 'https://metamask.io/download/',
+      store: { android: 'io.metamask', ios: '1438144202' },
     },
     {
       id: 'binance',
@@ -593,6 +595,7 @@ function renderWalletList(): void {
         return `https://app.binance.com/en/download?_dp=${btoa(bnc)}`;
       },
       webLink: 'https://www.binance.com/en/web3wallet',
+      store: { android: 'com.binance.dev', ios: '1436799971' },
     },
     {
       id: 'trust',
@@ -600,14 +603,23 @@ function renderWalletList(): void {
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2.5L4 6.5v5.5c0 5.5 3.5 10.5 8 12 4.5-1.5 8-6.5 8-12V6.5l-8-4z" fill="#0500FF"/><path d="M12 5l5 2.5v4.5c0 3.8-2.2 7.2-5 8.5-2.8-1.3-5-4.7-5-8.5V7.5L12 5z" fill="#0057FF"/></svg>`,
       appLink: (url) => `https://link.trustwallet.com/open_url?coin_id=20000714&url=${encodeURIComponent(url)}`,
       webLink: 'https://trustwallet.com/',
+      store: { android: 'com.wallet.crypto.trustapp', ios: '1288339409' },
     },
     {
       id: 'tokenpocket',
       name: 'TokenPocket',
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="#2980FE"/><path d="M6.5 7h7v3h-2v7h-3v-7h-2V7z" fill="#FFFFFF"/><path d="M14.5 7h1.2a3.3 3.3 0 010 6.6h-1.2V7z" fill="#FFFFFF" opacity="0.75"/></svg>`,
-      // official "open DApp" deeplink (help.tokenpocket.pro, Pull up wallet with DeepLink)
-      appLink: (url) => `tpdapp://open?params=${encodeURIComponent(JSON.stringify({ url, chain: 'BSC', source: 'DAOvault' }))}`,
+      // official "open DApp" deeplink (help.tokenpocket.pro, Pull up wallet with DeepLink). tpdapp:// does
+      // nothing when the app is missing, so Android gets it as an intent link: Chrome opens the app, or
+      // the Play Store listing when it is not installed (owner, 2026-10-16)
+      appLink: (url) => {
+        const path = `open?params=${encodeURIComponent(JSON.stringify({ url, chain: 'BSC', source: 'DAOvault' }))}`;
+        return isAndroid()
+          ? `intent://${path}#Intent;scheme=tpdapp;package=vip.mytokenpocket;S.browser_fallback_url=${encodeURIComponent(PLAY_STORE + 'vip.mytokenpocket')};end`
+          : `tpdapp://${path}`;
+      },
       webLink: 'https://www.tokenpocket.pro/',
+      store: { android: 'vip.mytokenpocket', ios: '6444625622' },
     },
     {
       // SafePal documents no deeplink: on a phone the link is copied for its Browser tab
@@ -615,6 +627,7 @@ function renderWalletList(): void {
       name: 'SafePal',
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="#4A21EF"/><path d="M15.8 6.5H9.6L7 10.2h6.2l-2.6 3.6h-3.4L5.6 16.5h6.2l2.6-3.7H8.2l2.6-3.6h3.4l1.6-2.7z" fill="#FFFFFF"/></svg>`,
       webLink: 'https://www.safepal.com/download',
+      store: { android: 'io.safepal.wallet', ios: '1548297139' },
     },
   ];
 
@@ -662,7 +675,14 @@ function renderWalletList(): void {
         } else if (mobile) {
           // no app link (SafePal): copy the link for the wallet app's own browser
           try { await navigator.clipboard.writeText(withConnectFlag(window.location.href)); } catch { /* clipboard blocked */ }
-          showToast(`Link copied. Open ${opt.name}, go to its Browser and paste the link.`, true);
+          const download = await confirmNotice({
+            kicker: 'Link copied',
+            title: `Open ${opt.name}`,
+            message: `Open ${opt.name}, go to its Browser and paste the link. Don't have ${opt.name} yet? Download it first.`,
+            confirm: `Get ${opt.name}`,
+            cancel: 'OK',
+          });
+          if (download) openStore(opt);
         } else {
           showToast(`Please install ${opt.name} or open inside wallet app browser.`, true);
         }
@@ -770,9 +790,27 @@ function openWalletApp(wallet: WalletOption, currentUrl: string): void {
   window.setTimeout(() => {
     document.removeEventListener('visibilitychange', onVisibility);
     if (pageLeft || document.visibilityState !== 'visible') return;
-    const where = wallet.webLink ? ` If it is not installed, get it from ${new URL(wallet.webLink).hostname}.` : '';
-    showToast(`${wallet.name} did not open.${where} Then tap Connect again.`, true);
+    // the app is most likely not installed: offer its store page (a tap, so every phone opens it)
+    void confirmNotice({
+      kicker: 'Wallet app',
+      title: `${wallet.name} did not open`,
+      message: `If ${wallet.name} is not installed on this phone, download it, then come back and tap Connect again.`,
+      confirm: `Download ${wallet.name}`,
+      cancel: 'Close',
+    }).then((download) => { if (download) openStore(wallet); });
   }, 4000);
+}
+
+const PLAY_STORE = 'https://play.google.com/store/apps/details?id=';
+const isAndroid = () => /Android/i.test(navigator.userAgent);
+const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+/** the wallet's official store page for this phone (Play Store / App Store), else its download site */
+function openStore(wallet: WalletOption): void {
+  const link = wallet.store && isAndroid() ? PLAY_STORE + wallet.store.android
+    : wallet.store && isIOS() ? `https://apps.apple.com/app/id${wallet.store.ios}`
+      : wallet.webLink;
+  if (link) window.location.href = link;
 }
 
 function updateConnectButtonUI(account: string): void {

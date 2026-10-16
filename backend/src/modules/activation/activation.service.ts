@@ -1,9 +1,10 @@
-import { Contract, JsonRpcProvider, formatUnits, getAddress, Interface, ZeroAddress, type LogDescription } from 'ethers';
+import { Contract, formatUnits, getAddress, Interface, ZeroAddress, type AbstractProvider, type LogDescription } from 'ethers';
 import { env } from '../../config/env.js';
 import { serializable } from '../../config/transaction.js';
 import { processActivation, processTopUp } from './activation.engine.js';
 import { kickPlanQueue } from './planQueue.js';
 import { alert, shortWallet } from '../../config/alerts.js';
+import { chainProvider } from '../../config/rpc.js';
 
 const shortTx = (hash: string) => `${hash.slice(0, 10)}…`;
 
@@ -58,7 +59,7 @@ const transactionHashOf = (input: { transactionHash: string }) => shortTx(input.
  */
 type ContractConfig = { tokenAddress: string; treasuryAddress: string; activationAmount: bigint; payoutVault: string; amountUsd: number };
 const contractConfigs = new Map<string, Promise<ContractConfig>>();
-function contractConfig(payment: Contract, address: string, provider: JsonRpcProvider): Promise<ContractConfig> {
+function contractConfig(payment: Contract, address: string, provider: AbstractProvider): Promise<ContractConfig> {
   let config = contractConfigs.get(address);
   if (!config) {
     config = Promise.all([payment.usdt(), payment.treasury(), payment.activationAmount(), payment.payoutVault()])
@@ -90,7 +91,7 @@ export class ActivationService {
   private async contractEvent(walletAddress: string, transactionHash: string, eventName: 'Activated' | 'ToppedUp'): Promise<{ event: LogDescription; activationAmount: bigint; amountUsd: number }> {
     if (!env.PAYMENT_CONTRACT_ADDRESS) throw fail('Payments are not open yet. Please try again later.', 503);
     const contractAddress = env.PAYMENT_CONTRACT_ADDRESS.toLowerCase();
-    const provider = new JsonRpcProvider(env.BSC_RPC_URL, env.BSC_CHAIN_ID);
+    const provider = chainProvider();
     const [transaction, receipt] = await Promise.all([provider.getTransaction(transactionHash), provider.getTransactionReceipt(transactionHash)]);
     if (!transaction || !receipt || receipt.status !== 1) throw fail('Payment transaction is missing or failed.');
     if (transaction.from.toLowerCase() !== walletAddress || transaction.to?.toLowerCase() !== contractAddress) {

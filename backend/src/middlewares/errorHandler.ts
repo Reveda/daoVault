@@ -13,11 +13,12 @@ const GENERIC: Record<number, string> = {
 };
 
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
-  const status = typeof error?.statusCode === "number" ? error.statusCode : 500;
+  const limiterStoreFailure = typeof error?.code === "string" && error.code.startsWith("ERR_ERL_");
+  const status = limiterStoreFailure ? 503 : typeof error?.statusCode === "number" ? error.statusCode : 500;
   // our services throw Error + statusCode with a message written for members; library errors
   // (JSON body parser, payload size...) carry a `type` / `expose` and only get the generic text.
   // 503 is ours too: "try again later" messages (withdrawals paused, daily limit...)
-  const ours = (status < 500 || status === 503) && error instanceof Error && !("type" in error) && !("expose" in error);
+  const ours = limiterStoreFailure || ((status < 500 || status === 503) && error instanceof Error && !("type" in error) && !("expose" in error));
   if (status >= 500 && !ours) {
     console.error(error);
     // one [alert] log line per route per ALERT_REPEAT_MINUTES; wallets shortened, no request data
@@ -26,6 +27,6 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
   }
   res.status(status).json({
     success: false,
-    error: ours ? error.message : GENERIC[status] ?? (status >= 500 ? "Something went wrong. Please try again." : "Request failed."),
+    error: limiterStoreFailure ? "Security protection is temporarily unavailable. Please try again shortly." : ours ? error.message : GENERIC[status] ?? (status >= 500 ? "Something went wrong. Please try again." : "Request failed."),
   });
 };

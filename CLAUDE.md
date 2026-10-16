@@ -11,6 +11,8 @@ options (KMS / Docker signer / admin review), hardening, backups, emergency plan
 **Withdrawal + money flow for non-technical readers (owner, Hinglish: 45/55 split, one signer vs a voucher per
 withdrawal, keygen what to note, Remix fields not code):** `WITHDRAWAL-FLOW.md`.
 **Launch day (owner, Hinglish): what turns real by itself vs the owner's switches:** `LAUNCH-DAY.md`.
+**Power Business (owner, Hinglish: display-only business for one member ID, one side; table power_businesses,
+dashboard.service powerSides; no script in the code, records go straight into the DB):** `POWER-BUSINESS-POLICY.md`.
 **Join / team / activation scenarios for non-technical readers (owner, Hinglish: pre-launch, 10 Nov, A-B-C unpaid
 sponsor example, the sponsor popup):** `ACTIVATION-FLOW.md`.
 GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it private); history had no secrets.
@@ -265,6 +267,10 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   wallet, in any view (also ?view=member); .dash-content-grid.is-single; the Withdraw menu shortcut hides with it; the
   server refuses an admin withdrawal (403, withdrawals.service request).
   Dashboard 20-level rows open the level modal only when unlocked.
+  Wallets that saved an invite code before 2026-10-13 had pending_sponsor_code but no upline_id (missing from the
+  sponsor's downline): usersService.linkSavedSponsors() links them with linkUpline at EVERY API start (server.ts,
+  logs the codes; safe with several copies).
+  Local DB repaired 2026-10-15 (5 linked, incl. DV125A9D -> DV4C851C).
   Phones (owner 2026-10-12): html.lite = no .lvl-row / .reward-box entrance (a row stayed unpainted), finished entrances dropped
   via tbody/.reward-boxes.is-settled, particleScene skips frames while scrolling on LITE. Tap feedback site-wide: core.ts
   enableTouchPress adds .tap-glow only on a real tap (moved < 10px), CSS floats the card 3px (.tap-glow:not(#_) beats sticky

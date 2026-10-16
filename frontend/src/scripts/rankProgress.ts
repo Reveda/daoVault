@@ -27,9 +27,11 @@ const YOU = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColo
  * One side of the leg tree (owner, 2026-10-11): a progress ring with the side's DAO against the
  * rank target; hover / focus / tap shows how many members are on that side.
  */
-function legNode(side: 'left' | 'right', label: string, have: number, need: number, members: number | undefined, hint: string): string {
+function legNode(side: 'left' | 'right', label: string, rawHave: number, need: number, members: number | undefined, hint: string): string {
+  // capped at the target (owner, 2026-10-15): a reached side reads 25 / 25, never 42 / 25
+  const have = Math.min(rawHave, need);
   const pct = Math.min(1, need ? have / need : 0);
-  const done = have >= need;
+  const done = rawHave >= need;
   const people = members === undefined ? '—' : num(members);
   return `
     <button type="button" class="ri-node is-${side}${done ? ' is-done' : ''}" aria-label="${label}: ${num(have)} of ${num(need)} DAO, ${people} members">
@@ -51,17 +53,19 @@ function legNode(side: 'left' | 'right', label: string, have: number, need: numb
     </button>`;
 }
 
-function legTree(power: number, other: number, need: number, powerMembers?: number, otherMembers?: number): string {
+/** `legs` = the sides the member sees: the official legs, or with Power Business added when they have it */
+function legTree(legs: { power: number; other: number }, need: number, powerMembers?: number, otherMembers?: number): string {
+  const show = legs;
   return `
     <div class="ri-tree">
       <span class="ri-root" aria-hidden="true">${YOU}<em class="mono">YOU</em></span>
       <svg class="ri-links" viewBox="0 0 200 44" preserveAspectRatio="none" aria-hidden="true">
-        <path class="ri-link${power >= need ? ' is-done' : ''}" d="M100 0 C100 26 50 18 50 44" />
-        <path class="ri-link${other >= need ? ' is-done' : ''}" d="M100 0 C100 26 150 18 150 44" />
+        <path class="ri-link${show.power >= need ? ' is-done' : ''}" d="M100 0 C100 26 50 18 50 44" />
+        <path class="ri-link${show.other >= need ? ' is-done' : ''}" d="M100 0 C100 26 150 18 150 44" />
       </svg>
       <div class="ri-legs">
-        ${legNode('left', 'Strong Leg', power, need, powerMembers, 'Your biggest direct’s team')}
-        ${legNode('right', 'Other Leg', other, need, otherMembers, 'All your other directs’ teams')}
+        ${legNode('left', 'Strong Leg', show.power, need, powerMembers, 'Your biggest direct’s team')}
+        ${legNode('right', 'Other Leg', show.other, need, otherMembers, 'All your other directs’ teams')}
       </div>
     </div>`;
 }
@@ -70,19 +74,55 @@ export function renderRankProgress(data: DashboardData | null): void {
   const list = document.getElementById('rankList');
   const chip = document.getElementById('rankAchievedChip');
   const tabs = document.getElementById('rankFilter');
+  const powerProgress = document.getElementById('powerRankProgress');
+  const powerDaoValue = document.getElementById('powerRankDaoValue');
+  const powerAmountValue = document.getElementById('powerRankAmountValue');
+  const powerNameValue = document.getElementById('powerRankNameValue');
+  const powerNextValue = document.getElementById('powerRankNextValue');
+  const powerFill = document.getElementById('powerRankFill');
   if (!list) return;
   const power = data?.legs.power ?? 0;
   const other = data?.legs.other ?? 0;
   const current = data?.currentRank ?? 0;
-  const achieved = Math.min(current, RANK_TIERS.length);
+  // counted after the Power Business rank is known (below): the cards and the counts must agree
+  let achieved = Math.min(current, RANK_TIERS.length);
 
+  // virtual Power Business (owner, 2026-10-15): display only, same both-sides rank rule
+  const powerBusiness = data?.powerBusiness;
+  const hasVirtual = Boolean(powerBusiness && Number(powerBusiness.totalUsd) > 0);
+  const virtualLegs = hasVirtual ? powerBusiness!.legs : null;
+  const virtualRank = hasVirtual ? powerBusiness!.rank : 0;
+  if (powerProgress && powerDaoValue && powerAmountValue && powerNameValue && powerNextValue && powerFill) {
+    powerProgress.hidden = !hasVirtual;
+    if (hasVirtual && powerBusiness) {
+      const next = powerBusiness.nextRank;
+      const matched = powerBusiness.legs.matched;
+      const money = (v: number | string) => `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      powerDaoValue.textContent = `${num(matched)} DAO matched`;
+      powerAmountValue.textContent = `Business ${money(powerBusiness.totalUsd)}`;
+      powerNameValue.textContent = powerBusiness.rankName ?? 'Unranked';
+      powerNextValue.textContent = next ? `Next: ${next.name} at ${num(next.volume)} DAO on each side` : 'Highest rank reached';
+      powerFill.style.setProperty('--power-progress', `${next ? Math.min(100, (matched / next.volume) * 100) : 100}%`);
+      requestAnimationFrame(() => powerProgress.classList.add('is-visible'));
+    }
+  }
+
+  const officialRank = current;
+  const shownRank = Math.max(current, virtualRank);
+  achieved = Math.min(shownRank, RANK_TIERS.length);
+  const shownPower = virtualLegs?.power ?? power;
+  const shownOther = virtualLegs?.other ?? other;
   list.innerHTML = RANK_TIERS.map((tier, i) => {
     const rank = i + 1;
-    const state = rank <= current ? 'achieved' : rank === current + 1 ? 'current' : 'locked';
+    const state = rank <= shownRank ? 'achieved' : rank === shownRank + 1 ? 'current' : 'locked';
+    // reached only with the virtual business (the official rank is lower): shown, never rewarded
+    const viaPowerBusiness = state === 'achieved' && rank > officialRank;
     const status = state === 'achieved' ? 'Achieved' : state === 'current' ? 'In progress' : 'Locked';
-    const morePower = Math.max(0, tier.volume - power);
-    const moreOther = Math.max(0, tier.volume - other);
-    const foot = state === 'achieved'
+    const morePower = Math.max(0, tier.volume - shownPower);
+    const moreOther = Math.max(0, tier.volume - shownOther);
+    const foot = viaPowerBusiness
+      ? 'Rank reached'
+      : state === 'achieved'
       ? 'Rank reached &middot; reward credited to your balance'
       : morePower || moreOther
         ? `Still needed: <b>${num(morePower)}</b> Strong Leg &middot; <b>${num(moreOther)}</b> Other Leg`
@@ -98,7 +138,7 @@ export function renderRankProgress(data: DashboardData | null): void {
           <span class="ri-status mono">${status}</span>
         </div>
         <p class="ri-target mono">Target: ${num(tier.volume)} DAO on each side</p>
-        ${legTree(power, other, tier.volume, data?.legs.powerMembers, data?.legs.otherMembers)}
+        ${legTree(virtualLegs ?? { power, other }, tier.volume, data?.legs.powerMembers, data?.legs.otherMembers)}
         <p class="ri-foot mono">${foot}</p>
       </li>`;
   }).join('');

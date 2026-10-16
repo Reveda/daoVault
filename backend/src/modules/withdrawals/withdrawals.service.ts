@@ -1,11 +1,12 @@
 import { Prisma, WithdrawalStatus, type Withdrawal } from "@prisma/client";
-import { Contract, Interface, JsonRpcProvider, parseUnits } from "ethers";
+import { Contract, Interface, parseUnits } from "ethers";
 import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
 import { serializable } from "../../config/transaction.js";
 import { alert } from "../../config/alerts.js";
 import { isAdminWallet } from "../auth/auth.service.js";
 import { fromCents, toCents, withdrawalSplit } from "../plan/plan.js";
+import { chainProvider } from "../../config/rpc.js";
 import {
   canPayInstantly,
   findClaimTx,
@@ -334,7 +335,7 @@ export class WithdrawalsService {
     if (w.voucherId || w.voucherAmount) throw httpError("Instant withdrawal: the payout contract handles it automatically.", 409);
     if (w.status !== WithdrawalStatus.PROCESSING) throw httpError("Approve the withdrawal before marking it paid.", 409);
 
-    const provider = new JsonRpcProvider(env.BSC_RPC_URL, env.BSC_CHAIN_ID);
+    const provider = chainProvider();
     const receipt = await provider.getTransactionReceipt(payoutTxHash);
     if (!receipt || receipt.status !== 1) throw httpError("Payout transaction is missing or failed.", 400);
     const usdt = env.USDT_CONTRACT_ADDRESS.toLowerCase();

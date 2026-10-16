@@ -135,6 +135,29 @@
           </div>
         </div>
 
+        <div class="glass metric-card power-dao-metric" hidden>
+          <div class="metric-top">
+            <span class="metric-label mono">Total DAO</span>
+            <span class="metric-icon">&#9672;</span>
+          </div>
+          <div class="metric-val" id="metricPowerDaoVal">0</div>
+          <div class="metric-footer mono">
+            <span id="metricPowerDaoNote">DAO allocation</span>
+          </div>
+        </div>
+
+        <div class="glass metric-card power-business-total-metric" hidden>
+          <div class="metric-top">
+            <span class="metric-label mono">Total Business</span>
+            <span class="metric-icon">&dollar;</span>
+          </div>
+          <div class="metric-val" id="metricPowerBusinessVal" style="color: var(--gold);">$0.00</div>
+          <div class="metric-footer mono">
+            <span id="metricPowerBusinessNote">Business total</span>
+            <span id="metricPowerRankNote">Rank: —</span>
+          </div>
+        </div>
+
         <div class="glass metric-card">
           <div class="metric-top">
             <span class="metric-label mono">Total Earned</span>
@@ -215,9 +238,24 @@
           <div>
             <span class="mono rewards-tag">ALL RANKS</span>
             <h3>Rank <span class="grad-text">Progress</span></h3>
-            <p>Each rank needs its DAO on both sides: your Strong Leg and your Other Leg (all your other legs combined). 1 DAO = 1 activated $300 package.</p>
+            <p>Each rank needs its DAO on both sides: your Strong Leg and your Other Leg.</p>
           </div>
           <span class="rank-achieved-chip mono" id="rankAchievedChip">0 / 11 Achieved</span>
+        </div>
+        <div class="power-rank-progress" id="powerRankProgress" hidden>
+          <div class="power-rank-progress-top">
+            <div>
+              <span class="mono power-rank-kicker">DAO PROGRESS</span>
+              <strong id="powerRankDaoValue">0 DAO</strong>
+              <span class="mono" id="powerRankAmountValue">$0.00</span>
+            </div>
+            <div class="power-rank-current">
+              <span class="mono">RANK PROGRESS</span>
+              <b id="powerRankNameValue">Unranked</b>
+            </div>
+          </div>
+          <div class="power-rank-track"><i id="powerRankFill"></i></div>
+          <div class="power-rank-progress-foot mono" id="powerRankNextValue">Next: Starter at 25 DAO</div>
         </div>
         <div class="rank-filter mono" id="rankFilter" role="group" aria-label="Filter ranks">
           <button type="button" data-filter="all" class="is-active" aria-pressed="true">All <em>11</em></button>

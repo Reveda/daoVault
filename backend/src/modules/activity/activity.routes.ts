@@ -18,7 +18,9 @@ async function recentActivity(): Promise<Activity[]> {
   if (cache && Date.now() - cache.at < 30_000) return cache.items;
   const [packages, ranks, paid] = await Promise.all([
     prisma.package.findMany({
-      orderBy: { createdAt: "desc" }, take: 10,
+      // Public activity is reserved for verifiable on-chain business. Future system-assigned
+      // packages (for example POWER_BUSINESS) must never appear as activations/top-ups here.
+      where: { source: "ON_CHAIN" }, orderBy: { createdAt: "desc" }, take: 10,
       select: { createdAt: true, packageAmount: true, activationTxHash: true, userId: true, user: { select: { walletAddress: true } } },
     }),
     prisma.earning.findMany({

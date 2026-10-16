@@ -53,6 +53,12 @@ export function startPlanQueueTimer(everyMs = 5_000): void {
   void kickPlanQueue();
 }
 
+export function stopPlanQueueTimer(): void {
+  if (!timer) return;
+  clearInterval(timer);
+  timer = null;
+}
+
 /** queue health for the watch job: waiting payments and the oldest one's age */
 export async function planQueueBacklog(): Promise<{ waiting: number; oldestSeconds: number }> {
   const [waiting, oldest] = await Promise.all([

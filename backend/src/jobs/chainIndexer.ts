@@ -1,8 +1,9 @@
-import { Interface, JsonRpcProvider, type Log } from "ethers";
+import { Interface, type Log } from "ethers";
 import { env } from "../config/env.js";
 import { prisma } from "../config/prisma.js";
 import { activationService } from "../modules/activation/activation.service.js";
 import { alert, shortWallet } from "../config/alerts.js";
+import { indexerProvider } from "../config/rpc.js";
 
 /**
  * Chain indexer (background worker): reads the payment contract's Activated / ToppedUp events
@@ -60,7 +61,7 @@ export async function indexPaymentEvents(): Promise<{ from?: number; to?: number
     alert("critical", "indexer-no-start-block", "Chain indexer is NOT running: set INDEXER_START_BLOCK to the activation contract's deploy block (BscScan -> contract -> first transaction), then restart the worker.");
     return { events: 0, skipped: 0 };
   }
-  const provider = new JsonRpcProvider(env.INDEXER_RPC_URL ?? env.BSC_RPC_URL, env.BSC_CHAIN_ID, { staticNetwork: true });
+  const provider = indexerProvider();
   const safeHead = (await provider.getBlockNumber()) - env.INDEXER_CONFIRMATIONS;
 
   const firstBlock = from;

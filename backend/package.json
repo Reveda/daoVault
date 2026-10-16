@@ -19,7 +19,8 @@
     "signer": "node dist/signer/server.js",
     "signer:dev": "tsx watch src/signer/server.ts",
     "signer:keygen": "tsx src/signer/keygen.ts",
-    "check:env": "tsx src/tools/checkEnv.ts"
+    "check:env": "tsx src/tools/checkEnv.ts",
+    "security:deps": "npm audit --audit-level=high"
   },
   "dependencies": {
     "@prisma/client": "^6.16.2",

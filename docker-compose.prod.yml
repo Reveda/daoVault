@@ -102,6 +102,8 @@ services:
 
   backend:
     <<: *hardening
+    init: true
+    stop_grace_period: 20s
     build:
       context: ./backend
       target: production
@@ -114,7 +116,7 @@ services:
       # one proxy hop: Nginx replaces X-Forwarded-For with the real visitor IP
       TRUST_PROXY: "1"
       # 10 connections per copy: 3 copies = 30 of Postgres' 100
-      DATABASE_URL: postgresql://daovault:${POSTGRES_PASSWORD}@db:5432/daovault?schema=public&connection_limit=10
+      DATABASE_URL: postgresql://daovault:${POSTGRES_PASSWORD}@db:5432/daovault?schema=public&connection_limit=${DB_CONNECTION_LIMIT:-10}&pool_timeout=${DB_POOL_TIMEOUT_SECONDS:-10}&connect_timeout=${DB_CONNECT_TIMEOUT_SECONDS:-10}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       # instant withdrawals: vouchers are signed by the signer service (empty token = withdrawals closed)
       PAYOUT_SIGNER_URL: ${PAYOUT_SIGNER_URL:-}
@@ -130,17 +132,35 @@ services:
         condition: service_healthy
     cap_drop:
       - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
     deploy:
       # one Node copy per core; Nginx sends each request to the next copy (round robin)
       replicas: ${BACKEND_REPLICAS:-3}
       resources:
         limits:
           memory: 1g
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 5
+        window: 60s
+      update_config:
+        order: start-first
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      rollback_config:
+        order: stop-first
+        parallelism: 1
 
   # background jobs (BullMQ on Redis): chain indexer, voucher settlement, auth cleanup.
   # ONE copy only, so every job runs exactly once. Same image as the API.
   worker:
     <<: *hardening
+    init: true
+    stop_grace_period: 30s
     build:
       context: ./backend
       target: production
@@ -150,7 +170,7 @@ services:
       - ./backend/.env.production
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://daovault:${POSTGRES_PASSWORD}@db:5432/daovault?schema=public&connection_limit=5
+      DATABASE_URL: postgresql://daovault:${POSTGRES_PASSWORD}@db:5432/daovault?schema=public&connection_limit=${WORKER_DB_CONNECTION_LIMIT:-5}&pool_timeout=${DB_POOL_TIMEOUT_SECONDS:-10}&connect_timeout=${DB_CONNECT_TIMEOUT_SECONDS:-10}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
     networks:
       - app      # outbound internet (BSC RPC)
@@ -164,6 +184,9 @@ services:
       disable: true
     cap_drop:
       - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
     deploy:
       replicas: 1
       resources:
@@ -191,6 +214,7 @@ services:
       # the signer's own caps, on top of the contract's maxPerClaim / dailyLimit
       SIGNER_MAX_PER_CLAIM_USD: ${SIGNER_MAX_PER_CLAIM_USD:-1000}
       SIGNER_MAX_PER_DAY_USD: ${SIGNER_MAX_PER_DAY_USD:-10000}
+      SIGNER_MAX_REQUESTS_PER_MINUTE: ${SIGNER_MAX_REQUESTS_PER_MINUTE:-120}
       PAYOUT_SIGNER_TOKEN: ${PAYOUT_SIGNER_TOKEN:-}
       SIGNER_KEYSTORE_FILE: /run/secrets/payout_keystore.json
       SIGNER_KEYSTORE_PASSWORD_FILE: /run/secrets/payout_keystore_password.txt

@@ -8,7 +8,11 @@ export const dashboardRepository = {
   findUserDashboard(walletAddress: string) {
     return prisma.user.findUnique({
       where: { walletAddress },
-      include: { packages: { orderBy: { createdAt: "asc" } }, upline: { select: { referralCode: true } } },
+      include: {
+        packages: { orderBy: { createdAt: "asc" } },
+        powerBusinesses: { orderBy: { createdAt: "desc" } },
+        upline: { select: { referralCode: true } },
+      },
     });
   },
 
@@ -31,7 +35,7 @@ export const dashboardRepository = {
     });
   },
 
-  /** each direct's leg volume (their own counted packages + everything below them) */
+  /** each direct's OFFICIAL leg volume (their own counted packages + everything below them); Power Business is not in it */
   directLegs(userId: string) {
     return prisma.user.findMany({
       where: { uplineId: userId },
@@ -53,17 +57,17 @@ export const dashboardRepository = {
 
   /**
    * The members exactly `level` generations below the user (1 = directs), oldest first:
-   * DV code, wallet, who sponsored them and when they activated (null = registered, not paid yet:
+   * DV code, wallet, official rank, who sponsored them and when they activated (null = registered, not paid yet:
    * invite links build the tree before payment, owner 2026-10-13).
    */
   async membersAtLevel(userId: string, level: number, limit: number, offset: number) {
-    const rows = await prisma.$queryRaw<Array<{ referral_code: string; wallet_address: string; sponsor_code: string | null; joined_at: Date | null; total: bigint }>>`
+    const rows = await prisma.$queryRaw<Array<{ id: string; referral_code: string; wallet_address: string; sponsor_code: string | null; joined_at: Date | null; current_rank: number; total: bigint }>>`
       WITH RECURSIVE tree(id, depth) AS (
         SELECT id, 1 FROM users WHERE upline_id = ${userId}::uuid
         UNION ALL
         SELECT u.id, t.depth + 1 FROM users u JOIN tree t ON u.upline_id = t.id WHERE t.depth < ${level}
       )
-      SELECT u.referral_code, u.wallet_address, s.referral_code AS sponsor_code,
+      SELECT u.id::text AS id, u.referral_code, u.wallet_address, s.referral_code AS sponsor_code, u.current_rank,
              (SELECT MIN(p.created_at) FROM packages p WHERE p.user_id = u.id) AS joined_at,
              COUNT(*) OVER () AS total
         FROM tree t

@@ -8,10 +8,11 @@
  *
  * Signer: voucherSigner.ts (the Docker signer service, or the testnet-only env key).
  */
-import { Contract, Interface, JsonRpcProvider, formatUnits, id as keccakText, parseUnits } from "ethers";
+import { Contract, Interface, formatUnits, id as keccakText, parseUnits, type AbstractProvider } from "ethers";
 import { env } from "../../config/env.js";
 import { signClaim, signerAddress, signerConfigured } from "./voucherSigner.js";
 import { alert } from "../../config/alerts.js";
+import { chainProvider } from "../../config/rpc.js";
 
 const PAYOUT_ABI = [
   "function claim(bytes32 id, uint256 amount, uint256 deadline, bytes signature)",
@@ -33,8 +34,8 @@ export type Voucher = { contract: string; id: string; amount: string; deadline: 
 export const instantPayoutsEnabled = () =>
   Boolean(env.PAYOUT_CONTRACT_ADDRESS && env.USDT_CONTRACT_ADDRESS && signerConfigured());
 
-let provider: JsonRpcProvider | null = null;
-const chain = () => (provider ??= new JsonRpcProvider(env.BSC_RPC_URL, env.BSC_CHAIN_ID));
+let provider: AbstractProvider | null = null;
+const chain = () => (provider ??= chainProvider());
 const payout = () => new Contract(env.PAYOUT_CONTRACT_ADDRESS!, PAYOUT_ABI, chain());
 let decimalsCache: number | null = null;
 const tokenDecimals = async () => (decimalsCache ??= Number(await new Contract(env.USDT_CONTRACT_ADDRESS!, ERC20_ABI, chain()).decimals()));

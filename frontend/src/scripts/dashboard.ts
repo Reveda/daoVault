@@ -262,7 +262,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // pay with the sponsor the server recorded (the team tree), so the on-chain sponsor always matches it
   if (!adminWallet) initActivation(account, Boolean(pkg) || isRoot, serverDown, dashboardData?.sponsorCode ?? dashboardData?.pendingSponsorCode ?? getPendingReferral(),
     Boolean(dashboardData?.canTopUp), dashboardData?.packageCount ?? 0, dashboardData?.paymentsOpenAt ?? null, dashboardData?.paymentsOpen ?? true);
-  updateOverviewMetrics(activeDirects, totalEarned, capEarned, maxCap, dashboardData?.currentRank, pkg?.status);
+  // the rank the member sees includes Power Business (shown as normal business); money stays official
+  updateOverviewMetrics(activeDirects, totalEarned, capEarned, maxCap, Math.max(dashboardData?.currentRank ?? 0, dashboardData?.powerBusiness?.rank ?? 0), pkg?.status);
+  renderPowerBusiness(dashboardData);
   initDvToken(dashboardData);
   updateMemberDetails(dashboardData, Boolean(pkg) || isRoot, capEarned, maxCap);
 
@@ -499,6 +501,30 @@ function updateOverviewMetrics(activeDirects: number, totalEarned: number, capEa
   if (rankEl) rankEl.textContent = typeof rank === 'number' && rank > 0 ? (RANK_TIERS[rank - 1]?.name ?? `Rank ${rank}`) : 'Unranked';
 }
 
+/**
+ * Power Business cards (owner, 2026-10-15): shown only to a member who has Power Business given to
+ * them (never to their upline); everyone else keeps the normal four cards. Display only: never
+ * income, a reward, a withdrawal or DV tokens. Its rank uses the official both-sides rule.
+ */
+function renderPowerBusiness(data: DashboardData | null): void {
+  const cards = document.querySelectorAll<HTMLElement>('.power-dao-metric, .power-business-total-metric');
+  const dao = document.getElementById('metricPowerDaoVal');
+  const daoNote = document.getElementById('metricPowerDaoNote');
+  const business = document.getElementById('metricPowerBusinessVal');
+  const businessNote = document.getElementById('metricPowerBusinessNote');
+  const rankNote = document.getElementById('metricPowerRankNote');
+  const pb = data?.powerBusiness;
+  const own = Number(pb?.totalUsd ?? 0);
+  const show = Boolean(pb) && own > 0;
+  cards.forEach((card) => { card.hidden = !show; });
+  if (!show || !pb || !dao || !daoNote || !business || !businessNote) return;
+  dao.textContent = `${pb.dao.toLocaleString('en-US')} DAO`;
+  daoNote.textContent = `Strong ${pb.legs.power.toLocaleString('en-US')} · Other ${pb.legs.other.toLocaleString('en-US')} DAO`;
+  business.textContent = formatUsd(own);
+  businessNote.textContent = `${pb.legs.matched.toLocaleString('en-US')} DAO matched`;
+  if (rankNote) rankNote.textContent = `Rank: ${pb.rankName ?? 'Unranked'}`;
+}
+
 /** Header tag + metric captions, written from the live data so every line means something. */
 function updateMemberDetails(data: DashboardData | null, active: boolean, capEarned: number, cap: number): void {
   const net = BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BSC Mainnet';
@@ -521,7 +547,8 @@ function updateMemberDetails(data: DashboardData | null, active: boolean, capEar
   set('metricEarnedNote', cap > 0
     ? `Level $${(data?.levelIncomeUsd ?? 0).toLocaleString()} · Rank $${(data?.rankRewardsUsd ?? 0).toLocaleString()} · ${formatUsd(Math.max(cap - capEarned, 0))} to cap`
     : data?.isRoot ? 'Company root: its commission shares stay in the treasury' : 'Activate the $300 package to start earning');
-  const next = RANK_TIERS[data?.currentRank ?? 0];
+  // same rank as the Current Rank card (Power Business counted as normal business)
+  const next = RANK_TIERS[Math.max(data?.currentRank ?? 0, data?.powerBusiness?.rank ?? 0)];
   set('metricRankNote', next ? `Next: ${next.name} at ${next.volume.toLocaleString()} DAO` : 'Top rank reached');
 }
 
@@ -664,27 +691,29 @@ function renderLevelTable(data: DashboardData | null): void {
     const live = data?.levels[idx];
     const isUnlocked = live ? live.unlocked : false;
     const tr = document.createElement('tr');
-    tr.className = isUnlocked ? 'lvl-row' : 'lvl-row is-locked';
+    const hasMembers = (live?.members ?? 0) > 0;
+    const statusText = isUnlocked ? '✓ Unlocked' : hasMembers ? 'Viewable' : '🔒 Locked';
+    const statusClass = isUnlocked ? 'unlocked' : hasMembers ? 'viewable' : 'locked';
+    tr.className = `${isUnlocked ? 'lvl-row' : 'lvl-row is-locked'}${hasMembers ? ' is-browseable' : ''}`;
     tr.style.setProperty('--i', String(idx));
     tr.innerHTML = `
       <td><strong>Level ${row.level}</strong></td>
       <td><span style="color: var(--gold); font-weight: 700;">${row.pct}%</span> ($${row.usd})</td>
       <td>${row.reqDirects === 0 ? '0 Directs (Open)' : `${row.reqDirects} Directs Required`}</td>
       <td>
-        <span class="level-status-tag ${isUnlocked ? 'unlocked' : 'locked'}">
-          ${isUnlocked ? '✓ Unlocked' : '🔒 Locked'}
+        <span class="level-status-tag ${statusClass}">
+          ${statusText}
         </span>
       </td>
-      <td><span class="lvl-members">${(live?.members ?? 0).toLocaleString()}${isUnlocked ? ' <i aria-hidden="true">&rsaquo;</i>' : ''}</span></td>
+      <td><span class="lvl-members">${(live?.members ?? 0).toLocaleString()}${hasMembers ? ' <i aria-hidden="true">&rsaquo;</i>' : ''}</span></td>
       <td><strong>${formatUsd(live?.earnedUsd ?? 0)}</strong></td>
     `;
-    // tap an UNLOCKED level: modal with everyone who joined at that level (levelModal.ts).
-    // A locked level does not open (owner, 2026-10-10); it opens once its directs are reached.
-    if (data && isUnlocked) {
+    // Members are viewable before activation; the locked status still controls earning eligibility.
+    if (data && hasMembers) {
       tr.tabIndex = 0;
       tr.setAttribute('role', 'button');
-      tr.setAttribute('aria-label', `Level ${row.level}: see who joined`);
-      const open = () => openLevelModal(data.walletAddress, row.level, row.pct, row.usd);
+      tr.setAttribute('aria-label', `Level ${row.level}: see ${live?.members ?? 0} members`);
+      const open = () => openLevelModal(data.walletAddress, row.level);
       tr.addEventListener('click', open);
       tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
     }
