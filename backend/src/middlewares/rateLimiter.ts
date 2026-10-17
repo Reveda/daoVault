@@ -20,9 +20,9 @@ const createLimiter = (name: string, windowMs: number, limit: number, message: s
     skip: (req) => req.method === "OPTIONS" || req.path.endsWith("/health"),
     message: { success: false, error: message },
     store: sharedStore(name),
-    // Public reads can fail open for availability; authentication and financial routes below
-    // fail closed when the shared limiter cannot be reached.
-    passOnStoreError: !redis || passOnStoreError,
+    // Local Docker development must remain usable while Redis is starting/restarting. Production
+    // authentication and financial routes still fail closed when the shared limiter is unavailable.
+    passOnStoreError: env.NODE_ENV === "development" || !redis || passOnStoreError,
   });
 
 export const apiRateLimiter = createLimiter(

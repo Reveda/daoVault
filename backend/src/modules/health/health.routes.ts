@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../../config/prisma.js";
+import { redis } from "../../config/redis.js";
 
 export const healthRouter = Router();
 
@@ -15,6 +16,7 @@ const NEWEST_TABLES = ["plan_events", "chain_cursors", "power_businesses"] as co
 async function readiness(_req: Parameters<Parameters<typeof healthRouter.get>[1]>[0], res: Parameters<Parameters<typeof healthRouter.get>[1]>[1]) {
   let database: "up" | "down" = "up";
   let schema: "ok" | "outdated" | "unknown" = "unknown";
+  const redisStatus: "up" | "down" | "disabled" = !redis ? "disabled" : redis.isReady ? "up" : "down";
   try {
     const [row] = await prisma.$queryRaw<Array<{ missing: number }>>`
       SELECT COUNT(*) FILTER (WHERE to_regclass('public.' || t) IS NULL)::int AS missing
@@ -24,12 +26,13 @@ async function readiness(_req: Parameters<Parameters<typeof healthRouter.get>[1]
     database = "down";
   }
 
-  const healthy = database === "up" && schema === "ok";
+  const healthy = database === "up" && schema === "ok" && redisStatus !== "down";
   res.status(healthy ? 200 : 503).json({
     success: healthy,
     service: "daovault-backend",
     database,
     schema,
+    redis: redisStatus,
     timestamp: new Date().toISOString(),
   });
 }

@@ -21,20 +21,25 @@ export function initUnfoldCards(): void {
   }, { passive: true });
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  const triggerRatio = isMobile ? 0.28 : 0.16;
+  const triggerRatio = isMobile ? 0.04 : 0.12;
 
   cards.forEach((c) => c.classList.add('unfold-ready'));
   const io = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       const card = entry.target as HTMLElement;
-      if (entry.isIntersecting && entry.intersectionRatio >= triggerRatio && !card.classList.contains('is-unfolded')) {
-        // which side it came from decides the direction: from below while scrolling down -> drops from above
-        card.dataset.from = dir === 'down' ? 'top' : 'bottom';
-        card.style.setProperty('--unfold-h', `${card.offsetHeight}px`); // the seam runs the full height
-        void card.offsetWidth;
-        card.classList.add('is-unfolded');
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      if ((entry.isIntersecting && entry.intersectionRatio >= triggerRatio) || entry.boundingClientRect.bottom <= 0) {
+        if (!card.classList.contains('is-unfolded')) {
+          // which side it came from decides the direction: from below while scrolling down -> drops from above
+          card.dataset.from = dir === 'down' ? 'top' : 'bottom';
+          card.style.setProperty('--unfold-h', `${card.offsetHeight}px`); // the seam runs the full height
+          void card.offsetWidth;
+          card.classList.add('is-unfolded');
+        }
       } else if (!entry.isIntersecting && card.classList.contains('is-unfolded')) {
-        card.classList.remove('is-unfolded'); // off screen again: ready to play next time
+        if (entry.boundingClientRect.top > vh) {
+          card.classList.remove('is-unfolded'); // only reset if scrolled completely back up
+        }
       }
     });
   }, { threshold: [0, triggerRatio] });

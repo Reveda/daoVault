@@ -218,18 +218,24 @@ export function initOffscreenPause(): void {
 
 export function initTrophyBoom(): void {
   const card = document.getElementById('trophyCard');
-  if (!card || !('IntersectionObserver' in window)) return;
+  if (!card) return;
+  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    card.classList.add('boomed');
+    return;
+  }
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
-      if (entry.isIntersecting) {
+      const vh = window.innerHeight || document.documentElement.clientHeight;
+      if (entry.isIntersecting || entry.boundingClientRect.bottom <= 0) {
         card.classList.add('boomed');
-      } else {
+      } else if (entry.boundingClientRect.top > vh) {
+        // Only reset if user has scrolled all the way back up above the card
         card.classList.remove('boomed');
       }
     });
-  }, { threshold: isMobile ? 0.35 : 0.15 });
+  }, { threshold: isMobile ? 0.05 : 0.15 });
 
   observer.observe(card);
 }

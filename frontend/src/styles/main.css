@@ -3966,6 +3966,32 @@ html {
   .modal-box { width: calc(100vw - 2rem); max-width: none; }
   .wallet-opt { padding: 0.8rem; }
 
+  /* Tighten the ranks section trophy feature card on phones (eliminates
+     the large empty dark gap between the heading and the boom card) */
+  .trophy-stage,
+  .bz1-visual { height: clamp(220px, 52vw, 300px); }
+  .trophy-boom-card {
+    margin-bottom: 1.5rem;
+    transform: perspective(1000px) scale(0.92) translateY(20px);
+    filter: blur(4px) brightness(1.2);
+    transition-duration: 0.5s;
+  }
+  .feature { padding: clamp(18px, 4vw, 28px); margin-bottom: 1.5rem; }
+  .trophy-boom-card .feature-copy h3 { font-size: clamp(1.2rem, 5vw, 1.5rem); }
+  .trophy-boom-card .feature-copy p { font-size: 0.85rem; }
+
+  /* Tighten Rank Display Card and Rank Calculator on phones (eliminates
+     the empty dark void between the 50:50 leg meter and the calculator) */
+  .rank-tabs-wrap { margin-bottom: 1.2rem; }
+  .rank-card-display { padding: 1.4rem 1.1rem; gap: 1.25rem; }
+  .rank-leg-meter { padding: 1.2rem 1.1rem; }
+  .rank-big-reward { font-size: clamp(2.4rem, 8vw, 3.2rem); margin: 0.4rem 0 0.6rem; }
+  #rankDisplayTitle { font-size: 1.5rem; margin-bottom: 0.4rem; }
+  #rankDisplayDesc { margin-bottom: 1.1rem; font-size: 0.88rem; }
+  .rank-calculator-card { margin-top: 1.2rem !important; padding: 1.2rem 1rem !important; }
+  [data-unfold].unfold-ready { transform: translateY(-30px) scale(0.98); }
+  [data-unfold].unfold-ready[data-from="bottom"] { transform: translateY(30px) scale(0.98); }
+
   /* The rule connector must remain inside the feature card on narrow screens.
      A horizontal flex connector used to wrap over the second step and look
      like a misplaced arrow. Stack the steps and turn the connector vertical. */

@@ -13,7 +13,9 @@ const GENERIC: Record<number, string> = {
 };
 
 export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
-  const limiterStoreFailure = typeof error?.code === "string" && error.code.startsWith("ERR_ERL_");
+  const errorCode = typeof error?.code === "string" ? error.code : "";
+  const errorMessage = String(error?.message ?? error);
+  const limiterStoreFailure = errorCode.startsWith("ERR_ERL_") || /redis|client is offline|client is closed|client is disconnected|socket closed/i.test(errorMessage);
   const status = limiterStoreFailure ? 503 : typeof error?.statusCode === "number" ? error.statusCode : 500;
   // our services throw Error + statusCode with a message written for members; library errors
   // (JSON body parser, payload size...) carry a `type` / `expose` and only get the generic text.
@@ -26,6 +28,7 @@ export const errorHandler: ErrorRequestHandler = (error, req, res, _next) => {
     alert("critical", `api-500 ${route}`, `Server error on ${route}: ${String(error?.message ?? error).slice(0, 200)}`);
   }
   res.status(status).json({
+    statusCode: status,
     success: false,
     error: limiterStoreFailure ? "Security protection is temporarily unavailable. Please try again shortly." : ours ? error.message : GENERIC[status] ?? (status >= 500 ? "Something went wrong. Please try again." : "Request failed."),
   });

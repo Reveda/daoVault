@@ -7,6 +7,7 @@ import { alert } from "./config/alerts.js";
 import { startPlanQueueTimer, stopPlanQueueTimer } from "./modules/activation/planQueue.js";
 import { runWatch } from "./jobs/watch.js";
 import { withdrawalsService } from "./modules/withdrawals/withdrawals.service.js";
+import { redisReady } from "./config/redis.js";
 
 // a crash or a forgotten promise reaches the owner (then the process manager restarts the API)
 process.on("unhandledRejection", (reason) => {
@@ -18,6 +19,16 @@ process.on("uncaughtException", (error) => {
   alert("critical", "api-crash", `API crashed: ${error.message.slice(0, 200)}. It restarts by itself; check the logs.`);
   setTimeout(() => process.exit(1), 500).unref(); // let the log line flush
 });
+
+// Avoid accepting the first auth request while the Docker Redis service is still becoming ready.
+// A real outage must not prevent the API from starting; route-specific rate-limit policy handles it.
+const redisStartupReady = await Promise.race([
+  redisReady,
+  new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 5_000)),
+]);
+if (env.REDIS_URL && !redisStartupReady) {
+  console.warn("[redis] not ready after 5s; API started in degraded rate-limit mode and will keep retrying");
+}
 
 const server = app.listen(env.PORT, () => {
   console.log(`DAOvault API listening on http://localhost:${env.PORT}`);
