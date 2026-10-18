@@ -21,7 +21,9 @@ const dir = resolve(process.argv[2] ?? "secrets");
 const keystoreFile = join(dir, "payout_keystore.json");
 const passwordFile = join(dir, "payout_keystore_password.txt");
 if (existsSync(keystoreFile)) {
-  console.error(`${keystoreFile} already exists. Not overwriting it (the payout contract trusts that key).`);
+  console.error(
+    `${keystoreFile} already exists. Not overwriting it (the payout contract trusts that key).`,
+  );
   process.exit(1);
 }
 mkdirSync(dir, { recursive: true });
@@ -36,5 +38,9 @@ writeFileSync(keystoreFile, keystore, { mode: 0o600 });
 console.log(`\nSigner address: ${wallet.address}`);
 console.log(`Saved: ${keystoreFile}`);
 console.log(`       ${passwordFile}`);
-console.log("\nNext: deploy / setSigner DAOvaultPayout with this address. Back up BOTH files offline (USB),");
-console.log("never in git, chat or email. Lost files = deploy a new key with setSigner(), no money is lost.");
+console.log(
+  "\nNext: deploy / setSigner DAOvaultPayout with this address. Back up BOTH files offline (USB),",
+);
+console.log(
+  "never in git, chat or email. Lost files = deploy a new key with setSigner(), no money is lost.",
+);

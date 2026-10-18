@@ -1,0 +1,25 @@
+{
+  "semi": true,
+  "trailingComma": "all",
+  "singleQuote": false,
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "arrowParens": "always",
+  "endOfLine": "auto",
+  "overrides": [
+    {
+      "files": "frontend/**/*.{js,ts,jsx,tsx,html,css}",
+      "options": {
+        "singleQuote": true
+      }
+    },
+    {
+      "files": "backend/**/*.{js,ts,jsx,tsx}",
+      "options": {
+        "singleQuote": false
+      }
+    }
+  ]
+}
+

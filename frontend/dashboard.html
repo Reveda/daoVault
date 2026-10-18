@@ -1,485 +1,698 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <!-- dark from the very first frame: before main.css / Google Fonts arrive the browser would
+  <head>
+    <meta charset="UTF-8" />
+    <!-- dark from the very first frame: before main.css / Google Fonts arrive the browser would
        paint its default white for a moment (owner saw it behind the splash on slow loads) -->
-  <meta name="color-scheme" content="dark" />
-  <style>html,body{background:#050505;color:#fff}</style>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard | DAOVAULT</title>
-  <meta name="theme-color" content="#050505" />
-  <!-- lite mode (phones / low-power devices): lighter effects, set before first paint -->
-  <script src="/boot.js"></script>
-  <link rel="icon" type="image/png" href="/favicon.png" />
-  <link rel="apple-touch-icon" href="/favicon.png" />
-  <meta name="description" content="Manage your DAOVAULT decentralized affiliate account, view your 25x cap gauge meter, track 20-level earnings, and withdraw USDT." />
+    <meta name="color-scheme" content="dark" />
+    <style>
+      html,
+      body {
+        background: #050505;
+        color: #fff;
+      }
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard | DAOVAULT</title>
+    <meta name="theme-color" content="#050505" />
+    <!-- lite mode (phones / low-power devices): lighter effects, set before first paint -->
+    <script src="/boot.js"></script>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta
+      name="description"
+      content="Manage your DAOVAULT decentralized affiliate account, view your 25x cap gauge meter, track 20-level earnings, and withdraw USDT."
+    />
 
-  <!-- Lossless Referral Catcher -->
+    <!-- Lossless Referral Catcher -->
 
-  <!-- Google Fonts: Outfit, Plus Jakarta Sans, JetBrains Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <!-- Google Fonts: Outfit, Plus Jakarta Sans, JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
 
-  <!-- Stylesheets -->
-  <link rel="stylesheet" href="/src/styles/main.css" />
-  <link rel="stylesheet" href="/src/styles/dashboard.css" />
-</head>
-<body class="dash-page">
-  <!-- 3D Celestial WebGL Canvas, Ambient Wash & Cursor Spotlight (Zero Eye Strain) -->
-  <canvas class="scene-canvas" id="sceneCanvas" aria-hidden="true"></canvas>
-  <div class="bg-wash" aria-hidden="true"></div>
-  <div class="cursor-spotlight" id="cursorSpotlight" aria-hidden="true"></div>
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/src/styles/main.css" />
+    <link rel="stylesheet" href="/src/styles/dashboard.css" />
+  </head>
+  <body class="dash-page">
+    <!-- 3D Celestial WebGL Canvas, Ambient Wash & Cursor Spotlight (Zero Eye Strain) -->
+    <canvas class="scene-canvas" id="sceneCanvas" aria-hidden="true"></canvas>
+    <div class="bg-wash" aria-hidden="true"></div>
+    <div class="cursor-spotlight" id="cursorSpotlight" aria-hidden="true"></div>
 
-  <!-- Smart Preloader -->
-  <div class="preloader" id="preloader">
-    <div class="loader-logo loader-logo--anim" data-dv-logo="full">
-      <img src="/assets/DAOlogo.jpg" alt="DAOVAULT" width="240" height="160" />
+    <!-- Smart Preloader -->
+    <div class="preloader" id="preloader">
+      <div class="loader-logo loader-logo--anim" data-dv-logo="full">
+        <img src="/assets/DAOlogo.jpg" alt="DAOVAULT" width="240" height="160" />
+      </div>
+      <div class="loader-bar-wrap">
+        <div class="loader-bar" id="loaderBar"></div>
+      </div>
+      <div class="loader-num mono" id="loaderNum">1%</div>
     </div>
-    <div class="loader-bar-wrap">
-      <div class="loader-bar" id="loaderBar"></div>
-    </div>
-    <div class="loader-num mono" id="loaderNum">1%</div>
-  </div>
 
-  <!-- Header -->
-  <header class="top-header scrolled">
-    <div class="wrap top-bar">
-      <a href="#overview" class="brand" aria-label="DAOVAULT dashboard">
-        <div class="brand-icon brand-icon--logo" data-dv-logo="mark"><img src="/favicon.png" alt="" width="40" height="40" /></div>
-        <span><span class="grad-text">DAO</span>vault</span>
-      </a>
+    <!-- Header -->
+    <header class="top-header scrolled">
+      <div class="wrap top-bar">
+        <a href="#overview" class="brand" aria-label="DAOVAULT dashboard">
+          <div class="brand-icon brand-icon--logo" data-dv-logo="mark">
+            <img src="/favicon.png" alt="" width="40" height="40" />
+          </div>
+          <span><span class="grad-text">DAO</span>vault</span>
+        </a>
 
-
-      <div class="dash-head-actions">
-      <!-- DV token allocation: total + per-package calculation (owner, 2026-10-15; dashboard.ts initDvToken) -->
-      <div class="dv-menu" id="dvMenu" hidden>
-        <button class="dv-menu-btn" id="dvMenuBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="dvMenuPanel">
-          <!-- 3D DV coin (dvToken3d.ts); the logo stays as the fallback -->
-          <span class="dv-token-slot dv-token-slot--sm" id="dvMenuCoin"><img src="/favicon.png" alt="" width="28" height="28" /></span>
-          <span class="dv-menu-label">DV Token</span>
-          <b class="dv-menu-total mono" id="dvMenuTotal">0</b>
-        </button>
-        <div class="dv-menu-panel" id="dvMenuPanel" role="dialog" aria-label="DV token allocation" hidden>
-          <div class="dv-panel-head">
-            <span class="mono dv-token-tag">DAOVAULT TOKEN &middot; DV</span>
-            <div class="dv-panel-total"><span id="dvPanelTotal">0</span><span class="dv-token-unit">DV</span></div>
-          </div>
-          <ol class="dv-panel-rows" id="dvPanelRows"></ol>
-          <p class="dv-panel-foot mono" id="dvPanelFoot">1,500 DV per $300 package &middot; planned launch March 2028 on BNB Smart Chain</p>
-        </div>
-      </div>
-      <!-- wallet chip with a menu: section shortcuts, copy address, BscScan, log out -->
-      <div class="wallet-menu" id="walletMenu">
-        <button class="dash-user-badge mono wallet-menu-btn" id="walletMenuBtn" type="button" aria-haspopup="menu" aria-expanded="false">
-          <span class="wallet-status-dot"></span>
-          <span id="dashWalletAddr">Not connected</span>
-          <span class="wallet-caret" aria-hidden="true"></span>
-        </button>
-        <div class="wallet-menu-panel" role="menu" hidden>
-          <!-- shortcuts: scroll to a section (rewardVaults.ts initWalletMenu; hidden ones are left out) -->
-          <span class="wm-label mono" aria-hidden="true">Go to</span>
-          <a role="menuitem" href="#withdrawSection" data-jump>Withdraw</a>
-          <a role="menuitem" href="#rewardsSection" data-jump>Rewards</a>
-          <span class="wm-divider" aria-hidden="true"></span>
-          <button type="button" role="menuitem" id="walletCopyBtn">Copy address</button>
-          <a role="menuitem" id="walletScanLink" href="https://bscscan.com" target="_blank" rel="noopener">View on BscScan &nearr;</a>
-          <a role="menuitem" id="walletAdminLink" href="admin.html" hidden>Admin panel &rarr;</a>
-          <button type="button" role="menuitem" class="is-danger" id="dashLogoutBtn">Log out</button>
-        </div>
-      </div>
-      </div>
-    </div>
-  </header>
-
-  <main class="dash-shell">
-    <div class="wrap">
-      <!-- Dashboard Top Header -->
-      <div class="dash-header" id="overview">
-        <div>
-          <div class="mono dash-member-tag" id="dashMemberTag">&bull; Checking membership&hellip;</div>
-          <h1 style="font-size: clamp(1.8rem, 3.2vw, 2.6rem);">Welcome to your <span class="grad-text">Vault</span></h1>
-        </div>
-
-        <div class="dash-id-chips mono">
-          <span class="dash-chip">Member ID <b id="dashMemberId">&ndash;</b></span>
-          <span class="dash-chip" id="dashSponsorTag">Joined direct</span>
-          <a class="dash-chip dash-chip--proof" id="dashActivationTx" href="#" target="_blank" rel="noopener" hidden>Activation on BscScan &#8599;</a>
-        </div>
-      </div>
-
-      <!-- Company overview: only for the admin = company wallet (companyOverview.ts, same as the admin panel) -->
-      <section class="glass rewards-card company-card" id="companySection" hidden>
-        <div class="rank-list-head">
-          <div>
-            <span class="mono rewards-tag">COMPANY</span>
-            <h3>Company <span class="grad-text">Overview</span></h3>
-            <p>The whole business at a glance. Withdrawal approvals are in the admin panel.</p>
-          </div>
-          <a class="btn btn-grad" href="admin.html">Open admin panel &rarr;</a>
-        </div>
-        <div class="metrics-grid co-grid" id="companyStats"></div>
-      </section>
-
-      <!-- 4 Overview Metric Cards -->
-      <div class="metrics-grid" data-scene="dashTop">
-        <div class="glass metric-card">
-          <div class="metric-top">
-            <span class="metric-label mono">Active Directs</span>
-            <span class="metric-icon">&phone;</span>
-          </div>
-          <div class="metric-val" id="metricDirectsVal">0</div>
-          <div class="metric-footer mono">
-            <span id="metricDirectsNote">Levels unlocked: 0 / 20</span>
-          </div>
-        </div>
-
-        <div class="glass metric-card power-dao-metric" hidden>
-          <div class="metric-top">
-            <span class="metric-label mono">Total DAO</span>
-            <span class="metric-icon">&#9672;</span>
-          </div>
-          <div class="metric-val" id="metricPowerDaoVal">0</div>
-          <div class="metric-footer mono">
-            <span id="metricPowerDaoNote">DAO allocation</span>
-          </div>
-        </div>
-
-        <div class="glass metric-card power-business-total-metric" hidden>
-          <div class="metric-top">
-            <span class="metric-label mono">Total Business</span>
-            <span class="metric-icon">&dollar;</span>
-          </div>
-          <div class="metric-val" id="metricPowerBusinessVal" style="color: var(--gold);">$0.00</div>
-          <div class="metric-footer mono">
-            <span id="metricPowerBusinessNote">Business total</span>
-            <span id="metricPowerRankNote">Rank: —</span>
-          </div>
-        </div>
-
-        <div class="glass metric-card">
-          <div class="metric-top">
-            <span class="metric-label mono">Total Earned</span>
-            <span class="metric-icon">&dollar;</span>
-          </div>
-          <div class="metric-val" id="metricEarnedVal" style="color: var(--gold);">$0.00</div>
-          <div class="metric-footer mono">
-            <span id="metricEarnedNote">Level commissions + rank rewards</span>
-          </div>
-        </div>
-
-        <div class="glass metric-card">
-          <div class="metric-top">
-            <span class="metric-label mono">25&times; Cap Status</span>
-            <span class="metric-icon">&infin;</span>
-          </div>
-          <div class="metric-val" id="metricCapVal">$0 <span style="font-size: 1rem; color: var(--text-dim);">/ $0</span></div>
-          <div class="metric-footer mono">
-            <span id="metricCapStatus" style="color: var(--text-muted);">&bull; No live package</span>
-          </div>
-        </div>
-
-        <div class="glass metric-card">
-          <div class="metric-top">
-            <span class="metric-label mono">Current Rank</span>
-            <span class="metric-icon">&starf;</span>
-          </div>
-          <div class="metric-val" id="metricRankVal">Not activated</div>
-          <div class="metric-footer mono">
-            <span id="metricRankNote">Starter at 25 DAO matching (each side)</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- DV token allocation (owner, 2026-10-15): 1,500 DV per $300 package, planned launch March 2028 (dashboard.ts initDvToken) -->
-      <section class="glass dv-token-card" id="dvTokenCard" hidden>
-        <div class="dv-coin" aria-hidden="true">
-          <span class="dv-coin-ring"></span>
-          <span class="dv-token-slot dv-token-slot--lg" id="dvCardCoin"><img src="/favicon.png" alt="" width="56" height="56" /></span>
-        </div>
-        <div class="dv-token-main">
-          <span class="mono dv-token-tag">DAOVAULT TOKEN &middot; DV</span>
-          <h3>Your <span class="grad-text">DV Token</span> Allocation</h3>
-          <div class="dv-token-amount"><span id="dvTokenAmount">0</span><span class="dv-token-unit">DV</span></div>
-          <!-- packages x 1,500 = total (dashboard.ts initDvToken) -->
-          <div class="dv-calc mono" id="dvTokenCalc" aria-label="How your DV allocation is counted"></div>
-        </div>
-        <div class="dv-token-side">
-          <span class="dv-token-badge mono"><span class="dv-badge-dot"></span><span id="dvTokenLaunch">Planned launch &middot; March 2028</span></span>
-          <span class="dv-token-net mono" id="dvTokenNet">BNB Smart Chain</span>
-          <p class="dv-token-note">Credited to this wallet at the planned DV launch.</p>
-        </div>
-      </section>
-
-      <!-- Rank reward vaults: one sealed DAOvault box per rank (giftBox.ts) -->
-      <!-- Fast-start bonus (owner 2026-10-18): 10 directs in 3 days $100 / 7 days $50 (dashboard.ts renderFastStart) -->
-      <div class="glass ref-box-card fast-start-card" id="fastStartCard" hidden>
-        <div class="fast-start-top">
-          <div>
-            <span class="mono fast-start-kicker">Fast-start bonus</span>
-            <h3 id="fastStartTitle">Earn up to $100 extra</h3>
-            <p id="fastStartText">Bring 10 activated directs soon after you activate.</p>
-          </div>
-          <b class="mono fast-start-count" id="fastStartCount">0 / 10</b>
-        </div>
-        <div class="fast-start-tiers" id="fastStartTiers">
-          <div class="fs-tier"><span class="fs-tier-name">Rocket Start Bonus</span><span class="fs-tier-rule">10 directs within 3 days</span><b class="mono">$100</b></div>
-          <div class="fs-tier"><span class="fs-tier-name">Fast Start Bonus</span><span class="fs-tier-rule">10 directs within 7 days</span><b class="mono">$50</b></div>
-        </div>
-        <div class="fast-start-track"><i></i></div>
-      </div>
-
-      <section class="glass rewards-card" id="rewardsSection" data-scene="dashRewards">
-        <div class="rewards-head">
-          <div>
-            <span class="mono rewards-tag">RANK REWARD VAULTS</span>
-            <h3>Your <span class="grad-text">Surprise Boxes</span></h3>
-            <p>Every rank you reach unlocks a sealed DAOvault box. Open it to reveal your cash reward.</p>
-          </div>
-          <div class="rank-progress">
-            <div class="rank-progress-row mono">
-              <span>Current rank <b id="rankNow">Unranked</b></span>
-              <span id="rankBoxesOpen">0 / 11 opened</span>
-            </div>
-            <div class="rank-bar"><i id="rankBar"></i></div>
-            <p class="rank-next mono" id="rankNext">Next: Starter at 25 DAO matching (each side)</p>
-          </div>
-        </div>
-        <div class="reward-boxes" id="rewardBoxes"></div>
-      </section>
-
-      <!-- All ranks: Left Leg / Right Leg progress, reward and status per rank (rankProgress.ts) -->
-      <section class="glass rewards-card rank-list-card" id="rankListSection" data-scene="dashRanks">
-        <div class="rank-list-head">
-          <div>
-            <span class="mono rewards-tag">ALL RANKS</span>
-            <h3>Rank <span class="grad-text">Progress</span></h3>
-            <p>Each rank needs its DAO on both sides: your Left Leg and your Right Leg.</p>
-          </div>
-          <span class="rank-achieved-chip mono" id="rankAchievedChip">0 / 11 Achieved</span>
-        </div>
-        <div class="power-rank-progress" id="powerRankProgress" hidden>
-          <div class="power-rank-progress-top">
-            <div>
-              <span class="mono power-rank-kicker">DAO PROGRESS</span>
-              <strong id="powerRankDaoValue">0 DAO</strong>
-              <span class="mono" id="powerRankAmountValue">$0.00</span>
-            </div>
-            <div class="power-rank-current">
-              <span class="mono">RANK PROGRESS</span>
-              <b id="powerRankNameValue">Unranked</b>
-            </div>
-          </div>
-          <div class="power-rank-track"><i id="powerRankFill"></i></div>
-          <div class="power-rank-progress-foot mono" id="powerRankNextValue">Next: Starter at 25 DAO</div>
-        </div>
-        <div class="rank-filter mono" id="rankFilter" role="group" aria-label="Filter ranks">
-          <button type="button" data-filter="all" class="is-active" aria-pressed="true">All <em>11</em></button>
-          <button type="button" data-filter="achieved" aria-pressed="false">Achieved <em>0</em></button>
-          <button type="button" data-filter="pending" aria-pressed="false">Pending <em>11</em></button>
-        </div>
-        <ol class="rank-list" id="rankList"></ol>
-        <p class="rank-list-empty mono" hidden>No ranks achieved yet. Your first one is Starter: 25 DAO on each side.</p>
-      </section>
-
-      <!-- 25x Capping Gauge Meter Card with High-Tech Rotating Border Beam -->
-      <div class="border-beam-card active" style="margin-bottom: 2rem;">
-        <div class="border-beam-inner cap-meter-card" style="margin-bottom: 0;">
-          <div class="cap-meter-head">
-            <div>
-              <h3 style="font-size: 1.35rem; margin-bottom: 0.35rem;">
-                25&times; Sustainability <span class="grad-text">Gauge Meter</span>
-              </h3>
-              <p style="color: var(--text-muted); font-size: 0.88rem;">
-                All earnings (level income, rank rewards and bonuses) are capped at 25&times; ($7,500) per $300 package.
+        <div class="dash-head-actions">
+          <!-- DV token allocation: total + per-package calculation (owner, 2026-10-15; dashboard.ts initDvToken) -->
+          <div class="dv-menu" id="dvMenu" hidden>
+            <button
+              class="dv-menu-btn"
+              id="dvMenuBtn"
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              aria-controls="dvMenuPanel"
+            >
+              <!-- 3D DV coin (dvToken3d.ts); the logo stays as the fallback -->
+              <span class="dv-token-slot dv-token-slot--sm" id="dvMenuCoin"
+                ><img src="/favicon.png" alt="" width="28" height="28"
+              /></span>
+              <span class="dv-menu-label">DV Token</span>
+              <b class="dv-menu-total mono" id="dvMenuTotal">0</b>
+            </button>
+            <div
+              class="dv-menu-panel"
+              id="dvMenuPanel"
+              role="dialog"
+              aria-label="DV token allocation"
+              hidden
+            >
+              <div class="dv-panel-head">
+                <span class="mono dv-token-tag">DAOVAULT TOKEN &middot; DV</span>
+                <div class="dv-panel-total">
+                  <span id="dvPanelTotal">0</span><span class="dv-token-unit">DV</span>
+                </div>
+              </div>
+              <ol class="dv-panel-rows" id="dvPanelRows"></ol>
+              <p class="dv-panel-foot mono" id="dvPanelFoot">
+                1,500 DV per $300 package &middot; planned launch March 2028 on BNB Smart Chain
               </p>
             </div>
-            <div class="mono" id="capPctText" style="font-size: 1rem; font-weight: 700; color: var(--gold);">
-              0% of 25&times; Cap Reached
+          </div>
+          <!-- wallet chip with a menu: section shortcuts, copy address, BscScan, log out -->
+          <div class="wallet-menu" id="walletMenu">
+            <button
+              class="dash-user-badge mono wallet-menu-btn"
+              id="walletMenuBtn"
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded="false"
+            >
+              <span class="wallet-status-dot"></span>
+              <span id="dashWalletAddr">Not connected</span>
+              <span class="wallet-caret" aria-hidden="true"></span>
+            </button>
+            <div class="wallet-menu-panel" role="menu" hidden>
+              <!-- shortcuts: scroll to a section (rewardVaults.ts initWalletMenu; hidden ones are left out) -->
+              <span class="wm-label mono" aria-hidden="true">Go to</span>
+              <a role="menuitem" href="#withdrawSection" data-jump>Withdraw</a>
+              <a role="menuitem" href="#rewardsSection" data-jump>Rewards</a>
+              <span class="wm-divider" aria-hidden="true"></span>
+              <button type="button" role="menuitem" id="walletCopyBtn">Copy address</button>
+              <a
+                role="menuitem"
+                id="walletScanLink"
+                href="https://bscscan.com"
+                target="_blank"
+                rel="noopener"
+                >View on BscScan &nearr;</a
+              >
+              <a role="menuitem" id="walletAdminLink" href="admin.html" hidden
+                >Admin panel &rarr;</a
+              >
+              <button type="button" role="menuitem" class="is-danger" id="dashLogoutBtn">
+                Log out
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="dash-shell">
+      <div class="wrap">
+        <!-- Dashboard Top Header -->
+        <div class="dash-header" id="overview">
+          <div>
+            <div class="mono dash-member-tag" id="dashMemberTag">
+              &bull; Checking membership&hellip;
+            </div>
+            <h1 style="font-size: clamp(1.8rem, 3.2vw, 2.6rem)">
+              Welcome to your <span class="grad-text">Vault</span>
+            </h1>
+          </div>
+
+          <div class="dash-id-chips mono">
+            <span class="dash-chip">Member ID <b id="dashMemberId">&ndash;</b></span>
+            <span class="dash-chip" id="dashSponsorTag">Joined direct</span>
+            <a
+              class="dash-chip dash-chip--proof"
+              id="dashActivationTx"
+              href="#"
+              target="_blank"
+              rel="noopener"
+              hidden
+              >Activation on BscScan &#8599;</a
+            >
+          </div>
+        </div>
+
+        <!-- Company overview: only for the admin = company wallet (companyOverview.ts, same as the admin panel) -->
+        <section class="glass rewards-card company-card" id="companySection" hidden>
+          <div class="rank-list-head">
+            <div>
+              <span class="mono rewards-tag">COMPANY</span>
+              <h3>Company <span class="grad-text">Overview</span></h3>
+              <p>The whole business at a glance. Withdrawal approvals are in the admin panel.</p>
+            </div>
+            <a class="btn btn-grad" href="admin.html">Open admin panel &rarr;</a>
+          </div>
+          <div class="metrics-grid co-grid" id="companyStats"></div>
+        </section>
+
+        <!-- 4 Overview Metric Cards -->
+        <div class="metrics-grid" data-scene="dashTop">
+          <div class="glass metric-card">
+            <div class="metric-top">
+              <span class="metric-label mono">Active Directs</span>
+              <span class="metric-icon">&phone;</span>
+            </div>
+            <div class="metric-val" id="metricDirectsVal">0</div>
+            <div class="metric-footer mono">
+              <span id="metricDirectsNote">Levels unlocked: 0 / 20</span>
             </div>
           </div>
 
-          <div class="cap-bar-track">
-            <div class="cap-bar-fill" id="capFillBar"></div>
+          <div class="glass metric-card power-dao-metric" hidden>
+            <div class="metric-top">
+              <span class="metric-label mono">Total DAO</span>
+              <span class="metric-icon">&#9672;</span>
+            </div>
+            <div class="metric-val" id="metricPowerDaoVal">0</div>
+            <div class="metric-footer mono">
+              <span id="metricPowerDaoNote">DAO allocation</span>
+            </div>
           </div>
 
-          <div class="cap-meta-row mono">
-            <span>Earned: <strong id="capEarnedVal" style="color: #ffffff;">$0.00</strong></span>
-            <span>Max Limit: <strong id="capMaxVal" style="color: var(--gold);">$0</strong></span>
+          <div class="glass metric-card power-business-total-metric" hidden>
+            <div class="metric-top">
+              <span class="metric-label mono">Total Business</span>
+              <span class="metric-icon">&dollar;</span>
+            </div>
+            <div class="metric-val" id="metricPowerBusinessVal" style="color: var(--gold)">
+              $0.00
+            </div>
+            <div class="metric-footer mono">
+              <span id="metricPowerBusinessNote">Business total</span>
+              <span id="metricPowerRankNote">Rank: —</span>
+            </div>
+          </div>
+
+          <div class="glass metric-card">
+            <div class="metric-top">
+              <span class="metric-label mono">Total Earned</span>
+              <span class="metric-icon">&dollar;</span>
+            </div>
+            <div class="metric-val" id="metricEarnedVal" style="color: var(--gold)">$0.00</div>
+            <div class="metric-footer mono">
+              <span id="metricEarnedNote">Level commissions + rank rewards</span>
+            </div>
+          </div>
+
+          <div class="glass metric-card">
+            <div class="metric-top">
+              <span class="metric-label mono">25&times; Cap Status</span>
+              <span class="metric-icon">&infin;</span>
+            </div>
+            <div class="metric-val" id="metricCapVal">
+              $0 <span style="font-size: 1rem; color: var(--text-dim)">/ $0</span>
+            </div>
+            <div class="metric-footer mono">
+              <span id="metricCapStatus" style="color: var(--text-muted)"
+                >&bull; No live package</span
+              >
+            </div>
+          </div>
+
+          <div class="glass metric-card">
+            <div class="metric-top">
+              <span class="metric-label mono">Current Rank</span>
+              <span class="metric-icon">&starf;</span>
+            </div>
+            <div class="metric-val" id="metricRankVal">Not activated</div>
+            <div class="metric-footer mono">
+              <span id="metricRankNote">Starter at 25 DAO matching (each side)</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Affiliate Link Card -->
-      <div class="glass ref-box-card" id="inviteSection" data-scene="dashTeam">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
-          <div>
-            <h3 style="font-size: 1.2rem; margin-bottom: 0.2rem;">Your Permanent Affiliate Link</h3>
-            <p style="color: var(--text-muted); font-size: 0.85rem;">
-              Share your link anywhere. All visitors are automatically bound to your downline.
-            </p>
+        <!-- DV token allocation (owner, 2026-10-15): 1,500 DV per $300 package, planned launch March 2028 (dashboard.ts initDvToken) -->
+        <section class="glass dv-token-card" id="dvTokenCard" hidden>
+          <div class="dv-coin" aria-hidden="true">
+            <span class="dv-coin-ring"></span>
+            <span class="dv-token-slot dv-token-slot--lg" id="dvCardCoin"
+              ><img src="/favicon.png" alt="" width="56" height="56"
+            /></span>
           </div>
-          <span class="mono" style="font-size: 0.78rem; color: var(--green);">&bull; Unlimited Referrals Active</span>
-        </div>
-
-        <div class="ref-input-group">
-          <input type="text" class="ref-input" id="dashRefLinkInput" readonly value="Connect wallet to generate your link" />
-          <button class="btn btn-grad" id="dashCopyRefBtn" type="button">
-            <span>Copy Link</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- On-chain activation -->
-      <div class="glass ref-box-card activation-card" id="activationCard" style="margin-top: 2rem;">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
-          <div>
-            <h3 id="activationTitle" style="font-size: 1.2rem; margin-bottom: 0.2rem;">Activate your DAOvault ID</h3>
-            <p id="activationStatus" style="color: var(--text-muted); font-size: 0.85rem;">Payment contract configuration is required.</p>
+          <div class="dv-token-main">
+            <span class="mono dv-token-tag">DAOVAULT TOKEN &middot; DV</span>
+            <h3>Your <span class="grad-text">DV Token</span> Allocation</h3>
+            <div class="dv-token-amount">
+              <span id="dvTokenAmount">0</span><span class="dv-token-unit">DV</span>
+            </div>
+            <!-- packages x 1,500 = total (dashboard.ts initDvToken) -->
+            <div
+              class="dv-calc mono"
+              id="dvTokenCalc"
+              aria-label="How your DV allocation is counted"
+            ></div>
           </div>
-          <button class="btn btn-grad" id="dashActivateBtn" type="button">Approve &amp; Activate $300</button>
-        </div>
-      </div>
+          <div class="dv-token-side">
+            <span class="dv-token-badge mono"
+              ><span class="dv-badge-dot"></span
+              ><span id="dvTokenLaunch">Planned launch &middot; March 2028</span></span
+            >
+            <span class="dv-token-net mono" id="dvTokenNet">BNB Smart Chain</span>
+            <p class="dv-token-note">Credited to this wallet at the planned DV launch.</p>
+          </div>
+        </section>
 
-      <!-- Main 2-Column Content Grid -->
-      <div class="dash-content-grid" data-scene="dashIncome">
-        <!-- Left: 20-Level Matrix Table & 50% Leg Breakdown -->
-        <div>
-          <!-- 20-Level Matrix Accordion -->
-          <div class="glass" id="levelsSection" style="padding: 2rem; margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.2rem; flex-wrap: wrap; gap: 0.5rem;">
+        <!-- Rank reward vaults: one sealed DAOvault box per rank (giftBox.ts) -->
+        <!-- Fast-start bonus (owner 2026-10-18): 10 directs in 3 days $100 / 7 days $50 (dashboard.ts renderFastStart) -->
+        <div class="glass ref-box-card fast-start-card" id="fastStartCard" hidden>
+          <div class="fast-start-top">
+            <div>
+              <span class="mono fast-start-kicker">Fast-start bonus</span>
+              <h3 id="fastStartTitle">Earn up to $100 extra</h3>
+              <p id="fastStartText">Bring 10 activated directs soon after you activate.</p>
+            </div>
+            <b class="mono fast-start-count" id="fastStartCount">0 / 10</b>
+          </div>
+          <div class="fast-start-tiers" id="fastStartTiers">
+            <div class="fs-tier">
+              <span class="fs-tier-name">Rocket Start Bonus</span
+              ><span class="fs-tier-rule">10 directs within 3 days</span><b class="mono">$100</b>
+            </div>
+            <div class="fs-tier">
+              <span class="fs-tier-name">Fast Start Bonus</span
+              ><span class="fs-tier-rule">10 directs within 7 days</span><b class="mono">$50</b>
+            </div>
+          </div>
+          <div class="fast-start-track"><i></i></div>
+        </div>
+
+        <section class="glass rewards-card" id="rewardsSection" data-scene="dashRewards">
+          <div class="rewards-head">
+            <div>
+              <span class="mono rewards-tag">RANK REWARD VAULTS</span>
+              <h3>Your <span class="grad-text">Surprise Boxes</span></h3>
+              <p>
+                Every rank you reach unlocks a sealed DAOvault box. Open it to reveal your cash
+                reward.
+              </p>
+            </div>
+            <div class="rank-progress">
+              <div class="rank-progress-row mono">
+                <span>Current rank <b id="rankNow">Unranked</b></span>
+                <span id="rankBoxesOpen">0 / 11 opened</span>
+              </div>
+              <div class="rank-bar"><i id="rankBar"></i></div>
+              <p class="rank-next mono" id="rankNext">
+                Next: Starter at 25 DAO matching (each side)
+              </p>
+            </div>
+          </div>
+          <div class="reward-boxes" id="rewardBoxes"></div>
+        </section>
+
+        <!-- All ranks: Left Leg / Right Leg progress, reward and status per rank (rankProgress.ts) -->
+        <section
+          class="glass rewards-card rank-list-card"
+          id="rankListSection"
+          data-scene="dashRanks"
+        >
+          <div class="rank-list-head">
+            <div>
+              <span class="mono rewards-tag">ALL RANKS</span>
+              <h3>Rank <span class="grad-text">Progress</span></h3>
+              <p>Each rank needs its DAO on both sides: your Left Leg and your Right Leg.</p>
+            </div>
+            <span class="rank-achieved-chip mono" id="rankAchievedChip">0 / 11 Achieved</span>
+          </div>
+          <div class="power-rank-progress" id="powerRankProgress" hidden>
+            <div class="power-rank-progress-top">
               <div>
-                <h3 style="font-size: 1.3rem;">20-Level Downline</h3>
-                <p style="color: var(--text-muted); font-size: 0.85rem;">
-                  Real-time status of all 20 generational levels (40% distribution).
+                <span class="mono power-rank-kicker">DAO PROGRESS</span>
+                <strong id="powerRankDaoValue">0 DAO</strong>
+                <span class="mono" id="powerRankAmountValue">$0.00</span>
+              </div>
+              <div class="power-rank-current">
+                <span class="mono">RANK PROGRESS</span>
+                <b id="powerRankNameValue">Unranked</b>
+              </div>
+            </div>
+            <div class="power-rank-track"><i id="powerRankFill"></i></div>
+            <div class="power-rank-progress-foot mono" id="powerRankNextValue">
+              Next: Starter at 25 DAO
+            </div>
+          </div>
+          <div class="rank-filter mono" id="rankFilter" role="group" aria-label="Filter ranks">
+            <button type="button" data-filter="all" class="is-active" aria-pressed="true">
+              All <em>11</em>
+            </button>
+            <button type="button" data-filter="achieved" aria-pressed="false">
+              Achieved <em>0</em>
+            </button>
+            <button type="button" data-filter="pending" aria-pressed="false">
+              Pending <em>11</em>
+            </button>
+          </div>
+          <ol class="rank-list" id="rankList"></ol>
+          <p class="rank-list-empty mono" hidden>
+            No ranks achieved yet. Your first one is Starter: 25 DAO on each side.
+          </p>
+        </section>
+
+        <!-- 25x Capping Gauge Meter Card with High-Tech Rotating Border Beam -->
+        <div class="border-beam-card active" style="margin-bottom: 2rem">
+          <div class="border-beam-inner cap-meter-card" style="margin-bottom: 0">
+            <div class="cap-meter-head">
+              <div>
+                <h3 style="font-size: 1.35rem; margin-bottom: 0.35rem">
+                  25&times; Sustainability <span class="grad-text">Gauge Meter</span>
+                </h3>
+                <p style="color: var(--text-muted); font-size: 0.88rem">
+                  Each $300 package adds 25&times; ($7,500) to your earnings cap, and the caps add
+                  up. Level income, rank rewards and bonuses all count toward it.
                 </p>
               </div>
-              <span class="mono" style="font-size: 0.8rem; color: var(--gold);" id="levelTableNote">
-                Live data required
-              </span>
-            </div>
-
-            <div style="overflow-x: auto;">
-              <table class="level-table">
-                <thead>
-                  <tr>
-                    <th>Level</th>
-                    <th>Share</th>
-                    <th>Unlock Milestone</th>
-                    <th>Status</th>
-                    <th>Members</th>
-                    <th>Earned</th>
-                  </tr>
-                </thead>
-                <tbody id="levelTableBody" class="mono">
-                  <!-- Populated dynamically via dashboard.js -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- 50:50 Leg Ratio Balance Card (live from the backend) -->
-          <div class="glass leg-card" id="legCard" style="padding: 2rem;">
-            <h3 style="font-size: 1.25rem; margin-bottom: 0.4rem;">
-              Leadership Rank <span class="grad-text">DAO Matching</span>
-            </h3>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;" id="legNextTarget">
-              Next target: <strong>Starter &middot; 25 DAO each side &middot; $150 reward</strong>
-            </p>
-
-            <div class="leg-box">
-              <div class="leg-row mono">
-                <span style="color: var(--gold);">Left Leg <small>(your Left side)</small></span>
-                <span id="legPowerVal">0 / 25 DAO</span>
-              </div>
-              <div class="cap-bar-track leg-track"><div class="leg-fill leg-fill--power" id="legPowerBar"></div></div>
-
-              <div class="leg-row mono">
-                <span style="color: #f3ecd6;">Right Leg <small>(your Right side)</small></span>
-                <span id="legOtherVal">0 / 25 DAO</span>
-              </div>
-              <div class="cap-bar-track leg-track"><div class="leg-fill leg-fill--other" id="legOtherBar"></div></div>
-
-              <div class="leg-stats mono">
-                <span>Matched <b id="legCountedVal">0 / 25</b></span>
-                <span>Team volume <b id="legTeamVal">0 DAO</b></span>
-                <span>Placed <b id="legCountVal">—</b></span>
+              <div
+                class="mono"
+                id="capPctText"
+                style="font-size: 1rem; font-weight: 700; color: var(--gold)"
+              >
+                0% of 25&times; Cap Reached
               </div>
             </div>
-          </div>
 
-          <!-- Recent income (level commissions + rank rewards) -->
-          <div class="glass income-card" id="incomeCard" style="padding: 2rem; margin-top: 2rem;">
-            <div class="income-head">
-              <h3 style="font-size: 1.25rem;">Recent <span class="grad-text">Income</span></h3>
-              <span class="mono income-split" id="incomeSplit">Level $0 &middot; Rank $0</span>
+            <div class="cap-bar-track">
+              <div class="cap-bar-fill" id="capFillBar"></div>
             </div>
-            <ul class="income-list mono" id="incomeList">
-              <li class="income-empty">No income yet. Share your invite link to start earning.</li>
-            </ul>
+
+            <div class="cap-meta-row mono">
+              <span>Earned: <strong id="capEarnedVal" style="color: #ffffff">$0.00</strong></span>
+              <span>Max Limit: <strong id="capMaxVal" style="color: var(--gold)">$0</strong></span>
+            </div>
           </div>
         </div>
 
-        <!-- Right: 5% Withdrawal Fee Interactive Portal -->
-        <div id="withdrawSection">
-          <div class="glass withdraw-box">
-            <h3 style="font-size: 1.3rem; margin-bottom: 0.4rem;">
-              <span class="grad-text">USDT</span> Withdrawal
-            </h3>
-            <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">
-              Paid in USDT straight to your own connected wallet on BNB Smart Chain.
-            </p>
-
-            <div style="background: rgba(0,0,0,0.35); padding: 1.2rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; border: 1px solid var(--border-line);">
-              <span class="mono" style="font-size: 0.78rem; color: var(--text-muted);">AVAILABLE WITHDRAWABLE BALANCE</span>
-              <div class="mono" id="withAvailBalance" style="font-size: 1.8rem; font-weight: 800; color: #ffffff; margin-top: 0.35rem;">
-                $0.00 USDT
-              </div>
-              <div class="mono with-meta" id="withMeta">Pending $0.00 &middot; Withdrawn $0.00</div>
+        <!-- Affiliate Link Card -->
+        <div class="glass ref-box-card" id="inviteSection" data-scene="dashTeam">
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              flex-wrap: wrap;
+              gap: 0.5rem;
+            "
+          >
+            <div>
+              <h3 style="font-size: 1.2rem; margin-bottom: 0.2rem">
+                Your Permanent Affiliate Link
+              </h3>
+              <p style="color: var(--text-muted); font-size: 0.85rem">
+                Share your link anywhere. All visitors are automatically bound to your downline.
+              </p>
             </div>
+            <span class="mono" style="font-size: 0.78rem; color: var(--green)"
+              >&bull; Unlimited Referrals Active</span
+            >
+          </div>
 
-            <div style="margin-bottom: 1.5rem;">
-              <label class="mono" style="font-size: 0.82rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">
-                Withdrawal Amount ($)
-              </label>
-              <input type="number" class="ref-input" id="withAmountInput" style="width: 100%;" value="0" min="0" step="10" />
-            </div>
-
-            <!-- Calculation Breakdown -->
-            <div style="margin-bottom: 1.8rem;" class="mono">
-              <div class="calc-row">
-                <span style="color: var(--text-muted);">Gross Requested:</span>
-                <span id="withGrossVal" style="color: #ffffff;">$0.00</span>
-              </div>
-              <div class="calc-row">
-                <span style="color: var(--red);">Withdrawal charge (5%):</span>
-                <span id="withFeeVal" style="color: var(--red);">-$0.00</span>
-              </div>
-              <div class="calc-row total">
-                <span>Net Transfer to Wallet:</span>
-                <span id="withNetVal" style="color: var(--gold);">$0.00 USDT</span>
-              </div>
-            </div>
-
-            <button class="btn btn-grad" id="withSubmitBtn" type="button" style="width: 100%; padding: 1rem;">
-              <span id="withSubmitLabel">Sign in &amp; request withdrawal &rarr;</span>
+          <div class="ref-input-group">
+            <input
+              type="text"
+              class="ref-input"
+              id="dashRefLinkInput"
+              readonly
+              value="Connect wallet to generate your link"
+            />
+            <button class="btn btn-grad" id="dashCopyRefBtn" type="button">
+              <span>Copy Link</span>
             </button>
+          </div>
+        </div>
 
-            <p style="text-align: center; font-size: 0.75rem; color: var(--text-dim); margin-top: 1rem;" class="mono" id="withPayoutNote">
-              &bull; Signing in only proves wallet ownership: no gas, no transaction. The 5% charge goes to the ecosystem treasury.
-            </p>
-            <div class="with-history" id="withHistory" hidden>
-              <h4 class="mono">Your withdrawals</h4>
-              <ul id="withHistoryList"></ul>
+        <!-- On-chain activation -->
+        <div
+          class="glass ref-box-card activation-card"
+          id="activationCard"
+          style="margin-top: 2rem"
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+              gap: 1rem;
+              flex-wrap: wrap;
+            "
+          >
+            <div>
+              <h3 id="activationTitle" style="font-size: 1.2rem; margin-bottom: 0.2rem">
+                Activate your DAOvault ID
+              </h3>
+              <p id="activationStatus" style="color: var(--text-muted); font-size: 0.85rem">
+                Payment contract configuration is required.
+              </p>
+            </div>
+            <button class="btn btn-grad" id="dashActivateBtn" type="button">
+              Approve &amp; Activate $300
+            </button>
+          </div>
+        </div>
+
+        <!-- Main 2-Column Content Grid -->
+        <div class="dash-content-grid" data-scene="dashIncome">
+          <!-- Left: 20-Level Matrix Table & 50% Leg Breakdown -->
+          <div>
+            <!-- 20-Level Matrix Accordion -->
+            <div class="glass" id="levelsSection" style="padding: 2rem; margin-bottom: 2rem">
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  margin-bottom: 1.2rem;
+                  flex-wrap: wrap;
+                  gap: 0.5rem;
+                "
+              >
+                <div>
+                  <h3 style="font-size: 1.3rem">20-Level Downline</h3>
+                  <p style="color: var(--text-muted); font-size: 0.85rem">
+                    Real-time status of all 20 generational levels (40% distribution).
+                  </p>
+                </div>
+                <span
+                  class="mono"
+                  style="font-size: 0.8rem; color: var(--gold)"
+                  id="levelTableNote"
+                >
+                  Live data required
+                </span>
+              </div>
+
+              <div style="overflow-x: auto">
+                <table class="level-table">
+                  <thead>
+                    <tr>
+                      <th>Level</th>
+                      <th>Share</th>
+                      <th>Unlock Milestone</th>
+                      <th>Status</th>
+                      <th>Members</th>
+                      <th>Earned</th>
+                    </tr>
+                  </thead>
+                  <tbody id="levelTableBody" class="mono">
+                    <!-- Populated dynamically via dashboard.js -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- 50:50 Leg Ratio Balance Card (live from the backend) -->
+            <div class="glass leg-card" id="legCard" style="padding: 2rem">
+              <h3 style="font-size: 1.25rem; margin-bottom: 0.4rem">
+                Leadership Rank <span class="grad-text">DAO Matching</span>
+              </h3>
+              <p
+                style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem"
+                id="legNextTarget"
+              >
+                Next target: <strong>Starter &middot; 25 DAO each side &middot; $150 reward</strong>
+              </p>
+
+              <div class="leg-box">
+                <div class="leg-row mono">
+                  <span style="color: var(--gold)">Left Leg <small>(your Left side)</small></span>
+                  <span id="legPowerVal">0 / 25 DAO</span>
+                </div>
+                <div class="cap-bar-track leg-track">
+                  <div class="leg-fill leg-fill--power" id="legPowerBar"></div>
+                </div>
+
+                <div class="leg-row mono">
+                  <span style="color: #f3ecd6">Right Leg <small>(your Right side)</small></span>
+                  <span id="legOtherVal">0 / 25 DAO</span>
+                </div>
+                <div class="cap-bar-track leg-track">
+                  <div class="leg-fill leg-fill--other" id="legOtherBar"></div>
+                </div>
+
+                <div class="leg-stats mono">
+                  <span>Matched <b id="legCountedVal">0 / 25</b></span>
+                  <span>Team volume <b id="legTeamVal">0 DAO</b></span>
+                  <span>Placed <b id="legCountVal">—</b></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Recent income (level commissions + rank rewards) -->
+            <div class="glass income-card" id="incomeCard" style="padding: 2rem; margin-top: 2rem">
+              <div class="income-head">
+                <h3 style="font-size: 1.25rem">Recent <span class="grad-text">Income</span></h3>
+                <span class="mono income-split" id="incomeSplit">Level $0 &middot; Rank $0</span>
+              </div>
+              <ul class="income-list mono" id="incomeList">
+                <li class="income-empty">
+                  No income yet. Share your invite link to start earning.
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Right: 5% Withdrawal Fee Interactive Portal -->
+          <div id="withdrawSection">
+            <div class="glass withdraw-box">
+              <h3 style="font-size: 1.3rem; margin-bottom: 0.4rem">
+                <span class="grad-text">USDT</span> Withdrawal
+              </h3>
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem">
+                Paid in USDT straight to your own connected wallet on BNB Smart Chain.
+              </p>
+
+              <div
+                style="
+                  background: rgba(0, 0, 0, 0.35);
+                  padding: 1.2rem;
+                  border-radius: var(--radius-md);
+                  margin-bottom: 1.5rem;
+                  border: 1px solid var(--border-line);
+                "
+              >
+                <span class="mono" style="font-size: 0.78rem; color: var(--text-muted)"
+                  >AVAILABLE WITHDRAWABLE BALANCE</span
+                >
+                <div
+                  class="mono"
+                  id="withAvailBalance"
+                  style="font-size: 1.8rem; font-weight: 800; color: #ffffff; margin-top: 0.35rem"
+                >
+                  $0.00 USDT
+                </div>
+                <div class="mono with-meta" id="withMeta">
+                  Pending $0.00 &middot; Withdrawn $0.00
+                </div>
+              </div>
+
+              <div style="margin-bottom: 1.5rem">
+                <label
+                  class="mono"
+                  style="
+                    font-size: 0.82rem;
+                    color: var(--text-muted);
+                    display: block;
+                    margin-bottom: 0.5rem;
+                  "
+                >
+                  Withdrawal Amount ($)
+                </label>
+                <input
+                  type="number"
+                  class="ref-input"
+                  id="withAmountInput"
+                  style="width: 100%"
+                  value="0"
+                  min="0"
+                  step="10"
+                />
+              </div>
+
+              <!-- Calculation Breakdown -->
+              <div style="margin-bottom: 1.8rem" class="mono">
+                <div class="calc-row">
+                  <span style="color: var(--text-muted)">Gross Requested:</span>
+                  <span id="withGrossVal" style="color: #ffffff">$0.00</span>
+                </div>
+                <div class="calc-row">
+                  <span style="color: var(--red)">Withdrawal charge (5%):</span>
+                  <span id="withFeeVal" style="color: var(--red)">-$0.00</span>
+                </div>
+                <div class="calc-row total">
+                  <span>Net Transfer to Wallet:</span>
+                  <span id="withNetVal" style="color: var(--gold)">$0.00 USDT</span>
+                </div>
+              </div>
+
+              <button
+                class="btn btn-grad"
+                id="withSubmitBtn"
+                type="button"
+                style="width: 100%; padding: 1rem"
+              >
+                <span id="withSubmitLabel">Sign in &amp; request withdrawal &rarr;</span>
+              </button>
+
+              <p
+                style="
+                  text-align: center;
+                  font-size: 0.75rem;
+                  color: var(--text-dim);
+                  margin-top: 1rem;
+                "
+                class="mono"
+                id="withPayoutNote"
+              >
+                &bull; Signing in only proves wallet ownership: no gas, no transaction. The 5%
+                charge goes to the ecosystem treasury.
+              </p>
+              <div class="with-history" id="withHistory" hidden>
+                <h4 class="mono">Your withdrawals</h4>
+                <ul id="withHistoryList"></ul>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </main>
+    </main>
 
-  <!-- Master Dashboard TypeScript Module -->
-  <script type="module" src="/src/scripts/dashboard.ts"></script>
-</body>
+    <!-- Master Dashboard TypeScript Module -->
+    <script type="module" src="/src/scripts/dashboard.ts"></script>
+  </body>
 </html>

@@ -8,40 +8,53 @@
 export function initUnfoldCards(): void {
   const cards = [...document.querySelectorAll<HTMLElement>('[data-unfold]')];
   if (!cards.length) return;
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+  if (
+    matchMedia('(prefers-reduced-motion: reduce)').matches ||
+    !('IntersectionObserver' in window)
+  ) {
     cards.forEach((c) => c.classList.add('is-unfolded'));
     return;
   }
   let lastY = window.scrollY;
   let dir: 'down' | 'up' = 'down';
-  window.addEventListener('scroll', () => {
-    const y = window.scrollY;
-    if (Math.abs(y - lastY) > 2) dir = y > lastY ? 'down' : 'up';
-    lastY = y;
-  }, { passive: true });
+  window.addEventListener(
+    'scroll',
+    () => {
+      const y = window.scrollY;
+      if (Math.abs(y - lastY) > 2) dir = y > lastY ? 'down' : 'up';
+      lastY = y;
+    },
+    { passive: true },
+  );
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
   const triggerRatio = isMobile ? 0.04 : 0.12;
 
   cards.forEach((c) => c.classList.add('unfold-ready'));
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      const card = entry.target as HTMLElement;
-      const vh = window.innerHeight || document.documentElement.clientHeight;
-      if ((entry.isIntersecting && entry.intersectionRatio >= triggerRatio) || entry.boundingClientRect.bottom <= 0) {
-        if (!card.classList.contains('is-unfolded')) {
-          // which side it came from decides the direction: from below while scrolling down -> drops from above
-          card.dataset.from = dir === 'down' ? 'top' : 'bottom';
-          card.style.setProperty('--unfold-h', `${card.offsetHeight}px`); // the seam runs the full height
-          void card.offsetWidth;
-          card.classList.add('is-unfolded');
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const card = entry.target as HTMLElement;
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        if (
+          (entry.isIntersecting && entry.intersectionRatio >= triggerRatio) ||
+          entry.boundingClientRect.bottom <= 0
+        ) {
+          if (!card.classList.contains('is-unfolded')) {
+            // which side it came from decides the direction: from below while scrolling down -> drops from above
+            card.dataset.from = dir === 'down' ? 'top' : 'bottom';
+            card.style.setProperty('--unfold-h', `${card.offsetHeight}px`); // the seam runs the full height
+            void card.offsetWidth;
+            card.classList.add('is-unfolded');
+          }
+        } else if (!entry.isIntersecting && card.classList.contains('is-unfolded')) {
+          if (entry.boundingClientRect.top > vh) {
+            card.classList.remove('is-unfolded'); // only reset if scrolled completely back up
+          }
         }
-      } else if (!entry.isIntersecting && card.classList.contains('is-unfolded')) {
-        if (entry.boundingClientRect.top > vh) {
-          card.classList.remove('is-unfolded'); // only reset if scrolled completely back up
-        }
-      }
-    });
-  }, { threshold: [0, triggerRatio] });
+      });
+    },
+    { threshold: [0, triggerRatio] },
+  );
   cards.forEach((c) => io.observe(c));
 }

@@ -38,20 +38,28 @@ function medallionTexture(logo: HTMLImageElement | null): THREE.CanvasTexture {
   grad.addColorStop(0, '#2a2210');
   grad.addColorStop(1, '#050505');
   g.fillStyle = grad;
-  g.beginPath(); g.arc(256, 256, 256, 0, Math.PI * 2); g.fill();
-  g.lineWidth = 18; g.strokeStyle = '#e8b830';
-  g.beginPath(); g.arc(256, 256, 240, 0, Math.PI * 2); g.stroke();
+  g.beginPath();
+  g.arc(256, 256, 256, 0, Math.PI * 2);
+  g.fill();
+  g.lineWidth = 18;
+  g.strokeStyle = '#e8b830';
+  g.beginPath();
+  g.arc(256, 256, 240, 0, Math.PI * 2);
+  g.stroke();
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   if (logo) {
     const draw = () => {
       g.save();
-      g.beginPath(); g.arc(256, 256, 214, 0, Math.PI * 2); g.clip();
+      g.beginPath();
+      g.arc(256, 256, 214, 0, Math.PI * 2);
+      g.clip();
       g.drawImage(logo, 256 - 190, 256 - 190, 380, 380);
       g.restore();
       tex.needsUpdate = true;
     };
-    if (logo.complete && logo.naturalWidth) draw(); else logo.addEventListener('load', draw, { once: true });
+    if (logo.complete && logo.naturalWidth) draw();
+    else logo.addEventListener('load', draw, { once: true });
   }
   return tex;
 }
@@ -87,7 +95,8 @@ async function buildApexTrophy(): Promise<void> {
 
   if (!hasWebGL()) {
     // no WebGL: a still render of this same trophy (captured from the 3D scene)
-    slot.innerHTML = '<img class="trophy-canvas trophy-static" src="/assets/trophy-static.webp" alt="" width="435" height="490" decoding="async" loading="lazy" />';
+    slot.innerHTML =
+      '<img class="trophy-canvas trophy-static" src="/assets/trophy-static.webp" alt="" width="435" height="490" decoding="async" loading="lazy" />';
     return;
   }
 
@@ -97,8 +106,14 @@ async function buildApexTrophy(): Promise<void> {
   slot.appendChild(canvas);
 
   // phones / low-core devices get a lighter build (fewer segments, coins, sparkles, lower pixel ratio)
-  const lite = window.matchMedia('(max-width: 900px)').matches || (navigator.hardwareConcurrency || 8) <= 4;
-  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: !lite, powerPreference: 'high-performance' });
+  const lite =
+    window.matchMedia('(max-width: 900px)').matches || (navigator.hardwareConcurrency || 8) <= 4;
+  const renderer = new THREE.WebGLRenderer({
+    canvas,
+    alpha: true,
+    antialias: !lite,
+    powerPreference: 'high-performance',
+  });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, lite ? 1.5 : 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -131,24 +146,64 @@ async function buildApexTrophy(): Promise<void> {
   scene.add(glint);
 
   // without a reflection map (phones) fully metallic gold looks dark, so it is less metallic there
-  const gold = new THREE.MeshStandardMaterial({ color: GOLD, metalness: lite ? 0.55 : 1, roughness: lite ? 0.32 : 0.2, envMapIntensity: 1.25 });
-  const goldLight = new THREE.MeshStandardMaterial({ color: GOLD_LIGHT, metalness: lite ? 0.5 : 1, roughness: lite ? 0.25 : 0.12, envMapIntensity: 1.4 });
-  const goldInner = new THREE.MeshStandardMaterial({ color: 0xa8761b, metalness: 1, roughness: 0.35, side: THREE.BackSide });
-  const obsidian = new THREE.MeshStandardMaterial({ color: 0x0b0a08, metalness: 0.6, roughness: 0.28, envMapIntensity: 0.9 });
+  const gold = new THREE.MeshStandardMaterial({
+    color: GOLD,
+    metalness: lite ? 0.55 : 1,
+    roughness: lite ? 0.32 : 0.2,
+    envMapIntensity: 1.25,
+  });
+  const goldLight = new THREE.MeshStandardMaterial({
+    color: GOLD_LIGHT,
+    metalness: lite ? 0.5 : 1,
+    roughness: lite ? 0.25 : 0.12,
+    envMapIntensity: 1.4,
+  });
+  const goldInner = new THREE.MeshStandardMaterial({
+    color: 0xa8761b,
+    metalness: 1,
+    roughness: 0.35,
+    side: THREE.BackSide,
+  });
+  const obsidian = new THREE.MeshStandardMaterial({
+    color: 0x0b0a08,
+    metalness: 0.6,
+    roughness: 0.28,
+    envMapIntensity: 0.9,
+  });
 
   const trophy = new THREE.Group();
-  const rig = new THREE.Group();     // entrance / pointer tilt
+  const rig = new THREE.Group(); // entrance / pointer tilt
   rig.add(trophy);
   scene.add(rig);
 
   // ── chalice: one lathe profile from stem to rim ──
   const profile = [
-    [0.0, -0.78], [0.2, -0.78], [0.17, -0.66], [0.12, -0.42], [0.1, -0.18], [0.16, -0.06], [0.3, 0.02],
-    [0.2, 0.1], [0.24, 0.22], [0.46, 0.36], [0.72, 0.62], [0.88, 0.95], [0.95, 1.28], [0.98, 1.5], [1.03, 1.58], [1.0, 1.63],
+    [0.0, -0.78],
+    [0.2, -0.78],
+    [0.17, -0.66],
+    [0.12, -0.42],
+    [0.1, -0.18],
+    [0.16, -0.06],
+    [0.3, 0.02],
+    [0.2, 0.1],
+    [0.24, 0.22],
+    [0.46, 0.36],
+    [0.72, 0.62],
+    [0.88, 0.95],
+    [0.95, 1.28],
+    [0.98, 1.5],
+    [1.03, 1.58],
+    [1.0, 1.63],
   ].map(([x, y]) => new THREE.Vector2(x, y));
   const cup = new THREE.Mesh(new THREE.LatheGeometry(profile, lite ? 48 : 96), gold);
   trophy.add(cup);
-  const innerProfile = [[0.0, 0.5], [0.42, 0.56], [0.7, 0.9], [0.86, 1.25], [0.93, 1.58]].map(([x, y]) => new THREE.Vector2(x, y));
+  const innerProfile = [
+    [0.0, 0.5],
+    [0.42, 0.56],
+    [0.7, 0.9],
+    [0.86, 1.25],
+    [0.93, 1.58],
+  ].map(([x, y]) => new THREE.Vector2(x, y));
   trophy.add(new THREE.Mesh(new THREE.LatheGeometry(innerProfile, lite ? 48 : 96), goldInner));
   // polished rim and knot rings
   const ring = (r: number, t: number, y: number, mat = goldLight) => {
@@ -169,7 +224,12 @@ async function buildApexTrophy(): Promise<void> {
       new THREE.Vector3(1.55 * side, 0.62, 0),
       new THREE.Vector3(0.7 * side, 0.6, 0),
     );
-    trophy.add(new THREE.Mesh(new THREE.TubeGeometry(curve, lite ? 28 : 48, 0.065, lite ? 10 : 14, false), gold));
+    trophy.add(
+      new THREE.Mesh(
+        new THREE.TubeGeometry(curve, lite ? 28 : 48, 0.065, lite ? 10 : 14, false),
+        gold,
+      ),
+    );
     const cap = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), goldLight);
     cap.position.copy(curve.getPoint(0.42));
     trophy.add(cap);
@@ -179,7 +239,10 @@ async function buildApexTrophy(): Promise<void> {
   const logoImg = new Image();
   logoImg.src = '/favicon.png';
   const medalTex = medallionTexture(logoImg);
-  const medal = new THREE.Mesh(new THREE.CircleGeometry(0.36, 64), new THREE.MeshStandardMaterial({ map: medalTex, metalness: 0.55, roughness: 0.35 }));
+  const medal = new THREE.Mesh(
+    new THREE.CircleGeometry(0.36, 64),
+    new THREE.MeshStandardMaterial({ map: medalTex, metalness: 0.55, roughness: 0.35 }),
+  );
   medal.position.set(0, 1.0, 0.905);
   medal.rotation.x = -0.2;
   trophy.add(medal);
@@ -212,7 +275,10 @@ async function buildApexTrophy(): Promise<void> {
   plaque.position.set(0, -0.3, 0.67);
   plaque.rotation.x = -0.11;
   base.add(plaque);
-  const plaqueLogo = new THREE.Mesh(new THREE.PlaneGeometry(0.17, 0.17), new THREE.MeshBasicMaterial({ map: loadTexture('/favicon.png'), transparent: true }));
+  const plaqueLogo = new THREE.Mesh(
+    new THREE.PlaneGeometry(0.17, 0.17),
+    new THREE.MeshBasicMaterial({ map: loadTexture('/favicon.png'), transparent: true }),
+  );
   plaqueLogo.position.set(0, -0.3, 0.682);
   plaqueLogo.rotation.x = -0.11;
   base.add(plaqueLogo);
@@ -244,13 +310,16 @@ async function buildApexTrophy(): Promise<void> {
     fVel.set([Math.cos(a) * s, 2.6 + Math.random() * 0.8, Math.sin(a) * s * 0.7], i * 3);
     fSpin[i] = (Math.random() < 0.5 ? -1 : 1) * (5 + Math.random() * 6);
   };
-  for (let i = 0; i < FOUNT; i++) { launch(i); fWait[i] = i * (2.4 / FOUNT); }
+  for (let i = 0; i < FOUNT; i++) {
+    launch(i);
+    fWait[i] = i * (2.4 / FOUNT);
+  }
   const updateCoins = (t: number, dt: number) => {
     for (let i = 0; i < ORBIT; i++) {
       const a = (i / ORBIT) * Math.PI * 2 + t * 0.55;
       tmp.position.set(Math.cos(a) * 1.75, 0.55 + Math.sin(a * 2 + i) * 0.28, Math.sin(a) * 1.0);
       tmp.rotation.set(Math.PI / 2, 0, 0);
-      tmp.rotateZ(-a + t * 2.4 + i);      // each coin spins as it circles
+      tmp.rotateZ(-a + t * 2.4 + i); // each coin spins as it circles
       tmp.scale.setScalar(1);
       tmp.updateMatrix();
       orbitCoins.setMatrixAt(i, tmp.matrix);
@@ -265,7 +334,10 @@ async function buildApexTrophy(): Promise<void> {
         fPos[i * 3] += fVel[i * 3] * dt;
         fPos[i * 3 + 1] += fVel[i * 3 + 1] * dt;
         fPos[i * 3 + 2] += fVel[i * 3 + 2] * dt;
-        if (fPos[i * 3 + 1] < -1.5) { launch(i); fWait[i] = Math.random() * 0.8; }
+        if (fPos[i * 3 + 1] < -1.5) {
+          launch(i);
+          fWait[i] = Math.random() * 0.8;
+        }
         // grow out of the cup mouth
         const born = Math.min(1, (fPos[i * 3 + 1] - CUP_Y + 0.6) / 0.6);
         tmp.scale.setScalar(Math.max(0.0001, fVel[i * 3 + 1] > 0 ? born : 1));
@@ -280,11 +352,28 @@ async function buildApexTrophy(): Promise<void> {
 
   // floor glow + glow at the cup mouth
   const glowTex = glowTexture();
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2), new THREE.MeshBasicMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.55 }));
+  const floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(4.2, 4.2),
+    new THREE.MeshBasicMaterial({
+      map: glowTex,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      opacity: 0.55,
+    }),
+  );
   floor.rotation.x = -Math.PI / 2;
   floor.position.y = -1.6;
   rig.add(floor);
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.7 }));
+  const halo = new THREE.Sprite(
+    new THREE.SpriteMaterial({
+      map: glowTex,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      opacity: 0.7,
+    }),
+  );
   halo.scale.set(2.2, 1.2, 1);
   halo.position.y = 1.5;
   trophy.add(halo);
@@ -304,9 +393,17 @@ async function buildApexTrophy(): Promise<void> {
   for (let i = 0; i < N; i++) resetSpark(i, true);
   const sparkGeo = new THREE.BufferGeometry();
   sparkGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const sparks = new THREE.Points(sparkGeo, new THREE.PointsMaterial({
-    map: glowTex, size: 0.09, color: 0xffe08a, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
-  }));
+  const sparks = new THREE.Points(
+    sparkGeo,
+    new THREE.PointsMaterial({
+      map: glowTex,
+      size: 0.09,
+      color: 0xffe08a,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    }),
+  );
   rig.add(sparks);
 
   // gold burst (entrance + click)
@@ -315,7 +412,15 @@ async function buildApexTrophy(): Promise<void> {
   const burstVel = new Float32Array(BURST * 3);
   const burstGeo = new THREE.BufferGeometry();
   burstGeo.setAttribute('position', new THREE.BufferAttribute(burstPos, 3));
-  const burstMat = new THREE.PointsMaterial({ map: glowTex, size: 0.16, color: 0xfff1b8, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending });
+  const burstMat = new THREE.PointsMaterial({
+    map: glowTex,
+    size: 0.16,
+    color: 0xfff1b8,
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  });
   rig.add(new THREE.Points(burstGeo, burstMat));
   let burstT = -1;
   const burst = () => {
@@ -341,14 +446,22 @@ async function buildApexTrophy(): Promise<void> {
   resize();
 
   // pointer lean + click spin
-  let leanX = 0, leanY = 0, spin = 0;
+  let leanX = 0,
+    leanY = 0,
+    spin = 0;
   stage.addEventListener('pointermove', (e) => {
     const r = stage.getBoundingClientRect();
     leanY = ((e.clientX - r.left) / r.width - 0.5) * 0.9;
     leanX = ((e.clientY - r.top) / r.height - 0.5) * 0.25;
   });
-  stage.addEventListener('pointerleave', () => { leanX = 0; leanY = 0; });
-  stage.addEventListener('click', () => { spin += Math.PI * 2; burst(); });
+  stage.addEventListener('pointerleave', () => {
+    leanX = 0;
+    leanY = 0;
+  });
+  stage.addEventListener('click', () => {
+    spin += Math.PI * 2;
+    burst();
+  });
 
   // entrance when the section scrolls in (once)
   let entered = -1;
@@ -384,7 +497,11 @@ async function buildApexTrophy(): Promise<void> {
     trophy.position.y = -0.15 + (reduce ? 0 : Math.sin(t * 1.2) * 0.05);
 
     updateCoins(t, dt);
-    glint.position.set(Math.cos(t * 0.8) * 2.6, 1.6 + Math.sin(t * 1.3) * 0.6, 2.4 + Math.sin(t * 0.8) * 0.8);
+    glint.position.set(
+      Math.cos(t * 0.8) * 2.6,
+      1.6 + Math.sin(t * 1.3) * 0.6,
+      2.4 + Math.sin(t * 0.8) * 0.8,
+    );
 
     for (let i = 0; i < N; i++) {
       pos[i * 3 + 1] += speed[i] * dt;
@@ -402,7 +519,10 @@ async function buildApexTrophy(): Promise<void> {
       }
       burstGeo.attributes.position.needsUpdate = true;
       burstMat.opacity = Math.max(0, 1 - burstT / 1.4);
-      if (burstT > 1.4) { burstT = -1; burstMat.opacity = 0; }
+      if (burstT > 1.4) {
+        burstT = -1;
+        burstMat.opacity = 0;
+      }
     }
 
     renderer.render(scene, camera);
@@ -422,18 +542,24 @@ async function buildApexTrophy(): Promise<void> {
     clock.getDelta();
     if (!raf) raf = requestAnimationFrame(frame);
   };
-  renderer.compileAsync(scene, camera).catch(() => {}).finally(() => {
-    // one warm-up draw right away: uploads the textures to the GPU now (during the splash
-    // on lite devices) instead of on the first visible frame
-    renderer.render(scene, camera);
-    compiled = true;
-    start();
-  });
+  renderer
+    .compileAsync(scene, camera)
+    .catch(() => {})
+    .finally(() => {
+      // one warm-up draw right away: uploads the textures to the GPU now (during the splash
+      // on lite devices) instead of on the first visible frame
+      renderer.render(scene, camera);
+      compiled = true;
+      start();
+    });
 
-  new IntersectionObserver(([entry]) => {
-    visible = entry.isIntersecting;
-    start();
-  }, { threshold: 0.2 }).observe(stage);
+  new IntersectionObserver(
+    ([entry]) => {
+      visible = entry.isIntersecting;
+      start();
+    },
+    { threshold: 0.2 },
+  ).observe(stage);
 }
 
 /**
@@ -448,16 +574,30 @@ export function initApexTrophy(): void {
   // shaders) froze the page for ~0.5-0.9s right as Rank Rewards came on screen. The frame
   // loop still only runs while the trophy is visible.
   if (LITE) {
-    const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
-    if (idle) idle(() => void buildApexTrophy().catch(() => {}), { timeout: 1200 }); else window.setTimeout(() => void buildApexTrophy().catch(() => {}), 300);
+    const idle = (
+      window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }
+    ).requestIdleCallback;
+    if (idle) idle(() => void buildApexTrophy().catch(() => {}), { timeout: 1200 });
+    else window.setTimeout(() => void buildApexTrophy().catch(() => {}), 300);
     return;
   }
-  if (!('IntersectionObserver' in window)) { void buildApexTrophy().catch(() => {}); return; }
-  const io = new IntersectionObserver(([entry]) => {
-    if (!entry.isIntersecting) return;
-    io.disconnect();
-    const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
-    if (idle) idle(() => void buildApexTrophy().catch(() => {}), { timeout: 600 }); else window.setTimeout(() => void buildApexTrophy().catch(() => {}), 0);
-  }, { rootMargin: '600px 0px' });
+  if (!('IntersectionObserver' in window)) {
+    void buildApexTrophy().catch(() => {});
+    return;
+  }
+  const io = new IntersectionObserver(
+    ([entry]) => {
+      if (!entry.isIntersecting) return;
+      io.disconnect();
+      const idle = (
+        window as Window & {
+          requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void;
+        }
+      ).requestIdleCallback;
+      if (idle) idle(() => void buildApexTrophy().catch(() => {}), { timeout: 600 });
+      else window.setTimeout(() => void buildApexTrophy().catch(() => {}), 0);
+    },
+    { rootMargin: '600px 0px' },
+  );
   io.observe(stage);
 }

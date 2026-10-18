@@ -48,18 +48,27 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
   reeded edge, ~33 fps, only while visible); html.lite / no WebGL / reduced motion = flat logo + CSS coin spin (.is-css).
   Header pinned to both edges (owner bug 2026-10-18, Trust in-app browser ran the capsule past the right edge): .top-header
   left/right 0 + max-width 100vw (main.css), dashboard wallet chip shrinks with an ellipsis address (end of dashboard.css);
-  never put overflow on html (body already clips; html overflow would make body a scroll box).
+  Phones (<=960px): the capsule keeps a 16px gutter each side on landing + dashboard (width calc(100% - 2rem - insets), end of main.css);
+  html + body use overflow-x: clip (never hidden on html: that makes body a scroll box), body keeps hidden as fallback.
   .dv-token-slot is a fixed round box (overflow hidden, img max 100%): a CSS width:auto once let the 256 px logo stretch
   the header to 290 px (owner bug 2026-10-15). Dashboard header <=430px hides the brand text (logo + DV + wallet fit). Wording: allocation + "planned", never value / profit / guarantee.
 - Earnings cap 25x ($7,500) per package (was 10x). Owner 2026-10-18: EVERY income counts toward it (level income, rank
   rewards, fast-start bonus): activation.engine creditIntoCap fills ACTIVE packages oldest first, spills to the next, the
-  part over the cap stays with the company (a capped member reaching a rank gets no reward). 5% withdrawal fee.
+  part over the cap stays with the company (never carried forward). Caps ADD UP: a member can add a $300 package (top-up)
+  ANY time (dashboard canTopUp = activated + not root; was "only when every package is capped"), 2 packages = $15,000;
+  GET /dashboard capTotalUsd / capEarnedUsd drive the cap meter. 5% withdrawal fee.
+- No referral (owner 2026-10-18): nobody stays outside the tree. processActivation without a (known) on-chain sponsor and
+  without a recorded one links the member under the company root (rootFallback) and places it on the root's LEFT; the
+  join gate falls back to GET /dashboard companyCode ("DAOVAULT (DVxxxx)"); placeUnplacedPaid at start (after the root
+  record exists) also links sponsor-less paid members to the root. check-plan runs under a throw-away TEST_ROOT (88 checks).
 - Fast-start bonus (owner 2026-10-18; plan.ts FAST_START): 10 PAID directs (sponsor tree) counted from the member's own
   activation (joining date): within 3 days = "Rocket Start Bonus" $100, else within 7 days = "Fast Start Bonus" $50. ONE
   bonus per member (faster wins, never both), paid at once by the plan queue (awardFastStart after the 10th direct or the
   member's own activation), inside the 25x cap. EarningType FAST_START_BONUS (level = 3 / 7). Dashboard #fastStartCard (under the
   metric cards, ALWAYS shown: offer before activation, countdown + per-bonus rows, earned / closed; root = info only)
   GET /dashboard bonusUsd + fastStart (always sent, eligible=false for root); admin "rank rewards" totals include the bonus.
+  Clock = ON-CHAIN payment time (owner 2026-10-18): packages.paid_at = the Activated / ToppedUp event timestamp
+  (activation.service eventTime; future/unreadable = now); member join + directs use COALESCE(paid_at, created_at).
 - Referral: `?ref=CODE` saved to `localStorage['daovault_pending_ref']`; the latest link opened before JOINING is the one the
   join card offers (2026-10-17; was "latest link wins until payment"); joining saves it (users.pending_sponsor_code) and drops
   the browser copy; activation pays with that sponsor from any browser.
@@ -122,7 +131,7 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
                 withdrawals/voucherSigner.ts via PAYOUT_SIGNER_URL + PAYOUT_SIGNER_TOKEN. Guide: DOCKER.md B12.
   src/modules/plan/plan.ts  LEVELS, RANKS, 50:50 rankForLegs, cents helpers
   src/config/transaction.ts serializable() retry wrapper for money writes
-  scripts/check-plan.ts    npm run check:plan: 78 engine checks (incl. owner-confirmed rules, plan queue, reservations) on the real DB, always rolled back
+  scripts/check-plan.ts    npm run check:plan: 88 engine checks (incl. owner-confirmed rules, plan queue, reservations) on the real DB, always rolled back
   prisma/schema.prisma     User (teamVolume), Package, Earning (LEVEL_COMMISSION|RANK_REWARD), Withdrawal (review fields), AuthNonce
   prisma/seed.ts           local dashboard fixture (SEED_WALLET_ADDRESS)
 frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-web, vanta, ethers 6. Port 3000, proxies /api -> :5000.
@@ -166,7 +175,8 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
     dvLogo.ts         the owner's logo animation (public/DAOVault logo animation.html) as a component: [data-dv-logo="full|mark"]
                       in splash, header, footer, hero, rank medallion, quiz. Splash uses a 5s cycle while core.ts
                       bootPreloader counts every number 1..100% over SPLASH_MS.
-    quiz.ts           "Crack the Vault" quiz above the footer (gold/red answers, 3D coins, canvas lightning, data-scene quiz)
+    quiz.ts           "Crack the Vault" quiz above the footer (gold/red answers, 3D coins, canvas lightning, data-scene quiz);
+                      QUESTION_BANK of 15 (owner 2026-10-18), 5 random per round, Play again = 5 others (pickRound)
     rankEmblem.ts     #ranks card medallion (11-segment ring, DV coin flip, sparks)
     heroWallet.ts     our own gold wallet (inline SVG) + 4 CSS coins in the hero Connect badge and the navbar
                       Connect button ([data-wallet-icon]); badge opens into the full button (.is-ready), coins swirl
@@ -257,7 +267,12 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   payment order. Packages count for volume/legs only once countedAt is set. linkUpline takes the same lock.
   check-plan runs the queue inside its rollback transaction (processPlanEvents lock:false). Local DB has no
   _prisma_migrations table: apply new migrations there with prisma db execute --file (never migrate dev / reset).
-  Monitoring: config/alerts.ts = "[alert]" lines in the server log only (owner 2026-10-13 REMOVED Telegram: no bot, no
+  Logging (owner 2026-10-18): pino JSON lines (config/logger.ts; level as text, ISO time, host; redacts cookies,
+  Authorization, password/token/privateKey/signature fields; LOG_LEVEL, LOG_PRETTY=false for JSON in dev, pino-pretty in
+  dev); requestLogger = pino-http (req id from requestId, which rejects unsafe x-request-id; path only, no headers/body/
+  query; health skipped; 5xx error, 4xx warn); captureConsole() in server.ts / worker.ts / signer turns console.* into
+  JSON lines (CLI tools keep plain console). morgan removed. DEPLOYMENT.md 18 = reading logs, 19 = UptimeRobot.
+  Monitoring: config/alerts.ts = "[alert]" lines in the server log only (via the logger, field alert=<level>) (owner 2026-10-13 REMOVED Telegram: no bot, no
   activity messages, no daily summary; do not re-add), deduped, no secrets, from errorHandler 5xx, crashes,
   payout/signer failures, float low, session theft, admin sign-in, worker job failures; jobs/watch.ts every 2 min in the
   worker (API every 5 min when no REDIS_URL). config/cache.ts caches dashboard member counts 120s.
@@ -348,7 +363,7 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   Postgres tuned (shared_buffers 1GB, parallel 4), connection_limit=10 per copy. env.ts: empty optional values = unset.
   Owner guide: DOCKER.md. Docker is NOT installed on the dev PC and nothing
   builds the images yet: ci.yml + render.yaml stay Render-only until the owner moves to the VPS (owner 2026-10-11).
-- Git: GitHub Reveda/daoVault, branch main. Tests: backend `npm run check:plan` (78, rolled back), `npm run check:env`
+- Git: GitHub Reveda/daoVault, branch main. Tests: backend `npm run check:plan` (88, rolled back), `npm run check:env`
   (prod settings vs chain), contract tests in contracts/test (24, Hardhat; run in an isolated copy).
 
 ## Not built yet

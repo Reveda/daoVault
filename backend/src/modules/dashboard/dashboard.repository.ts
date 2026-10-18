@@ -18,12 +18,19 @@ export const dashboardRepository = {
   },
 
   earningsByType(recipientId: string) {
-    return prisma.earning.groupBy({ by: ["type"], where: { recipientId }, _sum: { amountUsd: true } });
+    return prisma.earning.groupBy({
+      by: ["type"],
+      where: { recipientId },
+      _sum: { amountUsd: true },
+    });
   },
 
   earningsByLevel(recipientId: string) {
     return prisma.earning.groupBy({
-      by: ["level"], where: { recipientId, type: "LEVEL_COMMISSION" }, _sum: { amountUsd: true }, _count: { _all: true },
+      by: ["level"],
+      where: { recipientId, type: "LEVEL_COMMISSION" },
+      _sum: { amountUsd: true },
+      _count: { _all: true },
     });
   },
 
@@ -32,14 +39,20 @@ export const dashboardRepository = {
       where: { recipientId },
       orderBy: { createdAt: "desc" },
       take: 12,
-      select: { type: true, level: true, amountUsd: true, createdAt: true, source: { select: { walletAddress: true } } },
+      select: {
+        type: true,
+        level: true,
+        amountUsd: true,
+        createdAt: true,
+        source: { select: { walletAddress: true } },
+      },
     });
   },
 
   /** when each paid direct (sponsor tree) activated: its first counted package (fast-start bonus progress) */
   async directActivations(userId: string) {
     const rows = await prisma.$queryRaw<Array<{ at: Date }>>`
-      SELECT MIN(p.created_at) AS at FROM users d
+      SELECT MIN(COALESCE(p.paid_at, p.created_at)) AS at FROM users d
         JOIN packages p ON p.user_id = d.id AND p.counted_at IS NOT NULL
        WHERE d.upline_id = ${userId}::uuid
        GROUP BY d.id`;
@@ -51,13 +64,17 @@ export const dashboardRepository = {
    * depths, paid or not)
    */
   async membersPerSide(userId: string) {
-    const rows = await cached(`sides:${userId}`, COUNT_CACHE_SECONDS, () => prisma.$queryRaw<Array<{ side: string; members: number }>>`
+    const rows = await cached(
+      `sides:${userId}`,
+      COUNT_CACHE_SECONDS,
+      () => prisma.$queryRaw<Array<{ side: string; members: number }>>`
       WITH RECURSIVE tree(id, side) AS (
         SELECT id, placement_side FROM users WHERE placement_id = ${userId}::uuid
         UNION ALL
         SELECT u.id, t.side FROM users u JOIN tree t ON u.placement_id = t.id
       )
-      SELECT side::text AS side, COUNT(*)::int AS members FROM tree GROUP BY side`);
+      SELECT side::text AS side, COUNT(*)::int AS members FROM tree GROUP BY side`,
+    );
     const of = (side: string) => Number(rows.find((r) => r.side === side)?.members ?? 0);
     return { left: of("LEFT"), right: of("RIGHT") };
   },
@@ -69,10 +86,21 @@ export const dashboardRepository = {
    * before payment, owner 2026-10-13).
    */
   async membersAtLevel(userId: string, level: number, limit: number, offset: number) {
-    const rows = await prisma.$queryRaw<Array<{
-      id: string; referral_code: string; wallet_address: string; sponsor_code: string | null; joined_at: Date | null;
-      current_rank: number; left_volume: number; right_volume: number; placement_side: string | null; placed_under: string | null; total: bigint;
-    }>>`
+    const rows = await prisma.$queryRaw<
+      Array<{
+        id: string;
+        referral_code: string;
+        wallet_address: string;
+        sponsor_code: string | null;
+        joined_at: Date | null;
+        current_rank: number;
+        left_volume: number;
+        right_volume: number;
+        placement_side: string | null;
+        placed_under: string | null;
+        total: bigint;
+      }>
+    >`
       WITH RECURSIVE tree(id, depth) AS (
         SELECT id, 1 FROM users WHERE upline_id = ${userId}::uuid
         UNION ALL
@@ -94,13 +122,17 @@ export const dashboardRepository = {
 
   /** members at each of the first 20 levels below the user in the SPONSOR tree (income levels) */
   async membersPerLevel(userId: string) {
-    const rows = await cached(`levels:${userId}`, COUNT_CACHE_SECONDS, () => prisma.$queryRaw<Array<{ depth: number; members: number }>>`
+    const rows = await cached(
+      `levels:${userId}`,
+      COUNT_CACHE_SECONDS,
+      () => prisma.$queryRaw<Array<{ depth: number; members: number }>>`
       WITH RECURSIVE tree(id, depth) AS (
         SELECT id, 1 FROM users WHERE upline_id = ${userId}::uuid
         UNION ALL
         SELECT u.id, t.depth + 1 FROM users u JOIN tree t ON u.upline_id = t.id WHERE t.depth < 20
       )
-      SELECT depth, COUNT(*)::int AS members FROM tree GROUP BY depth`);
+      SELECT depth, COUNT(*)::int AS members FROM tree GROUP BY depth`,
+    );
     return new Map(rows.map((r) => [Number(r.depth), Number(r.members)]));
   },
 };

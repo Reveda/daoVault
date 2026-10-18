@@ -9,8 +9,8 @@
 import { gsap } from 'gsap';
 import { getRankCrestSvg, RANK_CREST_METAS } from './rankCrests.ts';
 
-const C = 120;        // centre of the 240x240 viewBox
-const RING_R = 100;   // tier segments
+const C = 120; // centre of the 240x240 viewBox
+const RING_R = 100; // tier segments
 const GAP_DEG = 5;
 
 const polar = (r: number, deg: number): [number, number] => {
@@ -42,7 +42,10 @@ export function mountRankEmblem(host: HTMLElement, before: Element | null, total
     const [x1, y1] = polar(i % 6 === 0 ? 108 : 112, i * 5);
     return `<line x1="${x0.toFixed(2)}" y1="${y0.toFixed(2)}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}" />`;
   }).join('');
-  const segs = Array.from({ length: total }, (_, i) => `<path class="re-seg" d="${segmentPath(i, total)}" />`).join('');
+  const segs = Array.from(
+    { length: total },
+    (_, i) => `<path class="re-seg" d="${segmentPath(i, total)}" />`,
+  ).join('');
 
   root.innerHTML = `
     <div class="re-stage">
@@ -65,9 +68,21 @@ export function mountRankEmblem(host: HTMLElement, before: Element | null, total
   const coin = root.querySelector<HTMLElement>('.re-coin');
   if (coin) {
     const handleCoinSpin = () => {
-      try { navigator.vibrate?.(25); } catch { /* no vibration */ }
-      gsap.fromTo(coin, { rotateY: 0 }, { rotateY: 360, duration: 1.0, ease: 'back.out(1.4)', clearProps: 'transform' });
-      gsap.fromTo(coin, { scale: 1 }, { scale: 1.16, duration: 0.35, yoyo: true, repeat: 1, ease: 'power2.out' });
+      try {
+        navigator.vibrate?.(25);
+      } catch {
+        /* no vibration */
+      }
+      gsap.fromTo(
+        coin,
+        { rotateY: 0 },
+        { rotateY: 360, duration: 1.0, ease: 'back.out(1.4)', clearProps: 'transform' },
+      );
+      gsap.fromTo(
+        coin,
+        { scale: 1 },
+        { scale: 1.16, duration: 0.35, yoyo: true, repeat: 1, ease: 'power2.out' },
+      );
       burst();
     };
     coin.addEventListener('click', handleCoinSpin);
@@ -118,14 +133,30 @@ export function updateRankEmblem(index: number): void {
   const current = segments[index];
   // coin flips through its back (rank number) and lands on the 3D metal crest face
   if (coin) {
-    gsap.fromTo(coin, { rotateY: 0 }, { rotateY: dir * 360, duration: 1.1, ease: 'power3.inOut', clearProps: 'transform' });
-    gsap.fromTo(coin, { scale: 1 }, { scale: 1.12, duration: 0.45, yoyo: true, repeat: 1, ease: 'power2.out' });
+    gsap.fromTo(
+      coin,
+      { rotateY: 0 },
+      { rotateY: dir * 360, duration: 1.1, ease: 'power3.inOut', clearProps: 'transform' },
+    );
+    gsap.fromTo(
+      coin,
+      { scale: 1 },
+      { scale: 1.12, duration: 0.45, yoyo: true, repeat: 1, ease: 'power2.out' },
+    );
   }
   if (current) {
     const len = current.getTotalLength();
-    gsap.fromTo(current, { strokeDasharray: len, strokeDashoffset: len }, {
-      strokeDashoffset: 0, duration: 0.7, delay: 0.35, ease: 'power2.out', clearProps: 'strokeDasharray,strokeDashoffset',
-    });
+    gsap.fromTo(
+      current,
+      { strokeDasharray: len, strokeDashoffset: len },
+      {
+        strokeDashoffset: 0,
+        duration: 0.7,
+        delay: 0.35,
+        ease: 'power2.out',
+        clearProps: 'strokeDasharray,strokeDashoffset',
+      },
+    );
   }
   burst();
 }
@@ -138,12 +169,19 @@ function burst(): void {
     host.appendChild(s);
     const a = (i / 16) * Math.PI * 2 + Math.random() * 0.4;
     const r = 80 + Math.random() * 60;
-    gsap.fromTo(s,
+    gsap.fromTo(
+      s,
       { x: 0, y: 0, scale: 0.6 + Math.random() * 0.8, opacity: 1 },
       {
-        x: Math.cos(a) * r, y: Math.sin(a) * r, opacity: 0, scale: 0.2,
-        duration: 0.9 + Math.random() * 0.5, delay: 0.3, ease: 'power3.out',
+        x: Math.cos(a) * r,
+        y: Math.sin(a) * r,
+        opacity: 0,
+        scale: 0.2,
+        duration: 0.9 + Math.random() * 0.5,
+        delay: 0.3,
+        ease: 'power3.out',
         onComplete: () => s.remove(),
-      });
+      },
+    );
   }
 }

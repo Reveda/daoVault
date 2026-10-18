@@ -40,7 +40,10 @@ let mounted = 0;
 
 /** Puts the wallet + coins into `box`; returns a function that plays one coin swirl. */
 function mountWallet(box: HTMLElement): () => void {
-  const coins = Array.from({ length: COINS }, (_, i) => `<span class="hw-coin" style="--a:${(360 / COINS) * i}deg;--d:${i * 70}ms"></span>`).join('');
+  const coins = Array.from(
+    { length: COINS },
+    (_, i) => `<span class="hw-coin" style="--a:${(360 / COINS) * i}deg;--d:${i * 70}ms"></span>`,
+  ).join('');
   box.innerHTML = `${walletSvg(`hwGold${mounted++}`)}<span class="hw-coins">${coins}</span>`;
   return () => {
     box.classList.remove('is-swirling');
@@ -51,13 +54,18 @@ function mountWallet(box: HTMLElement): () => void {
 
 export function initHeroWallet(): void {
   // the navbar Connect Wallet button carries the same wallet (owner, 2026-10-09)
-  const navSwirls = [...document.querySelectorAll<HTMLElement>('[data-wallet-icon]')].map(mountWallet);
-  const swirlNav = () => { if (!document.hidden) navSwirls.forEach((s) => s()); };
-  if (navSwirls.length) whenPageReady(() => {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    swirlNav();
-    window.setInterval(swirlNav, SWIRL_EVERY_MS);
-  });
+  const navSwirls = [...document.querySelectorAll<HTMLElement>('[data-wallet-icon]')].map(
+    mountWallet,
+  );
+  const swirlNav = () => {
+    if (!document.hidden) navSwirls.forEach((s) => s());
+  };
+  if (navSwirls.length)
+    whenPageReady(() => {
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      swirlNav();
+      window.setInterval(swirlNav, SWIRL_EVERY_MS);
+    });
 
   const showcase = document.getElementById('heroConnectShowcase');
   const box = document.getElementById('heroWallet');
@@ -69,11 +77,16 @@ export function initHeroWallet(): void {
   let heroVisible = true;
   const hero = document.getElementById('hero');
   if (hero && 'IntersectionObserver' in window) {
-    new IntersectionObserver(([e]) => { heroVisible = e.isIntersecting; }).observe(hero);
+    new IntersectionObserver(([e]) => {
+      heroVisible = e.isIntersecting;
+    }).observe(hero);
   }
 
   whenPageReady(() => {
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { showButtons(); return; }
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      showButtons();
+      return;
+    }
     swirl();
     window.setTimeout(showButtons, OPEN_AFTER_MS);
     window.setInterval(() => {

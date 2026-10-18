@@ -28,8 +28,10 @@ import { init3DScene } from './scene.ts';
 import { pageCount, renderPager } from './pager.ts';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T | null;
-const usd = (n: number) => `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const scan = (kind: 'tx' | 'address', v: string) => `https://${BSC_CHAIN_ID === 97 ? 'testnet.' : ''}bscscan.com/${kind}/${v}`;
+const usd = (n: number) =>
+  `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const scan = (kind: 'tx' | 'address', v: string) =>
+  `https://${BSC_CHAIN_ID === 97 ? 'testnet.' : ''}bscscan.com/${kind}/${v}`;
 const esc = (s: string) => s.replace(/[<>&"']/g, (c) => `&#${c.charCodeAt(0)};`);
 
 // admin wallet once signed in; every call gets a fresh access token (memory + refresh cookie)
@@ -42,8 +44,10 @@ let ledgerGroup: LedgerGroup = 'day';
 let period: WithdrawalPeriod = 'all';
 
 const HELP: Record<Withdrawal['status'], string> = {
-  PENDING: 'Check the member, then Approve (or Reject with a reason: the amount returns to their balance).',
-  PROCESSING: 'Send the NET amount in USDT from the treasury wallet to the member, then paste the transaction hash. It is verified on-chain.',
+  PENDING:
+    'Check the member, then Approve (or Reject with a reason: the amount returns to their balance).',
+  PROCESSING:
+    'Send the NET amount in USDT from the treasury wallet to the member, then paste the transaction hash. It is verified on-chain.',
   COMPLETED: 'Paid and verified on BNB Smart Chain.',
   REJECTED: 'Rejected requests. The amount went back to the member balance.',
 };
@@ -83,18 +87,26 @@ function revealAdmin(): void {
   initDvLogos(); // animated DAOVAULT logo: header, footer
   init3DScene('admin'); // gold particles + lightning, like the landing page
   const badge = $('adminWallet');
-  if (badge) { badge.hidden = false; badge.textContent = formatAddress(adminWallet); }
+  if (badge) {
+    badge.hidden = false;
+    badge.textContent = formatAddress(adminWallet);
+  }
   $('adminApp')!.hidden = false;
   $('adminState')!.textContent = `• Administrator · ${formatAddress(adminWallet)}`;
   $('adminHeroActions')!.hidden = false;
   $('adminToDash')!.hidden = false;
-  loadList().catch((error) => showToast(error instanceof Error ? error.message : 'Could not load.', true));
+  loadList().catch((error) =>
+    showToast(error instanceof Error ? error.message : 'Could not load.', true),
+  );
 }
 
 /** KPIs + charts + live numbers (stats and analytics in parallel) */
 async function loadStats(): Promise<void> {
   const session = await token();
-  const [stats, analytics] = await Promise.all([getAdminStats(session), getAdminAnalytics(session)]);
+  const [stats, analytics] = await Promise.all([
+    getAdminStats(session),
+    getAdminAnalytics(session),
+  ]);
   renderCompanyOverview($('adminStats')!, stats);
   renderAdminCharts(stats, analytics);
   renderTracking(analytics);
@@ -109,14 +121,16 @@ async function loadLedger(): Promise<void> {
 /** a segmented filter: marks the pressed button and calls back with its value */
 function bindSeg(id: string, key: string, onPick: (value: string) => void): void {
   const seg = $(id);
-  seg?.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.addEventListener('click', () => {
-    if (b.classList.contains('is-active')) return;
-    seg.querySelectorAll<HTMLButtonElement>('button').forEach((x) => {
-      x.classList.toggle('is-active', x === b);
-      x.setAttribute('aria-pressed', String(x === b));
-    });
-    onPick(b.dataset[key] ?? '');
-  }));
+  seg?.querySelectorAll<HTMLButtonElement>('button').forEach((b) =>
+    b.addEventListener('click', () => {
+      if (b.classList.contains('is-active')) return;
+      seg.querySelectorAll<HTMLButtonElement>('button').forEach((x) => {
+        x.classList.toggle('is-active', x === b);
+        x.setAttribute('aria-pressed', String(x === b));
+      });
+      onPick(b.dataset[key] ?? '');
+    }),
+  );
 }
 
 /** withdrawal queue, 20 per page */
@@ -125,14 +139,27 @@ async function loadList(page = listPage): Promise<void> {
   $('adminHelp')!.textContent = HELP[status];
   const res = await getAdminWithdrawals(await token(), status, page, period);
   const items = res.items;
-  const when = period === 'week' ? 'in the last 7 days' : period === 'month' ? 'in the last 30 days' : 'in total';
-  $('wdSummary')!.textContent = `${res.total} ${res.total === 1 ? 'withdrawal' : 'withdrawals'} ${when} · ${usd(res.netUsd)} net`;
+  const when =
+    period === 'week'
+      ? 'in the last 7 days'
+      : period === 'month'
+        ? 'in the last 30 days'
+        : 'in total';
+  $('wdSummary')!.textContent =
+    `${res.total} ${res.total === 1 ? 'withdrawal' : 'withdrawals'} ${when} · ${usd(res.netUsd)} net`;
   const list = $('adminList')!;
   renderPager($('adminPager'), res.page, pageCount(res.total, res.pageSize), (p) => {
-    loadList(p).catch((error) => showToast(error instanceof Error ? error.message : 'Could not load.', true));
+    loadList(p).catch((error) =>
+      showToast(error instanceof Error ? error.message : 'Could not load.', true),
+    );
   });
-  if (!items.length) { list.innerHTML = '<p class="admin-empty">Nothing here.</p>'; return; }
-  list.innerHTML = items.map((w) => `
+  if (!items.length) {
+    list.innerHTML = '<p class="admin-empty">Nothing here.</p>';
+    return;
+  }
+  list.innerHTML = items
+    .map(
+      (w) => `
     <article class="admin-item" data-id="${w.id}">
       <div class="admin-item-main">
         <div class="admin-amount"><b>${usd(w.netUsd)}</b> <span class="mono">net USDT</span></div>
@@ -143,37 +170,60 @@ async function loadList(page = listPage): Promise<void> {
       </div>
       <div class="admin-actions">
         ${w.instant ? '<p class="mono admin-sub">Instant payout: the member claims it from the payout contract. No action needed.</p>' : ''}
-        ${!w.instant && w.status === 'PENDING' ? `
+        ${
+          !w.instant && w.status === 'PENDING'
+            ? `
           <button class="btn btn-grad" data-act="approve" type="button">Approve</button>
           <input class="ref-input" data-field="reason" placeholder="Reason to reject" maxlength="280" />
-          <button class="btn admin-btn-danger" data-act="reject" type="button">Reject</button>` : ''}
-        ${!w.instant && w.status === 'PROCESSING' ? `
+          <button class="btn admin-btn-danger" data-act="reject" type="button">Reject</button>`
+            : ''
+        }
+        ${
+          !w.instant && w.status === 'PROCESSING'
+            ? `
           <input class="ref-input mono" data-field="tx" placeholder="Payout tx hash 0x…" />
           <button class="btn btn-grad" data-act="complete" type="button">Mark paid</button>
           <input class="ref-input" data-field="reason" placeholder="Reason to reject" maxlength="280" />
-          <button class="btn admin-btn-danger" data-act="reject" type="button">Reject</button>` : ''}
+          <button class="btn admin-btn-danger" data-act="reject" type="button">Reject</button>`
+            : ''
+        }
       </div>
-    </article>`).join('');
+    </article>`,
+    )
+    .join('');
 }
 
 async function act(item: HTMLElement, action: string, button: HTMLButtonElement): Promise<void> {
   const id = item.dataset.id!;
-  const field = (name: string) => item.querySelector<HTMLInputElement>(`[data-field="${name}"]`)?.value.trim() ?? '';
+  const field = (name: string) =>
+    item.querySelector<HTMLInputElement>(`[data-field="${name}"]`)?.value.trim() ?? '';
   button.disabled = true;
   try {
     if (action === 'approve') await approveWithdrawal(await token(), id);
     if (action === 'reject') {
       const reason = field('reason');
-      if (reason.length < 3) { showToast('Write a short reason first.', true); return; }
+      if (reason.length < 3) {
+        showToast('Write a short reason first.', true);
+        return;
+      }
       await rejectWithdrawal(await token(), id, reason);
     }
     if (action === 'complete') {
       const tx = field('tx');
-      if (!/^0x[a-fA-F0-9]{64}$/.test(tx)) { showToast('Paste the full payout transaction hash.', true); return; }
+      if (!/^0x[a-fA-F0-9]{64}$/.test(tx)) {
+        showToast('Paste the full payout transaction hash.', true);
+        return;
+      }
       showToast('Checking the transfer on-chain...');
       await completeWithdrawal(await token(), id, tx);
     }
-    showToast(action === 'approve' ? 'Approved. Now send the payout.' : action === 'reject' ? 'Rejected. Amount returned to member.' : 'Payout verified on-chain.');
+    showToast(
+      action === 'approve'
+        ? 'Approved. Now send the payout.'
+        : action === 'reject'
+          ? 'Rejected. Amount returned to member.'
+          : 'Payout verified on-chain.',
+    );
     await Promise.all([loadStats(), loadList()]);
   } catch (error) {
     if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
@@ -197,7 +247,10 @@ document.addEventListener('DOMContentLoaded', () => {
       await Promise.all([loadStats(), loadList()]);
       showToast('Data refreshed.');
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not refresh the data. Please try again.', true);
+      showToast(
+        error instanceof Error ? error.message : 'Could not refresh the data. Please try again.',
+        true,
+      );
     } finally {
       button.disabled = false;
       button.classList.remove('is-loading');
@@ -205,17 +258,27 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   bindSeg('ledgerGroup', 'group', (value) => {
     ledgerGroup = value as LedgerGroup;
-    loadLedger().catch((error) => showToast(error instanceof Error ? error.message : 'Could not load the ledger.', true));
+    loadLedger().catch((error) =>
+      showToast(error instanceof Error ? error.message : 'Could not load the ledger.', true),
+    );
   });
   bindSeg('wdPeriod', 'period', (value) => {
     period = value as WithdrawalPeriod;
-    loadList(1).catch((error) => showToast(error instanceof Error ? error.message : 'Could not load.', true));
+    loadList(1).catch((error) =>
+      showToast(error instanceof Error ? error.message : 'Could not load.', true),
+    );
   });
-  document.querySelectorAll<HTMLButtonElement>('.admin-tabs button').forEach((tab) => tab.addEventListener('click', () => {
-    document.querySelectorAll('.admin-tabs button').forEach((t) => t.classList.toggle('is-active', t === tab));
-    status = tab.dataset.status as Withdrawal['status'];
-    loadList(1).catch((error) => showToast(error instanceof Error ? error.message : 'Could not load.', true));
-  }));
+  document.querySelectorAll<HTMLButtonElement>('.admin-tabs button').forEach((tab) =>
+    tab.addEventListener('click', () => {
+      document
+        .querySelectorAll('.admin-tabs button')
+        .forEach((t) => t.classList.toggle('is-active', t === tab));
+      status = tab.dataset.status as Withdrawal['status'];
+      loadList(1).catch((error) =>
+        showToast(error instanceof Error ? error.message : 'Could not load.', true),
+      );
+    }),
+  );
   $('adminList')?.addEventListener('click', (e) => {
     const button = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-act]');
     const item = button?.closest<HTMLElement>('.admin-item');

@@ -18,12 +18,16 @@ export const CLAIM_TYPES = {
 };
 export type ClaimValue = { member: string; amount: bigint; id: string; deadline: number };
 
-export const signerConfigured = () => Boolean(env.PAYOUT_SIGNER_URL || env.PAYOUT_SIGNER_TESTNET_KEY);
+export const signerConfigured = () =>
+  Boolean(env.PAYOUT_SIGNER_URL || env.PAYOUT_SIGNER_TESTNET_KEY);
 
 async function call<T>(path: string, body?: unknown): Promise<T> {
   const res = await fetch(new URL(path, env.PAYOUT_SIGNER_URL), {
     method: body ? "POST" : "GET",
-    headers: { "content-type": "application/json", authorization: `Bearer ${env.PAYOUT_SIGNER_TOKEN ?? ""}` },
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${env.PAYOUT_SIGNER_TOKEN ?? ""}`,
+    },
     body: body ? JSON.stringify(body) : undefined,
     signal: AbortSignal.timeout(8_000),
   });
@@ -35,14 +39,18 @@ async function call<T>(path: string, body?: unknown): Promise<T> {
 let remoteAddress: string | null = null;
 /** The signer's wallet address (must equal the payout contract's signer()). */
 export async function signerAddress(): Promise<string> {
-  if (env.PAYOUT_SIGNER_URL) return (remoteAddress ??= (await call<{ address: string }>("/address")).address);
+  if (env.PAYOUT_SIGNER_URL)
+    return (remoteAddress ??= (await call<{ address: string }>("/address")).address);
   return new Wallet(env.PAYOUT_SIGNER_TESTNET_KEY!).address;
 }
 
 export async function signClaim(domain: TypedDataDomain, value: ClaimValue): Promise<string> {
   if (env.PAYOUT_SIGNER_URL) {
     const { signature } = await call<{ signature: string }>("/sign", {
-      member: value.member, amount: value.amount.toString(), id: value.id, deadline: value.deadline,
+      member: value.member,
+      amount: value.amount.toString(),
+      id: value.id,
+      deadline: value.deadline,
     });
     return signature;
   }

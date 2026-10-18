@@ -8,7 +8,14 @@
  *
  * Signer: voucherSigner.ts (the Docker signer service, or the testnet-only env key).
  */
-import { Contract, Interface, formatUnits, id as keccakText, parseUnits, type AbstractProvider } from "ethers";
+import {
+  Contract,
+  Interface,
+  formatUnits,
+  id as keccakText,
+  parseUnits,
+  type AbstractProvider,
+} from "ethers";
 import { env } from "../../config/env.js";
 import { signClaim, signerAddress, signerConfigured } from "./voucherSigner.js";
 import { alert } from "../../config/alerts.js";
@@ -29,7 +36,13 @@ const PAYOUT_ABI = [
 const ERC20_ABI = ["function decimals() view returns (uint8)"];
 const payoutInterface = new Interface(PAYOUT_ABI);
 
-export type Voucher = { contract: string; id: string; amount: string; deadline: number; signature: string };
+export type Voucher = {
+  contract: string;
+  id: string;
+  amount: string;
+  deadline: number;
+  signature: string;
+};
 
 export const instantPayoutsEnabled = () =>
   Boolean(env.PAYOUT_CONTRACT_ADDRESS && env.USDT_CONTRACT_ADDRESS && signerConfigured());
@@ -38,10 +51,14 @@ let provider: AbstractProvider | null = null;
 const chain = () => (provider ??= chainProvider());
 const payout = () => new Contract(env.PAYOUT_CONTRACT_ADDRESS!, PAYOUT_ABI, chain());
 let decimalsCache: number | null = null;
-const tokenDecimals = async () => (decimalsCache ??= Number(await new Contract(env.USDT_CONTRACT_ADDRESS!, ERC20_ABI, chain()).decimals()));
+const tokenDecimals = async () =>
+  (decimalsCache ??= Number(
+    await new Contract(env.USDT_CONTRACT_ADDRESS!, ERC20_ABI, chain()).decimals(),
+  ));
 
 /** bytes32 voucher id for a withdrawal row */
-export const voucherIdFor = (withdrawalId: string) => keccakText(`daovault-withdrawal:${withdrawalId}`);
+export const voucherIdFor = (withdrawalId: string) =>
+  keccakText(`daovault-withdrawal:${withdrawalId}`);
 
 /**
  * Can the contract pay `netUsd` right now? There is no admin review (owner, 2026-10-13): when it
@@ -57,57 +74,142 @@ export async function canPayInstantly(netUsd: number): Promise<PayCheck> {
   const c = payout();
   const decimals = await tokenDecimals();
   const amount = parseUnits(netUsd.toFixed(2), decimals);
-  const [paused, contractSigner, maxPerClaim, dailyLimit, currentDay, spentToday, float, ourSigner] = await Promise.all([
-    c.paused(), c.signer(), c.maxPerClaim(), c.dailyLimit(), c.currentDay(), c.spentToday(), c.floatBalance(), signerAddress(),
-  ]) as [boolean, string, bigint, bigint, bigint, bigint, bigint, string];
-  const usd = (v: bigint) => `$${Number(formatUnits(v, decimals)).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
-  if (paused) return { ok: false, status: 503, message: "Withdrawals are paused for a short check. Please try again later." };
+  const [
+    paused,
+    contractSigner,
+    maxPerClaim,
+    dailyLimit,
+    currentDay,
+    spentToday,
+    float,
+    ourSigner,
+  ] = (await Promise.all([
+    c.paused(),
+    c.signer(),
+    c.maxPerClaim(),
+    c.dailyLimit(),
+    c.currentDay(),
+    c.spentToday(),
+    c.floatBalance(),
+    signerAddress(),
+  ])) as [boolean, string, bigint, bigint, bigint, bigint, bigint, string];
+  const usd = (v: bigint) =>
+    `$${Number(formatUnits(v, decimals)).toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+  if (paused)
+    return {
+      ok: false,
+      status: 503,
+      message: "Withdrawals are paused for a short check. Please try again later.",
+    };
   if (contractSigner.toLowerCase() !== ourSigner.toLowerCase()) {
-    console.error("[withdrawals] payout contract signer", contractSigner, "is not this server's signer", ourSigner);
-    alert("critical", "signer-mismatch", `Withdrawals blocked: the payout contract trusts signer ${contractSigner.slice(0, 8)}… but this server signs as ${ourSigner.slice(0, 8)}…. Fix with setSigner or the signer keystore.`);
-    return { ok: false, status: 503, message: "Withdrawals are not available right now. Please try again later." };
+    console.error(
+      "[withdrawals] payout contract signer",
+      contractSigner,
+      "is not this server's signer",
+      ourSigner,
+    );
+    alert(
+      "critical",
+      "signer-mismatch",
+      `Withdrawals blocked: the payout contract trusts signer ${contractSigner.slice(0, 8)}… but this server signs as ${ourSigner.slice(0, 8)}…. Fix with setSigner or the signer keystore.`,
+    );
+    return {
+      ok: false,
+      status: 503,
+      message: "Withdrawals are not available right now. Please try again later.",
+    };
   }
   if (amount > maxPerClaim) {
-    return { ok: false, status: 400, message: `You can withdraw up to ${usd(maxPerClaim)} (after fee) at a time. Please enter a smaller amount.` };
+    return {
+      ok: false,
+      status: 400,
+      message: `You can withdraw up to ${usd(maxPerClaim)} (after fee) at a time. Please enter a smaller amount.`,
+    };
   }
   const today = BigInt(Math.floor(Date.now() / 86_400_000));
   const spent = currentDay === today ? spentToday : 0n;
   if (spent + amount > dailyLimit) {
-    alert("warning", "daily-limit", `Payout daily limit reached (${usd(dailyLimit)}): members are told to try tomorrow. Raise it with setLimits if this is expected.`);
+    alert(
+      "warning",
+      "daily-limit",
+      `Payout daily limit reached (${usd(dailyLimit)}): members are told to try tomorrow. Raise it with setLimits if this is expected.`,
+    );
   }
-  if (spent + amount > dailyLimit) return { ok: false, status: 503, message: "Today's withdrawal limit has been reached. Please try again tomorrow." };
+  if (spent + amount > dailyLimit)
+    return {
+      ok: false,
+      status: 503,
+      message: "Today's withdrawal limit has been reached. Please try again tomorrow.",
+    };
   if (amount > float) {
     console.warn("[withdrawals] payout float too low:", usd(float), "needed", usd(amount));
-    alert("critical", "float-empty", `A member could not withdraw ${usd(amount)}: the payout contract holds only ${usd(float)}. Send USDT to the payout contract.`);
-    return { ok: false, status: 503, message: "Withdrawals are being topped up. Please try again in a little while." };
+    alert(
+      "critical",
+      "float-empty",
+      `A member could not withdraw ${usd(amount)}: the payout contract holds only ${usd(float)}. Send USDT to the payout contract.`,
+    );
+    return {
+      ok: false,
+      status: 503,
+      message: "Withdrawals are being topped up. Please try again in a little while.",
+    };
   }
   // what is left on-chain right now; the caller subtracts vouchers already handed out (reservations)
   return { ok: true, amount, dailyLeft: dailyLimit - spent, float, checkedAt };
 }
 
 /** Signs the one-time voucher the member's wallet submits to claim(). */
-export async function signVoucher(member: string, withdrawalId: string, amount: bigint): Promise<Voucher> {
+export async function signVoucher(
+  member: string,
+  withdrawalId: string,
+  amount: bigint,
+): Promise<Voucher> {
   const id = voucherIdFor(withdrawalId);
   const deadline = Math.floor(Date.now() / 1000) + env.PAYOUT_VOUCHER_MINUTES * 60;
   const signature = await signClaim(
-    { name: "DAOvaultPayout", version: "1", chainId: env.BSC_CHAIN_ID, verifyingContract: env.PAYOUT_CONTRACT_ADDRESS! },
+    {
+      name: "DAOvaultPayout",
+      version: "1",
+      chainId: env.BSC_CHAIN_ID,
+      verifyingContract: env.PAYOUT_CONTRACT_ADDRESS!,
+    },
     { member, amount, id, deadline },
   );
-  return { contract: env.PAYOUT_CONTRACT_ADDRESS!, id, amount: amount.toString(), deadline, signature };
+  return {
+    contract: env.PAYOUT_CONTRACT_ADDRESS!,
+    id,
+    amount: amount.toString(),
+    deadline,
+    signature,
+  };
 }
 
-export const isVoucherUsed = async (voucherId: string): Promise<boolean> => Boolean(await payout().used(voucherId));
+export const isVoucherUsed = async (voucherId: string): Promise<boolean> =>
+  Boolean(await payout().used(voucherId));
 
 /** Does this tx contain the Claimed event for exactly this voucher, member and amount? */
-export async function verifyClaimTx(txHash: string, voucherId: string, member: string, amount: string): Promise<boolean> {
+export async function verifyClaimTx(
+  txHash: string,
+  voucherId: string,
+  member: string,
+  amount: string,
+): Promise<boolean> {
   const receipt = await chain().getTransactionReceipt(txHash);
   if (!receipt || receipt.status !== 1) return false;
   return receipt.logs.some((log) => {
     if (log.address.toLowerCase() !== env.PAYOUT_CONTRACT_ADDRESS!.toLowerCase()) return false;
-    const parsed = (() => { try { return payoutInterface.parseLog(log); } catch { return null; } })();
+    const parsed = (() => {
+      try {
+        return payoutInterface.parseLog(log);
+      } catch {
+        return null;
+      }
+    })();
     if (!parsed || parsed.name !== "Claimed") return false;
     const [id, who, paid] = parsed.args as unknown as [string, string, bigint];
-    return id === voucherId && who.toLowerCase() === member.toLowerCase() && paid.toString() === amount;
+    return (
+      id === voucherId && who.toLowerCase() === member.toLowerCase() && paid.toString() === amount
+    );
   });
 }
 
@@ -132,20 +234,42 @@ export async function payoutContractStatus() {
   try {
     const c = payout();
     const decimals = await tokenDecimals();
-    const [paused, maxPerClaim, dailyLimit, float] = await Promise.all([c.paused(), c.maxPerClaim(), c.dailyLimit(), c.floatBalance()]) as [boolean, bigint, bigint, bigint];
+    const [paused, maxPerClaim, dailyLimit, float] = (await Promise.all([
+      c.paused(),
+      c.maxPerClaim(),
+      c.dailyLimit(),
+      c.floatBalance(),
+    ])) as [boolean, bigint, bigint, bigint];
     const toUsd = (v: bigint) => Number(v) / 10 ** decimals;
-    return { contract: env.PAYOUT_CONTRACT_ADDRESS, paused, maxPerClaimUsd: toUsd(maxPerClaim), dailyLimitUsd: toUsd(dailyLimit), floatUsd: toUsd(float) };
+    return {
+      contract: env.PAYOUT_CONTRACT_ADDRESS,
+      paused,
+      maxPerClaimUsd: toUsd(maxPerClaim),
+      dailyLimitUsd: toUsd(dailyLimit),
+      floatUsd: toUsd(float),
+    };
   } catch {
     return { contract: env.PAYOUT_CONTRACT_ADDRESS, error: "Could not read the payout contract" };
   }
 }
 
 /** watch job: does the payout contract still trust this server's signer? null = not set up / unreadable */
-export async function signerMatchesContract(): Promise<{ ok: boolean; contractSigner: string; ourSigner: string } | null> {
+export async function signerMatchesContract(): Promise<{
+  ok: boolean;
+  contractSigner: string;
+  ourSigner: string;
+} | null> {
   if (!instantPayoutsEnabled()) return null;
   try {
-    const [contractSigner, ourSigner] = await Promise.all([payout().signer() as Promise<string>, signerAddress()]);
-    return { ok: contractSigner.toLowerCase() === ourSigner.toLowerCase(), contractSigner, ourSigner };
+    const [contractSigner, ourSigner] = await Promise.all([
+      payout().signer() as Promise<string>,
+      signerAddress(),
+    ]);
+    return {
+      ok: contractSigner.toLowerCase() === ourSigner.toLowerCase(),
+      contractSigner,
+      ourSigner,
+    };
   } catch {
     return null;
   }

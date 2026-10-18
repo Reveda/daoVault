@@ -18,10 +18,15 @@ import {
 } from "./payout.js";
 
 type Tx = Prisma.TransactionClient;
-const httpError = (message: string, statusCode: number) => Object.assign(new Error(message), { statusCode });
+const httpError = (message: string, statusCode: number) =>
+  Object.assign(new Error(message), { statusCode });
 
 /** Requests that still hold (or already used) part of the balance. */
-const RESERVED: WithdrawalStatus[] = [WithdrawalStatus.PENDING, WithdrawalStatus.PROCESSING, WithdrawalStatus.COMPLETED];
+const RESERVED: WithdrawalStatus[] = [
+  WithdrawalStatus.PENDING,
+  WithdrawalStatus.PROCESSING,
+  WithdrawalStatus.COMPLETED,
+];
 const OPEN: WithdrawalStatus[] = [WithdrawalStatus.PENDING, WithdrawalStatus.PROCESSING];
 /** a voucher is treated as expired a little after its deadline (block time can lag) */
 const EXPIRY_MARGIN_MS = 90_000;
@@ -47,9 +52,20 @@ export async function reservedPayout(tx: Tx, chainReadAt: Date = new Date()): Pr
     where: {
       voucherAmount: { not: null },
       OR: [
-        { status: WithdrawalStatus.PROCESSING, voucherDeadline: { gt: new Date(now - EXPIRY_MARGIN_MS) } },
-        { status: WithdrawalStatus.PENDING, voucherId: null, createdAt: { gt: new Date(now - UNSIGNED_TTL_MS) } },
-        { status: WithdrawalStatus.COMPLETED, voucherId: { not: null }, reviewedAt: { gte: new Date(chainReadAt.getTime() - SNAPSHOT_LAG_MS) } },
+        {
+          status: WithdrawalStatus.PROCESSING,
+          voucherDeadline: { gt: new Date(now - EXPIRY_MARGIN_MS) },
+        },
+        {
+          status: WithdrawalStatus.PENDING,
+          voucherId: null,
+          createdAt: { gt: new Date(now - UNSIGNED_TTL_MS) },
+        },
+        {
+          status: WithdrawalStatus.COMPLETED,
+          voucherId: { not: null },
+          reviewedAt: { gte: new Date(chainReadAt.getTime() - SNAPSHOT_LAG_MS) },
+        },
       ],
     },
     select: { voucherAmount: true },
@@ -58,17 +74,34 @@ export async function reservedPayout(tx: Tx, chainReadAt: Date = new Date()): Pr
 }
 
 /** releases requests whose voucher was never signed (the API stopped between the two steps) */
-const releaseUnsigned = (where: Prisma.WithdrawalWhereInput = {}) => prisma.withdrawal.updateMany({
-  where: { ...where, status: WithdrawalStatus.PENDING, voucherId: null, voucherAmount: { not: null }, createdAt: { lt: new Date(Date.now() - UNSIGNED_TTL_MS) } },
-  data: { status: WithdrawalStatus.REJECTED, rejectReason: "Could not prepare the payout. The amount is back in your balance.", reviewedAt: new Date() },
-});
+const releaseUnsigned = (where: Prisma.WithdrawalWhereInput = {}) =>
+  prisma.withdrawal.updateMany({
+    where: {
+      ...where,
+      status: WithdrawalStatus.PENDING,
+      voucherId: null,
+      voucherAmount: { not: null },
+      createdAt: { lt: new Date(Date.now() - UNSIGNED_TTL_MS) },
+    },
+    data: {
+      status: WithdrawalStatus.REJECTED,
+      rejectReason: "Could not prepare the payout. The amount is back in your balance.",
+      reviewedAt: new Date(),
+    },
+  });
 
 /** Withdrawable = every earning (level commissions + rank rewards) minus requests not rejected. In cents. */
 export async function balanceOf(db: Tx | typeof prisma, userId: string) {
   const [earned, reserved, paid] = await Promise.all([
     db.earning.aggregate({ where: { recipientId: userId }, _sum: { amountUsd: true } }),
-    db.withdrawal.aggregate({ where: { userId, status: { in: RESERVED } }, _sum: { grossAmount: true } }),
-    db.withdrawal.aggregate({ where: { userId, status: WithdrawalStatus.COMPLETED }, _sum: { grossAmount: true } }),
+    db.withdrawal.aggregate({
+      where: { userId, status: { in: RESERVED } },
+      _sum: { grossAmount: true },
+    }),
+    db.withdrawal.aggregate({
+      where: { userId, status: WithdrawalStatus.COMPLETED },
+      _sum: { grossAmount: true },
+    }),
   ]);
   const earnedCents = toCents(earned._sum.amountUsd?.toString() ?? 0);
   const reservedCents = toCents(reserved._sum.grossAmount?.toString() ?? 0);
@@ -81,15 +114,19 @@ export async function balanceOf(db: Tx | typeof prisma, userId: string) {
 }
 
 const voucherOf = (w: Withdrawal) =>
-  w.status === WithdrawalStatus.PROCESSING && w.voucherId && w.voucherAmount && w.voucherSignature && w.voucherDeadline
-    && w.voucherDeadline.getTime() > Date.now()
+  w.status === WithdrawalStatus.PROCESSING &&
+  w.voucherId &&
+  w.voucherAmount &&
+  w.voucherSignature &&
+  w.voucherDeadline &&
+  w.voucherDeadline.getTime() > Date.now()
     ? {
-      contract: env.PAYOUT_CONTRACT_ADDRESS ?? "",
-      id: w.voucherId,
-      amount: w.voucherAmount,
-      deadline: Math.floor(w.voucherDeadline.getTime() / 1000),
-      signature: w.voucherSignature,
-    }
+        contract: env.PAYOUT_CONTRACT_ADDRESS ?? "",
+        id: w.voucherId,
+        amount: w.voucherAmount,
+        deadline: Math.floor(w.voucherDeadline.getTime() / 1000),
+        signature: w.voucherSignature,
+      }
     : null;
 
 const view = (w: Withdrawal) => ({
@@ -126,12 +163,23 @@ export class WithdrawalsService {
           const tx = await findClaimTx(w.voucherId!);
           await prisma.withdrawal.updateMany({
             where: { id: w.id, status: WithdrawalStatus.PROCESSING },
-            data: { status: WithdrawalStatus.COMPLETED, payoutTxHash: tx?.toLowerCase() ?? null, reviewedAt: new Date() },
+            data: {
+              status: WithdrawalStatus.COMPLETED,
+              payoutTxHash: tx?.toLowerCase() ?? null,
+              reviewedAt: new Date(),
+            },
           });
-        } else if (w.voucherDeadline && w.voucherDeadline.getTime() + EXPIRY_MARGIN_MS < Date.now()) {
+        } else if (
+          w.voucherDeadline &&
+          w.voucherDeadline.getTime() + EXPIRY_MARGIN_MS < Date.now()
+        ) {
           await prisma.withdrawal.updateMany({
             where: { id: w.id, status: WithdrawalStatus.PROCESSING },
-            data: { status: WithdrawalStatus.REJECTED, rejectReason: "Not claimed in time. The amount is back in your balance.", reviewedAt: new Date() },
+            data: {
+              status: WithdrawalStatus.REJECTED,
+              rejectReason: "Not claimed in time. The amount is back in your balance.",
+              reviewedAt: new Date(),
+            },
           });
         }
       } catch (error) {
@@ -159,7 +207,11 @@ export class WithdrawalsService {
     await this.reconcile(user.id);
     const [balance, items] = await Promise.all([
       balanceOf(prisma, user.id),
-      prisma.withdrawal.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 50 }),
+      prisma.withdrawal.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
     ]);
     return {
       availableUsd: fromCents(balance.availableCents),
@@ -182,17 +234,29 @@ export class WithdrawalsService {
     const grossCents = toCents(amountUsd);
     // the admin / company wallet never withdraws member payouts (owner, 2026-10-15)
     if (isAdminWallet(wallet)) throw httpError("Admin wallets cannot request withdrawals.", 403);
-    if (grossCents < toCents(env.WITHDRAWAL_MIN_USD)) throw httpError(`Minimum withdrawal is $${env.WITHDRAWAL_MIN_USD}.`, 400);
-    if (!instantPayoutsEnabled()) throw httpError("Withdrawals are not open yet. Please try again later.", 503);
-    const pre = await prisma.user.findUnique({ where: { walletAddress: wallet }, select: { id: true } });
+    if (grossCents < toCents(env.WITHDRAWAL_MIN_USD))
+      throw httpError(`Minimum withdrawal is $${env.WITHDRAWAL_MIN_USD}.`, 400);
+    if (!instantPayoutsEnabled())
+      throw httpError("Withdrawals are not open yet. Please try again later.", 503);
+    const pre = await prisma.user.findUnique({
+      where: { walletAddress: wallet },
+      select: { id: true },
+    });
     if (pre) await this.reconcile(pre.id);
 
     // limits, float and signer are checked before anything is reserved
     const netCents = withdrawalSplit(grossCents, env.WITHDRAWAL_FEE_PERCENT).netCents;
     const check = await canPayInstantly(Number(fromCents(netCents))).catch((error) => {
       console.error("[withdrawals] payout check failed:", error);
-      alert("critical", "payout-check", `Withdrawals blocked: the payout contract could not be read (${String((error as Error)?.message ?? error).slice(0, 160)}).`);
-      throw httpError("Withdrawals are not available right now. Please try again in a few minutes.", 503);
+      alert(
+        "critical",
+        "payout-check",
+        `Withdrawals blocked: the payout contract could not be read (${String((error as Error)?.message ?? error).slice(0, 160)}).`,
+      );
+      throw httpError(
+        "Withdrawals are not available right now. Please try again in a few minutes.",
+        503,
+      );
     });
     if (!check.ok) throw httpError(check.message, check.status);
 
@@ -200,36 +264,57 @@ export class WithdrawalsService {
     // claimed on-chain but not yet marked paid (browser closed, no worker on Render) is counted in
     // both the chain numbers and the open list until settled
     let settled = false;
-    const create = () => serializable(async (tx) => {
-      const user = await tx.user.findUnique({ where: { walletAddress: wallet } });
-      if (!user) throw httpError("No activated account for this wallet.", 404);
-      const open = await tx.withdrawal.findFirst({ where: { userId: user.id, status: { in: OPEN } }, select: { id: true } });
-      if (open) throw httpError("You already have a withdrawal in progress.", 409);
-      const { availableCents } = await balanceOf(tx, user.id);
-      if (grossCents > availableCents) throw httpError("Amount is more than your available balance.", 400);
-      // reserve: this voucher + every one already handed out must fit the float and today's limit.
-      // Serializable: two requests at the same moment cannot both see the old total.
-      const reserved = await reservedPayout(tx, check.checkedAt);
-      if (reserved + check.amount > check.dailyLeft) {
-        if (settled) alert("warning", "daily-reserved", "Today's payout limit is fully promised to open withdrawals: members are told to try tomorrow. Raise it with setLimits if this is expected.");
-        throw Object.assign(httpError("Today's withdrawal limit has been reached. Please try again tomorrow.", 503), { capacity: true });
-      }
-      if (reserved + check.amount > check.float) {
-        if (settled) alert("warning", "float-reserved", "Payout float is fully promised to open withdrawals: new requests are refused until vouchers are claimed or the float is topped up.");
-        throw Object.assign(httpError("Withdrawals are being topped up. Please try again in a little while.", 503), { capacity: true });
-      }
-      const split = withdrawalSplit(grossCents, env.WITHDRAWAL_FEE_PERCENT);
-      return tx.withdrawal.create({
-        data: {
-          userId: user.id,
-          grossAmount: fromCents(split.grossCents),
-          feeAmount: fromCents(split.feeCents),
-          netAmount: fromCents(split.netCents),
-          destinationWallet: wallet,
-          voucherAmount: check.amount.toString(), // the reservation, until the voucher is signed
-        },
+    const create = () =>
+      serializable(async (tx) => {
+        const user = await tx.user.findUnique({ where: { walletAddress: wallet } });
+        if (!user) throw httpError("No activated account for this wallet.", 404);
+        const open = await tx.withdrawal.findFirst({
+          where: { userId: user.id, status: { in: OPEN } },
+          select: { id: true },
+        });
+        if (open) throw httpError("You already have a withdrawal in progress.", 409);
+        const { availableCents } = await balanceOf(tx, user.id);
+        if (grossCents > availableCents)
+          throw httpError("Amount is more than your available balance.", 400);
+        // reserve: this voucher + every one already handed out must fit the float and today's limit.
+        // Serializable: two requests at the same moment cannot both see the old total.
+        const reserved = await reservedPayout(tx, check.checkedAt);
+        if (reserved + check.amount > check.dailyLeft) {
+          if (settled)
+            alert(
+              "warning",
+              "daily-reserved",
+              "Today's payout limit is fully promised to open withdrawals: members are told to try tomorrow. Raise it with setLimits if this is expected.",
+            );
+          throw Object.assign(
+            httpError("Today's withdrawal limit has been reached. Please try again tomorrow.", 503),
+            { capacity: true },
+          );
+        }
+        if (reserved + check.amount > check.float) {
+          if (settled)
+            alert(
+              "warning",
+              "float-reserved",
+              "Payout float is fully promised to open withdrawals: new requests are refused until vouchers are claimed or the float is topped up.",
+            );
+          throw Object.assign(
+            httpError("Withdrawals are being topped up. Please try again in a little while.", 503),
+            { capacity: true },
+          );
+        }
+        const split = withdrawalSplit(grossCents, env.WITHDRAWAL_FEE_PERCENT);
+        return tx.withdrawal.create({
+          data: {
+            userId: user.id,
+            grossAmount: fromCents(split.grossCents),
+            feeAmount: fromCents(split.feeCents),
+            netAmount: fromCents(split.netCents),
+            destinationWallet: wallet,
+            voucherAmount: check.amount.toString(), // the reservation, until the voucher is signed
+          },
+        });
       });
-    });
     const created = await create().catch(async (error) => {
       if (!(error as { capacity?: boolean })?.capacity) throw error;
       await this.reconcileAllOpen().catch(() => 0);
@@ -253,12 +338,23 @@ export class WithdrawalsService {
     } catch (error) {
       // no voucher exists, so nothing can be paid: release the amount back to the balance at once
       console.error("[withdrawals] voucher signing failed:", error);
-      alert("critical", "voucher-signing", `Withdrawals blocked: the signer did not sign (${String((error as Error)?.message ?? error).slice(0, 160)}). Check the signer container.`);
+      alert(
+        "critical",
+        "voucher-signing",
+        `Withdrawals blocked: the signer did not sign (${String((error as Error)?.message ?? error).slice(0, 160)}). Check the signer container.`,
+      );
       await prisma.withdrawal.updateMany({
         where: { id: created.id, status: WithdrawalStatus.PENDING },
-        data: { status: WithdrawalStatus.REJECTED, rejectReason: "Could not prepare the payout. The amount is back in your balance.", reviewedAt: new Date() },
+        data: {
+          status: WithdrawalStatus.REJECTED,
+          rejectReason: "Could not prepare the payout. The amount is back in your balance.",
+          reviewedAt: new Date(),
+        },
       });
-      throw httpError("Withdrawals are not available right now. Please try again in a few minutes.", 503);
+      throw httpError(
+        "Withdrawals are not available right now. Please try again in a few minutes.",
+        503,
+      );
     }
   }
 
@@ -267,7 +363,8 @@ export class WithdrawalsService {
     const w = await prisma.withdrawal.findUnique({ where: { id: withdrawalId } });
     if (!w || w.destinationWallet !== wallet) throw httpError("Withdrawal not found.", 404);
     if (w.status === WithdrawalStatus.COMPLETED) return view(w);
-    if (!w.voucherId || !w.voucherAmount || w.status !== WithdrawalStatus.PROCESSING) throw httpError("This withdrawal has no open instant payout.", 409);
+    if (!w.voucherId || !w.voucherAmount || w.status !== WithdrawalStatus.PROCESSING)
+      throw httpError("This withdrawal has no open instant payout.", 409);
     if (!(await verifyClaimTx(txHash, w.voucherId, wallet, w.voucherAmount))) {
       throw httpError("That transaction is not the payout for this withdrawal.", 400);
     }
@@ -275,11 +372,16 @@ export class WithdrawalsService {
       // guarded on PROCESSING: the worker may settle the same claim at the same moment
       await prisma.withdrawal.updateMany({
         where: { id: w.id, status: WithdrawalStatus.PROCESSING },
-        data: { status: WithdrawalStatus.COMPLETED, payoutTxHash: txHash.toLowerCase(), reviewedAt: new Date() },
+        data: {
+          status: WithdrawalStatus.COMPLETED,
+          payoutTxHash: txHash.toLowerCase(),
+          reviewedAt: new Date(),
+        },
       });
       return view(await prisma.withdrawal.findUniqueOrThrow({ where: { id: w.id } }));
     } catch (error) {
-      if ((error as { code?: string })?.code === "P2002") throw httpError("That transaction is already recorded.", 409);
+      if ((error as { code?: string })?.code === "P2002")
+        throw httpError("That transaction is already recorded.", 409);
       throw error;
     }
   }
@@ -290,8 +392,12 @@ export class WithdrawalsService {
   /** admin list: by status, optionally only requests from the last 7 / 30 days, with the period's totals */
   async list(status?: WithdrawalStatus, page = 1, period: "all" | "week" | "month" = "all") {
     const pageSize = 20;
-    const since = period === "all" ? null : new Date(Date.now() - (period === "week" ? 7 : 30) * 86_400_000);
-    const where: Prisma.WithdrawalWhereInput = { ...(status ? { status } : {}), ...(since ? { createdAt: { gte: since } } : {}) };
+    const since =
+      period === "all" ? null : new Date(Date.now() - (period === "week" ? 7 : 30) * 86_400_000);
+    const where: Prisma.WithdrawalWhereInput = {
+      ...(status ? { status } : {}),
+      ...(since ? { createdAt: { gte: since } } : {}),
+    };
     const open = status === "PENDING" || status === "PROCESSING";
     const [total, sums, items] = await Promise.all([
       prisma.withdrawal.count({ where }),
@@ -305,31 +411,49 @@ export class WithdrawalsService {
       }),
     ]);
     return {
-      total, page, pageSize, period,
+      total,
+      page,
+      pageSize,
+      period,
       grossUsd: fromCents(toCents(sums._sum.grossAmount?.toString() ?? 0)),
       netUsd: fromCents(toCents(sums._sum.netAmount?.toString() ?? 0)),
       items: items.map((w) => ({ ...view(w), voucher: null, referralCode: w.user.referralCode })),
     };
   }
 
-  private async transition(id: string, from: WithdrawalStatus[], data: Prisma.WithdrawalUpdateInput) {
+  private async transition(
+    id: string,
+    from: WithdrawalStatus[],
+    data: Prisma.WithdrawalUpdateInput,
+  ) {
     return serializable(async (tx) => {
       const current = await tx.withdrawal.findUnique({ where: { id } });
       if (!current) throw httpError("Withdrawal not found.", 404);
       // voucherAmount without voucherId = an instant request being signed right now (never an admin case)
-      if (current.voucherId || current.voucherAmount) throw httpError("Instant withdrawal: the payout contract handles it automatically.", 409);
-      if (!from.includes(current.status)) throw httpError(`Withdrawal is ${current.status.toLowerCase()}.`, 409);
+      if (current.voucherId || current.voucherAmount)
+        throw httpError("Instant withdrawal: the payout contract handles it automatically.", 409);
+      if (!from.includes(current.status))
+        throw httpError(`Withdrawal is ${current.status.toLowerCase()}.`, 409);
       return view(await tx.withdrawal.update({ where: { id }, data }));
     });
   }
 
   approve(id: string, admin: string) {
-    return this.transition(id, [WithdrawalStatus.PENDING], { status: WithdrawalStatus.PROCESSING, reviewedBy: admin, reviewedAt: new Date() });
+    return this.transition(id, [WithdrawalStatus.PENDING], {
+      status: WithdrawalStatus.PROCESSING,
+      reviewedBy: admin,
+      reviewedAt: new Date(),
+    });
   }
 
   /** Rejecting releases the reserved amount back to the member's balance. */
   reject(id: string, admin: string, reason: string) {
-    return this.transition(id, OPEN, { status: WithdrawalStatus.REJECTED, reviewedBy: admin, reviewedAt: new Date(), rejectReason: reason });
+    return this.transition(id, OPEN, {
+      status: WithdrawalStatus.REJECTED,
+      reviewedBy: admin,
+      reviewedAt: new Date(),
+      rejectReason: reason,
+    });
   }
 
   /**
@@ -337,35 +461,59 @@ export class WithdrawalsService {
    * submits the tx hash. It is accepted only if that tx moved exactly the net USDT to the member.
    */
   async complete(id: string, admin: string, payoutTxHash: string) {
-    if (!env.USDT_CONTRACT_ADDRESS) throw httpError("The USDT token is not set up on the server yet.", 503);
+    if (!env.USDT_CONTRACT_ADDRESS)
+      throw httpError("The USDT token is not set up on the server yet.", 503);
     const w = await prisma.withdrawal.findUnique({ where: { id } });
     if (!w) throw httpError("Withdrawal not found.", 404);
-    if (w.voucherId || w.voucherAmount) throw httpError("Instant withdrawal: the payout contract handles it automatically.", 409);
-    if (w.status !== WithdrawalStatus.PROCESSING) throw httpError("Approve the withdrawal before marking it paid.", 409);
+    if (w.voucherId || w.voucherAmount)
+      throw httpError("Instant withdrawal: the payout contract handles it automatically.", 409);
+    if (w.status !== WithdrawalStatus.PROCESSING)
+      throw httpError("Approve the withdrawal before marking it paid.", 409);
 
     const provider = chainProvider();
     const receipt = await provider.getTransactionReceipt(payoutTxHash);
-    if (!receipt || receipt.status !== 1) throw httpError("Payout transaction is missing or failed.", 400);
+    if (!receipt || receipt.status !== 1)
+      throw httpError("Payout transaction is missing or failed.", 400);
     const usdt = env.USDT_CONTRACT_ADDRESS.toLowerCase();
-    const decimals = Number(await new Contract(usdt, ["function decimals() view returns (uint8)"], provider).decimals());
+    const decimals = Number(
+      await new Contract(usdt, ["function decimals() view returns (uint8)"], provider).decimals(),
+    );
     const expected = parseUnits(Number(w.netAmount).toFixed(2), decimals);
-    const erc20 = new Interface(["event Transfer(address indexed from, address indexed to, uint256 value)"]);
+    const erc20 = new Interface([
+      "event Transfer(address indexed from, address indexed to, uint256 value)",
+    ]);
     const match = receipt.logs.some((log) => {
       if (log.address.toLowerCase() !== usdt) return false;
-      const parsed = (() => { try { return erc20.parseLog(log); } catch { return null; } })();
+      const parsed = (() => {
+        try {
+          return erc20.parseLog(log);
+        } catch {
+          return null;
+        }
+      })();
       if (!parsed || parsed.name !== "Transfer") return false;
       const [from, to, value] = parsed.args as unknown as [string, string, bigint];
-      const fromOk = !env.COMPANY_WALLET_ADDRESS || from.toLowerCase() === env.COMPANY_WALLET_ADDRESS.toLowerCase();
+      const fromOk =
+        !env.COMPANY_WALLET_ADDRESS ||
+        from.toLowerCase() === env.COMPANY_WALLET_ADDRESS.toLowerCase();
       return fromOk && to.toLowerCase() === w.destinationWallet.toLowerCase() && value === expected;
     });
-    if (!match) throw httpError("That transaction does not send the exact net USDT amount to this member.", 400);
+    if (!match)
+      throw httpError(
+        "That transaction does not send the exact net USDT amount to this member.",
+        400,
+      );
 
     try {
       return await this.transition(id, [WithdrawalStatus.PROCESSING], {
-        status: WithdrawalStatus.COMPLETED, payoutTxHash: payoutTxHash.toLowerCase(), reviewedBy: admin, reviewedAt: new Date(),
+        status: WithdrawalStatus.COMPLETED,
+        payoutTxHash: payoutTxHash.toLowerCase(),
+        reviewedBy: admin,
+        reviewedAt: new Date(),
       });
     } catch (error) {
-      if ((error as { code?: string })?.code === "P2002") throw httpError("That payout transaction is already used for another withdrawal.", 409);
+      if ((error as { code?: string })?.code === "P2002")
+        throw httpError("That payout transaction is already used for another withdrawal.", 409);
       throw error;
     }
   }
@@ -379,7 +527,20 @@ export class WithdrawalsService {
   async stats() {
     const day = new Date(Date.now() - 86_400_000);
     const week = new Date(Date.now() - 7 * 86_400_000);
-    const [registered, members, packages, activePackages, cappedPackages, levelPaid, rankPaid, byStatus, payments24h, payments7d, payout, paidIn] = await Promise.all([
+    const [
+      registered,
+      members,
+      packages,
+      activePackages,
+      cappedPackages,
+      levelPaid,
+      rankPaid,
+      byStatus,
+      payments24h,
+      payments7d,
+      payout,
+      paidIn,
+    ] = await Promise.all([
       prisma.user.count(),
       // members = activated wallets; dashboard visitors without a package only hold a code
       prisma.user.count({ where: { packages: { some: {} } } }),
@@ -388,8 +549,15 @@ export class WithdrawalsService {
       prisma.package.count({ where: { status: "CAPPED" } }),
       prisma.earning.aggregate({ where: { type: "LEVEL_COMMISSION" }, _sum: { amountUsd: true } }),
       // rewards = rank rewards + fast-start bonuses (everything that is not level income)
-      prisma.earning.aggregate({ where: { type: { in: ["RANK_REWARD", "FAST_START_BONUS"] } }, _sum: { amountUsd: true } }),
-      prisma.withdrawal.groupBy({ by: ["status"], _count: { _all: true }, _sum: { grossAmount: true, feeAmount: true, netAmount: true } }),
+      prisma.earning.aggregate({
+        where: { type: { in: ["RANK_REWARD", "FAST_START_BONUS"] } },
+        _sum: { amountUsd: true },
+      }),
+      prisma.withdrawal.groupBy({
+        by: ["status"],
+        _count: { _all: true },
+        _sum: { grossAmount: true, feeAmount: true, netAmount: true },
+      }),
       prisma.package.count({ where: { createdAt: { gte: day } } }),
       prisma.package.count({ where: { createdAt: { gte: week } } }),
       payoutContractStatus(),
@@ -403,7 +571,10 @@ export class WithdrawalsService {
     const rankCents = toCents(String(rankPaid._sum.amountUsd ?? 0));
     const creditedCents = levelCents + rankCents;
     // requested (not rejected) withdrawals use up a member's balance; the rest can still be withdrawn
-    const requestedCents = sum("PENDING", "grossAmount") + sum("PROCESSING", "grossAmount") + sum("COMPLETED", "grossAmount");
+    const requestedCents =
+      sum("PENDING", "grossAmount") +
+      sum("PROCESSING", "grossAmount") +
+      sum("COMPLETED", "grossAmount");
     const feesCents = sum("COMPLETED", "feeAmount");
     return {
       registered,
@@ -423,7 +594,12 @@ export class WithdrawalsService {
       memberBalancesUsd: fromCents(Math.max(0, creditedCents - requestedCents)),
       // what the company keeps if every credited dollar is withdrawn (fees stay with it)
       companyNetUsd: fromCents(volumeCents - creditedCents + feesCents),
-      withdrawals: Object.fromEntries(byStatus.map((b) => [b.status, { count: b._count._all, netUsd: Number(b._sum.netAmount ?? 0) }])),
+      withdrawals: Object.fromEntries(
+        byStatus.map((b) => [
+          b.status,
+          { count: b._count._all, netUsd: Number(b._sum.netAmount ?? 0) },
+        ]),
+      ),
       payout,
     };
   }

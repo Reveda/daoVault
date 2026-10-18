@@ -25,7 +25,8 @@ const SECONDS = Number(process.env.LOAD_SECONDS ?? 30);
 const SIGNIN = process.env.LOAD_SIGNIN === "1";
 const SEED = process.env.LOAD_SEED ?? "daovault-load-test";
 const ORIGIN = process.env.LOAD_ORIGIN ?? env.FRONTEND_URL.split(",")[0].trim();
-const wallets = (n: number) => Array.from({ length: n }, (_, i) => new Wallet(keccakText(`${SEED}:${i}`)));
+const wallets = (n: number) =>
+  Array.from({ length: n }, (_, i) => new Wallet(keccakText(`${SEED}:${i}`)));
 
 async function cleanup() {
   const addresses = wallets(Math.max(USERS, 5_000)).map((w) => w.address.toLowerCase());
@@ -50,9 +51,14 @@ async function hit(name: string, path: string, init: RequestInit = {}): Promise<
   stats.set(name, stat);
   const t = performance.now();
   try {
-    const res = await fetch(BASE + path, { ...init, headers: { origin: ORIGIN, "content-type": "application/json", ...(init.headers ?? {}) }, signal: AbortSignal.timeout(30_000) });
+    const res = await fetch(BASE + path, {
+      ...init,
+      headers: { origin: ORIGIN, "content-type": "application/json", ...(init.headers ?? {}) },
+      signal: AbortSignal.timeout(30_000),
+    });
     stat.ms.push(performance.now() - t);
-    if (!res.ok) stat.errors.set(String(res.status), (stat.errors.get(String(res.status)) ?? 0) + 1);
+    if (!res.ok)
+      stat.errors.set(String(res.status), (stat.errors.get(String(res.status)) ?? 0) + 1);
     return res;
   } catch (error) {
     stat.ms.push(performance.now() - t);
@@ -66,45 +72,87 @@ async function virtualUser(wallet: Wallet, code: string, until: number) {
   const address = wallet.address.toLowerCase();
   let token = "";
   if (SIGNIN) {
-    const ch = await hit("sign-in challenge", "/auth/challenge", { method: "POST", body: JSON.stringify({ walletAddress: address }) });
+    const ch = await hit("sign-in challenge", "/auth/challenge", {
+      method: "POST",
+      body: JSON.stringify({ walletAddress: address }),
+    });
     const message = ch?.ok ? (await ch.json()).data?.message : null;
     if (message) {
       const signature = await wallet.signMessage(message);
-      const v = await hit("sign-in verify", "/auth/verify", { method: "POST", body: JSON.stringify({ walletAddress: address, signature }) });
+      const v = await hit("sign-in verify", "/auth/verify", {
+        method: "POST",
+        body: JSON.stringify({ walletAddress: address, signature }),
+      });
       token = v?.ok ? ((await v.json()).data?.token ?? "") : "";
     }
-    if (token) await hit("register", "/users/register", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ walletAddress: address }) });
+    if (token)
+      await hit("register", "/users/register", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}` },
+        body: JSON.stringify({ walletAddress: address }),
+      });
   }
   while (Date.now() < until) {
-    if (token) await hit("dashboard", `/dashboard/${address}`, { headers: { authorization: `Bearer ${token}` } });
+    if (token)
+      await hit("dashboard", `/dashboard/${address}`, {
+        headers: { authorization: `Bearer ${token}` },
+      });
     await hit("invite lookup", `/users/referral/${code}`);
     await hit("health", "/health");
   }
 }
 
-const pct = (sorted: number[], p: number) => sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] : 0;
+const pct = (sorted: number[], p: number) =>
+  sorted.length ? sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * p))] : 0;
 
 async function main() {
   if (process.env.LOAD_CLEANUP === "1") return cleanup();
   const root = env.COMPANY_WALLET_ADDRESS?.toLowerCase();
-  const code = process.env.LOAD_CODE ?? (root ? (await prisma.user.findUnique({ where: { walletAddress: root }, select: { referralCode: true } }))?.referralCode : undefined) ?? "DV000000";
-  console.log(`load test: ${USERS} users for ${SECONDS}s against ${BASE}${SIGNIN ? " (with wallet sign-in)" : ""}`);
+  const code =
+    process.env.LOAD_CODE ??
+    (root
+      ? (
+          await prisma.user.findUnique({
+            where: { walletAddress: root },
+            select: { referralCode: true },
+          })
+        )?.referralCode
+      : undefined) ??
+    "DV000000";
+  console.log(
+    `load test: ${USERS} users for ${SECONDS}s against ${BASE}${SIGNIN ? " (with wallet sign-in)" : ""}`,
+  );
   const until = Date.now() + SECONDS * 1000;
   const started = performance.now();
   await Promise.all(wallets(USERS).map((w) => virtualUser(w, code, until)));
   const secs = (performance.now() - started) / 1000;
 
-  console.log(`\n${"endpoint".padEnd(20)} ${"requests".padStart(9)} ${"req/s".padStart(8)} ${"p50 ms".padStart(8)} ${"p95 ms".padStart(8)} ${"p99 ms".padStart(8)}  errors`);
-  let total = 0, failed = 0;
+  console.log(
+    `\n${"endpoint".padEnd(20)} ${"requests".padStart(9)} ${"req/s".padStart(8)} ${"p50 ms".padStart(8)} ${"p95 ms".padStart(8)} ${"p99 ms".padStart(8)}  errors`,
+  );
+  let total = 0,
+    failed = 0;
   for (const [name, s] of stats) {
     const sorted = [...s.ms].sort((a, b) => a - b);
     const errs = [...s.errors].map(([k, v]) => `${k}:${v}`).join(" ") || "-";
-    total += s.ms.length; failed += [...s.errors.values()].reduce((a, b) => a + b, 0);
-    console.log(`${name.padEnd(20)} ${String(s.ms.length).padStart(9)} ${(s.ms.length / secs).toFixed(0).padStart(8)} ${pct(sorted, 0.5).toFixed(0).padStart(8)} ${pct(sorted, 0.95).toFixed(0).padStart(8)} ${pct(sorted, 0.99).toFixed(0).padStart(8)}  ${errs}`);
+    total += s.ms.length;
+    failed += [...s.errors.values()].reduce((a, b) => a + b, 0);
+    console.log(
+      `${name.padEnd(20)} ${String(s.ms.length).padStart(9)} ${(s.ms.length / secs).toFixed(0).padStart(8)} ${pct(sorted, 0.5).toFixed(0).padStart(8)} ${pct(sorted, 0.95).toFixed(0).padStart(8)} ${pct(sorted, 0.99).toFixed(0).padStart(8)}  ${errs}`,
+    );
   }
-  console.log(`\ntotal ${total} requests, ${(total / secs).toFixed(0)} req/s, ${failed} errors (${total ? ((failed / total) * 100).toFixed(2) : 0}%)`);
-  console.log(failed / Math.max(1, total) < 0.01 ? "PASS: under 1% errors" : "CHECK: 1% or more errors (429 = rate limits; 5xx/timeout = capacity)");
-  if (SIGNIN) console.log(`afterwards: run again with LOAD_CLEANUP=1 (same LOAD_SEED) to remove the ${USERS} test wallets`);
+  console.log(
+    `\ntotal ${total} requests, ${(total / secs).toFixed(0)} req/s, ${failed} errors (${total ? ((failed / total) * 100).toFixed(2) : 0}%)`,
+  );
+  console.log(
+    failed / Math.max(1, total) < 0.01
+      ? "PASS: under 1% errors"
+      : "CHECK: 1% or more errors (429 = rate limits; 5xx/timeout = capacity)",
+  );
+  if (SIGNIN)
+    console.log(
+      `afterwards: run again with LOAD_CLEANUP=1 (same LOAD_SEED) to remove the ${USERS} test wallets`,
+    );
 }
 
 await main().catch((error) => console.error("load test failed:", (error as Error).message));

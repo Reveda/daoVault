@@ -45,49 +45,177 @@ export interface SceneState {
 export const SCENE_STATES: Record<string, SceneState> = {
   // landing, in page order. Hero (owner, 2026-10-09): particle DAOVAULT shapes like the other
   // sections, changing every 6s - logo -> DV mark -> vault dial (scene.ts heroShowcase)
-  hero:     { shape: 'logo', x: 0, y: 0.05, s: 1,    op: 0.8,  storm: 0.8, my: -0.05, mop: 0.55 },
-  heroMark: { shape: 'mark', x: 0, y: 0.05, s: 0.95, op: 0.8,  storm: 0.8, my: -0.05, mop: 0.55 },
+  hero: { shape: 'logo', x: 0, y: 0.05, s: 1, op: 0.8, storm: 0.8, my: -0.05, mop: 0.55 },
+  heroMark: { shape: 'mark', x: 0, y: 0.05, s: 0.95, op: 0.8, storm: 0.8, my: -0.05, mop: 0.55 },
   heroDial: { shape: 'dial', x: 0, y: 0.05, s: 0.95, op: 0.75, storm: 0.8, my: -0.05, mop: 0.5 },
-  metrics: { shape: 'dial', x: 0.56,  y: 0,    s: 0.95, op: 0.8,  storm: 0.5, anchor: '#heroMetrics .scene-slot', fit: 0.9 },
-  vision:  { shape: 'mark', x: -0.58, y: 0,    s: 0.95, op: 0.85, storm: 0.6, anchor: '#vision .scene-slot' },
-  ranks:   { shape: 'logo', x: 0.58,  y: 0,    s: 0.95, op: 0.85, storm: 0.8, anchor: '#ranks .scene-slot' },
-  matrix:  { shape: 'dial', x: -0.58, y: 0,    s: 0.95, op: 0.8,  storm: 0.6, anchor: '#matrix .scene-slot' },
+  metrics: {
+    shape: 'dial',
+    x: 0.56,
+    y: 0,
+    s: 0.95,
+    op: 0.8,
+    storm: 0.5,
+    anchor: '#heroMetrics .scene-slot',
+    fit: 0.9,
+  },
+  vision: {
+    shape: 'mark',
+    x: -0.58,
+    y: 0,
+    s: 0.95,
+    op: 0.85,
+    storm: 0.6,
+    anchor: '#vision .scene-slot',
+  },
+  ranks: {
+    shape: 'logo',
+    x: 0.58,
+    y: 0,
+    s: 0.95,
+    op: 0.85,
+    storm: 0.8,
+    anchor: '#ranks .scene-slot',
+  },
+  matrix: {
+    shape: 'dial',
+    x: -0.58,
+    y: 0,
+    s: 0.95,
+    op: 0.8,
+    storm: 0.6,
+    anchor: '#matrix .scene-slot',
+  },
   // fast-start bonus (owner, 2026-10-18): the DAOVAULT logo beside the heading, with lightning
-  bonus:   { shape: 'logo', x: 0.58,  y: 0,    s: 0.95, op: 0.85, storm: 0.9, anchor: '#bonus .scene-slot' },
-  about:   { shape: 'mark', x: 0.58,  y: 0,    s: 0.95, op: 0.8,  storm: 0.5, anchor: '#about .scene-slot', fit: 0.9 },
-  compare: { shape: 'logo', x: -0.56, y: 0,    s: 0.85, op: 0.8,  storm: 0.6, anchor: '#compare .scene-slot' },
-  how:     { shape: 'dial', x: 0.6,   y: 0,    s: 0.95, op: 0.8,  storm: 0.6, anchor: '#how .scene-slot' },
-  join:    { shape: 'dial', x: 0,     y: 0.25, s: 1.1,  op: 0.7,  storm: 1.6, mop: 0.6, anchor: '#join .scene-slot', fit: 0.95 },
+  bonus: {
+    shape: 'logo',
+    x: 0.58,
+    y: 0,
+    s: 0.95,
+    op: 0.85,
+    storm: 0.9,
+    anchor: '#bonus .scene-slot',
+  },
+  about: {
+    shape: 'mark',
+    x: 0.58,
+    y: 0,
+    s: 0.95,
+    op: 0.8,
+    storm: 0.5,
+    anchor: '#about .scene-slot',
+    fit: 0.9,
+  },
+  compare: {
+    shape: 'logo',
+    x: -0.56,
+    y: 0,
+    s: 0.85,
+    op: 0.8,
+    storm: 0.6,
+    anchor: '#compare .scene-slot',
+  },
+  how: { shape: 'dial', x: 0.6, y: 0, s: 0.95, op: 0.8, storm: 0.6, anchor: '#how .scene-slot' },
+  join: {
+    shape: 'dial',
+    x: 0,
+    y: 0.25,
+    s: 1.1,
+    op: 0.7,
+    storm: 1.6,
+    mop: 0.6,
+    anchor: '#join .scene-slot',
+    fit: 0.95,
+  },
   // quiz carries the hidden CTA's (#join) background since 2026-10-12: the vault dial with its strong lightning
-  quiz:    { shape: 'dial', x: -0.6,  y: -0.1, s: 1.05, op: 0.8,  storm: 1.6, mx: 0, my: -0.35, mop: 0.45, anchor: '#quiz .scene-slot' },
+  quiz: {
+    shape: 'dial',
+    x: -0.6,
+    y: -0.1,
+    s: 1.05,
+    op: 0.8,
+    storm: 1.6,
+    mx: 0,
+    my: -0.35,
+    mop: 0.45,
+    anchor: '#quiz .scene-slot',
+  },
   // FAQ (owner, 2026-10-12): the DV mark beside the heading, with lightning like the sections above
   // landing rank calculator card (owner, 2026-10-12): the vault dial behind the card, also on phones
   // landing 25x cap card (owner, 2026-10-12): the DV mark behind the card, also on phones
-  retopup:  { shape: 'mark', x: 0, y: 0.1, s: 1, op: 0.85, storm: 1.4, mop: 0.6, anchor: '#retopupCycleCard .scene-slot--calc', fit: 0.95 },
-  rankcalc: { shape: 'dial', x: 0, y: 0.1, s: 1, op: 0.85, storm: 1.4, mop: 0.6, anchor: '#rankCalcCard .scene-slot--calc', fit: 0.95 },
-  faq:     { shape: 'mark', x: -0.58, y: 0,    s: 0.95, op: 0.85, storm: 1.3, mop: 0.45, anchor: '#faq .scene-slot' },
-  footer:  { shape: 'dust', x: 0,     y: 0,    s: 1,    op: 0.35, storm: 0.2 },
+  retopup: {
+    shape: 'mark',
+    x: 0,
+    y: 0.1,
+    s: 1,
+    op: 0.85,
+    storm: 1.4,
+    mop: 0.6,
+    anchor: '#retopupCycleCard .scene-slot--calc',
+    fit: 0.95,
+  },
+  rankcalc: {
+    shape: 'dial',
+    x: 0,
+    y: 0.1,
+    s: 1,
+    op: 0.85,
+    storm: 1.4,
+    mop: 0.6,
+    anchor: '#rankCalcCard .scene-slot--calc',
+    fit: 0.95,
+  },
+  faq: {
+    shape: 'mark',
+    x: -0.58,
+    y: 0,
+    s: 0.95,
+    op: 0.85,
+    storm: 1.3,
+    mop: 0.45,
+    anchor: '#faq .scene-slot',
+  },
+  footer: { shape: 'dust', x: 0, y: 0, s: 1, op: 0.35, storm: 0.2 },
   // dashboard: the logo forms while the wallet is checked, then calm dust
-  vault:   { shape: 'logo', x: 0,     y: 0.05, s: 1.1,  op: 0.9,  storm: 1.0, mop: 0.7 },
-  dash:    { shape: 'dust', x: 0,     y: 0,    s: 1,    op: 0.28, storm: 0.2, mop: 0.22 },
+  vault: { shape: 'logo', x: 0, y: 0.05, s: 1.1, op: 0.9, storm: 1.0, mop: 0.7 },
+  dash: { shape: 'dust', x: 0, y: 0, s: 1, op: 0.28, storm: 0.2, mop: 0.22 },
   // dashboard sections (owner, 2026-10-18): like the landing, the cloud re-forms as the member
   // scrolls - logo, DV mark, vault dial - with lightning, beside the cards and soft enough to read over
-  dashTop:     { shape: 'logo', x: 0.6,  y: 0.05, s: 0.9, op: 0.5,  storm: 0.8, mx: 0, my: 0, mop: 0.3 },
-  dashRewards: { shape: 'mark', x: -0.6, y: 0,    s: 0.9, op: 0.5,  storm: 0.9, mx: 0, my: 0, mop: 0.3 },
-  dashRanks:   { shape: 'dial', x: 0.6,  y: 0,    s: 0.9, op: 0.45, storm: 0.8, mx: 0, my: 0, mop: 0.28 },
-  dashTeam:    { shape: 'logo', x: -0.6, y: 0,    s: 0.9, op: 0.45, storm: 0.7, mx: 0, my: 0, mop: 0.28 },
-  dashIncome:  { shape: 'mark', x: 0.6,  y: 0,    s: 0.9, op: 0.45, storm: 0.7, mx: 0, my: 0, mop: 0.28 },
+  dashTop: { shape: 'logo', x: 0.6, y: 0.05, s: 0.9, op: 0.5, storm: 0.8, mx: 0, my: 0, mop: 0.3 },
+  dashRewards: {
+    shape: 'mark',
+    x: -0.6,
+    y: 0,
+    s: 0.9,
+    op: 0.5,
+    storm: 0.9,
+    mx: 0,
+    my: 0,
+    mop: 0.3,
+  },
+  dashRanks: { shape: 'dial', x: 0.6, y: 0, s: 0.9, op: 0.45, storm: 0.8, mx: 0, my: 0, mop: 0.28 },
+  dashTeam: { shape: 'logo', x: -0.6, y: 0, s: 0.9, op: 0.45, storm: 0.7, mx: 0, my: 0, mop: 0.28 },
+  dashIncome: {
+    shape: 'mark',
+    x: 0.6,
+    y: 0,
+    s: 0.9,
+    op: 0.45,
+    storm: 0.7,
+    mx: 0,
+    my: 0,
+    mop: 0.28,
+  },
   // admin Command Center: livelier dust and lightning behind the charts
-  admin:   { shape: 'dust', x: 0,     y: 0,    s: 1,    op: 0.42, storm: 0.6, mop: 0.3 },
+  admin: { shape: 'dust', x: 0, y: 0, s: 1, op: 0.42, storm: 0.6, mop: 0.3 },
 };
 
 /** Natural motion per shape: continuous spin, or a gentle sway for flat shapes. */
 const SHAPE_META: Record<ShapeName, { spin: number; sway: number; tilt: number }> = {
-  dust:  { spin: 0.015, sway: 0,    tilt: 0 },
-  vault: { spin: 0,     sway: 0.32, tilt: 0 },
-  logo:  { spin: 0,     sway: 0.4,  tilt: 0 },
-  mark:  { spin: 0,     sway: 0.45, tilt: 0 },
-  dial:  { spin: 0,     sway: 0.35, tilt: 0 },
+  dust: { spin: 0.015, sway: 0, tilt: 0 },
+  vault: { spin: 0, sway: 0.32, tilt: 0 },
+  logo: { spin: 0, sway: 0.4, tilt: 0 },
+  mark: { spin: 0, sway: 0.45, tilt: 0 },
+  dial: { spin: 0, sway: 0.35, tilt: 0 },
 };
 
 const TAU = Math.PI * 2;
@@ -145,20 +273,29 @@ const SHAPES: Record<ProceduralShape, (n: number, out: Float32Array) => void> = 
       let x: number, y: number, z: number;
       if (u < 0.42) {
         [x, y] = outer(Math.random());
-        x += jit(0.25); y += jit(0.25); z = jit(0.8);
+        x += jit(0.25);
+        y += jit(0.25);
+        z = jit(0.8);
       } else if (u < 0.58) {
         [x, y] = inner(Math.random());
         z = jit(0.4);
       } else if (u < 0.8) {
         const a = Math.random() * TAU;
         const r = 3.6 + (Math.sin(a * 12) > 0.3 ? 0.4 : 0) + jit(0.12);
-        x = Math.cos(a) * r; y = Math.sin(a) * r; z = jit(0.3);
+        x = Math.cos(a) * r;
+        y = Math.sin(a) * r;
+        z = jit(0.3);
       } else {
-        const a = Math.random() * TAU, b = Math.acos(rand(-1, 1));
+        const a = Math.random() * TAU,
+          b = Math.acos(rand(-1, 1));
         const r = 1.7 * Math.cbrt(Math.random());
-        x = Math.sin(b) * Math.cos(a) * r; y = Math.cos(b) * r; z = Math.sin(b) * Math.sin(a) * r;
+        x = Math.sin(b) * Math.cos(a) * r;
+        y = Math.cos(b) * r;
+        z = Math.sin(b) * Math.sin(a) * r;
       }
-      out[i * 3] = x; out[i * 3 + 1] = y; out[i * 3 + 2] = z;
+      out[i * 3] = x;
+      out[i * 3 + 1] = y;
+      out[i * 3 + 2] = z;
     }
   },
 };
@@ -168,9 +305,9 @@ const SHAPES: Record<ProceduralShape, (n: number, out: Float32Array) => void> = 
 const LOGO_URL = '/assets/DAOlogo.jpg';
 /** regions of DAOlogo.jpg as [left, top, right, bottom] fractions of the image */
 const LOGO_REGIONS: Record<LogoShape, [number, number, number, number]> = {
-  logo: [0.13, 0.15, 0.87, 0.82],   // DV mark + "DAOVault"
-  mark: [0.26, 0.16, 0.76, 0.62],   // the DV mark
-  dial: [0.335, 0.25, 0.51, 0.51],  // the vault dial inside the D
+  logo: [0.13, 0.15, 0.87, 0.82], // DV mark + "DAOVault"
+  mark: [0.26, 0.16, 0.76, 0.62], // the DV mark
+  dial: [0.335, 0.25, 0.51, 0.51], // the vault dial inside the D
 };
 const LOGO_SHAPES = Object.keys(LOGO_REGIONS) as LogoShape[];
 const isLogoShape = (name: ShapeName): name is LogoShape => name in LOGO_REGIONS;
@@ -197,8 +334,12 @@ function sampleLogo(img: HTMLImageElement): LogoPools | null {
   const pools = {} as LogoPools;
   LOGO_SHAPES.forEach((name) => {
     const [l, t, r, b] = LOGO_REGIONS[name];
-    const x0 = Math.floor(l * W), x1 = Math.ceil(r * W), y0 = Math.floor(t * H), y1 = Math.ceil(b * H);
-    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    const x0 = Math.floor(l * W),
+      x1 = Math.ceil(r * W),
+      y0 = Math.floor(t * H),
+      y1 = Math.ceil(b * H);
+    const cx = (x0 + x1) / 2,
+      cy = (y0 + y1) / 2;
     const unit = (2 * 7.2) / Math.max(x1 - x0, y1 - y0);
     // the dial is round: leave out the corners of the D around it
     const maxR = name === 'dial' ? Math.min(x1 - x0, y1 - y0) / 2 : Infinity;
@@ -319,7 +460,12 @@ const STAR_FRAG = /* glsl */ `
 
 /* ------------------------------------------------------------------ lightning */
 
-function boltPath(a: THREE.Vector3, b: THREE.Vector3, depth: number, rough: number): THREE.Vector3[] {
+function boltPath(
+  a: THREE.Vector3,
+  b: THREE.Vector3,
+  depth: number,
+  rough: number,
+): THREE.Vector3[] {
   let pts = [a.clone(), b.clone()];
   let off = a.distanceTo(b) * rough;
   for (let d = 0; d < depth; d++) {
@@ -373,7 +519,12 @@ export function createParticleScene(
 ): ParticleSceneController | null {
   let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, powerPreference: 'high-performance' });
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      alpha: true,
+      antialias: false,
+      powerPreference: 'high-performance',
+    });
   } catch (err) {
     console.warn('[DAOvault] Particle scene unavailable:', err);
     return null;
@@ -510,22 +661,23 @@ export function createParticleScene(
         x: (r.left + r.width / 2 - window.innerWidth / 2) / pxPerUnit,
         y: (window.innerHeight / 2 - (r.top + r.height / 2)) / pxPerUnit,
         s: (Math.min(r.width, r.height) / 2 / pxPerUnit / SHAPE_RADIUS) * (state.fit ?? 1),
-        op: small ? state.mop ?? state.op * 0.7 : state.op,
+        op: small ? (state.mop ?? state.op * 0.7) : state.op,
         anchored: true,
       };
     }
     return {
-      x: (small ? state.mx ?? 0 : state.x) * halfW,
-      y: (small ? state.my ?? state.y : state.y) * halfH,
+      x: (small ? (state.mx ?? 0) : state.x) * halfW,
+      y: (small ? (state.my ?? state.y) : state.y) * halfH,
       s: state.s * (small ? 0.8 : 1),
-      op: small ? state.mop ?? state.op * 0.55 : state.op,
+      op: small ? (state.mop ?? state.op * 0.55) : state.op,
       anchored: false,
     };
   };
   let switchedAt = -10;
   {
     const t0 = target();
-    view.x = t0.x; view.y = t0.y;
+    view.x = t0.x;
+    view.y = t0.y;
   }
 
   const clock = new THREE.Clock();
@@ -555,10 +707,24 @@ export function createParticleScene(
     const group = new THREE.Group();
     const materials: Bolt['materials'] = [];
     const addLine = (pts: THREE.Vector3[], color: number) => {
-      const mat = new THREE.LineBasicMaterial({ color, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
+      const mat = new THREE.LineBasicMaterial({
+        color,
+        transparent: true,
+        opacity: 1,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
       materials.push(mat);
       group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), mat));
-      const glow = new THREE.PointsMaterial({ size: 1.1, map: glowTex, color: 0xffd76a, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+      const glow = new THREE.PointsMaterial({
+        size: 1.1,
+        map: glowTex,
+        color: 0xffd76a,
+        transparent: true,
+        opacity: 0.9,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
       materials.push(glow);
       group.add(new THREE.Points(new THREE.BufferGeometry().setFromPoints(pts), glow));
     };
@@ -590,7 +756,9 @@ export function createParticleScene(
       }
       const flicker = age < 0.08 ? 1 : age % 0.06 < 0.03 ? 0.55 : 1;
       const fade = Math.pow(1 - age / b.life, 1.4) * flicker;
-      b.materials.forEach((m) => { m.opacity = fade; });
+      b.materials.forEach((m) => {
+        m.opacity = fade;
+      });
     }
   }
 
@@ -643,16 +811,27 @@ export function createParticleScene(
   logoImage.src = LOGO_URL;
 
   /* ---------------- loop */
-  window.addEventListener('pointermove', (e) => {
-    pointer.tx = (e.clientX / window.innerWidth - 0.5) * 2;
-    pointer.ty = (e.clientY / window.innerHeight - 0.5) * 2;
-  }, { passive: true });
+  window.addEventListener(
+    'pointermove',
+    (e) => {
+      pointer.tx = (e.clientX / window.innerWidth - 0.5) * 2;
+      pointer.ty = (e.clientY / window.innerHeight - 0.5) * 2;
+    },
+    { passive: true },
+  );
 
   // phones: no particle frames while the page is being scrolled (owner, 2026-10-12: parts of the
   // dashboard went blank during a fast scroll; the GPU needs that time to paint the page). The canvas
   // is fixed, so a paused frame is not visible; the scene carries on once the scroll stops.
   let scrolledAt = 0;
-  if (LITE) window.addEventListener('scroll', () => { scrolledAt = performance.now(); }, { passive: true });
+  if (LITE)
+    window.addEventListener(
+      'scroll',
+      () => {
+        scrolledAt = performance.now();
+      },
+      { passive: true },
+    );
 
   function frame(): void {
     requestAnimationFrame(frame);
@@ -690,7 +869,10 @@ export function createParticleScene(
     holder.rotation.set(view.tilt + pointer.y * 0.12, view.rotY + pointer.x * 0.25, 0);
 
     if (uniforms.uMix.value < 1) {
-      uniforms.uMix.value = Math.min(1, uniforms.uMix.value + dt / (reduceMotion ? MORPH_SECONDS * 1.5 : MORPH_SECONDS));
+      uniforms.uMix.value = Math.min(
+        1,
+        uniforms.uMix.value + dt / (reduceMotion ? MORPH_SECONDS * 1.5 : MORPH_SECONDS),
+      );
     }
     uniforms.uTime.value = t;
     uniforms.uOpacity.value = view.op;
@@ -723,7 +905,9 @@ export function createParticleScene(
   return {
     setScene,
     strike,
-    get current() { return currentName; },
+    get current() {
+      return currentName;
+    },
   };
 }
 
@@ -734,20 +918,26 @@ export function createParticleScene(
 export function bindSectionScenes(ctrl: ParticleSceneController): void {
   const sections = [...document.querySelectorAll<HTMLElement>('[data-scene]')];
   if (!sections.length || !('IntersectionObserver' in window)) return;
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      const el = entry.target as HTMLElement;
-      const name = el.dataset.scene;
-      if (entry.isIntersecting && name) { ctrl.setScene(name); return; }
-      // leaving a scene nested in a section (the #ranks calculator card): back to the section's
-      // own scene while the section still fills the middle of the screen
-      const parent = el.parentElement?.closest<HTMLElement>('[data-scene]');
-      if (!entry.isIntersecting && parent?.dataset.scene) {
-        const r = parent.getBoundingClientRect();
-        const mid = window.innerHeight * 0.5;
-        if (r.top < mid && r.bottom > mid) ctrl.setScene(parent.dataset.scene);
-      }
-    });
-  }, { rootMargin: '-45% 0px -50% 0px' });
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const el = entry.target as HTMLElement;
+        const name = el.dataset.scene;
+        if (entry.isIntersecting && name) {
+          ctrl.setScene(name);
+          return;
+        }
+        // leaving a scene nested in a section (the #ranks calculator card): back to the section's
+        // own scene while the section still fills the middle of the screen
+        const parent = el.parentElement?.closest<HTMLElement>('[data-scene]');
+        if (!entry.isIntersecting && parent?.dataset.scene) {
+          const r = parent.getBoundingClientRect();
+          const mid = window.innerHeight * 0.5;
+          if (r.top < mid && r.bottom > mid) ctrl.setScene(parent.dataset.scene);
+        }
+      });
+    },
+    { rootMargin: '-45% 0px -50% 0px' },
+  );
   sections.forEach((s) => io.observe(s));
 }

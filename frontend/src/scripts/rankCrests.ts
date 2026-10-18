@@ -13,17 +13,83 @@ export interface RankCrestMeta {
 }
 
 export const RANK_CREST_METAS: RankCrestMeta[] = [
-  { id: 1, name: 'Starter', metal: 'Bronze / Gold', themeColor: '#cd7f32', glowColor: 'rgba(205, 127, 50, 0.6)' },
-  { id: 2, name: 'Builder', metal: 'Copper Core', themeColor: '#d97706', glowColor: 'rgba(217, 119, 6, 0.6)' },
-  { id: 3, name: 'Leader', metal: 'Silver Laurel', themeColor: '#94a3b8', glowColor: 'rgba(148, 163, 184, 0.6)' },
-  { id: 4, name: 'Elite Leader', metal: 'Cobalt Star', themeColor: '#38bdf8', glowColor: 'rgba(56, 189, 248, 0.6)' },
-  { id: 5, name: 'Executive', metal: 'Amethyst Violet', themeColor: '#c084fc', glowColor: 'rgba(192, 132, 252, 0.6)' },
-  { id: 6, name: 'Crown Executive', metal: 'Emerald Coronet', themeColor: '#34d399', glowColor: 'rgba(52, 211, 153, 0.6)' },
-  { id: 7, name: 'Crown Director', metal: 'Ruby Imperial', themeColor: '#f43f5e', glowColor: 'rgba(244, 63, 94, 0.6)' },
-  { id: 8, name: 'Ambassador', metal: 'Celestial Sapphire', themeColor: '#60a5fa', glowColor: 'rgba(96, 165, 250, 0.6)' },
-  { id: 9, name: 'Crown Ambassador', metal: 'Diamond Diadem', themeColor: '#e2e8f0', glowColor: 'rgba(226, 232, 240, 0.7)' },
-  { id: 10, name: 'President', metal: 'Solar Gold', themeColor: '#fbbf24', glowColor: 'rgba(251, 191, 36, 0.75)' },
-  { id: 11, name: 'Crown President', metal: 'Apex Cosmic Crown', themeColor: '#ffd700', glowColor: 'rgba(255, 215, 0, 0.9)' },
+  {
+    id: 1,
+    name: 'Starter',
+    metal: 'Bronze / Gold',
+    themeColor: '#cd7f32',
+    glowColor: 'rgba(205, 127, 50, 0.6)',
+  },
+  {
+    id: 2,
+    name: 'Builder',
+    metal: 'Copper Core',
+    themeColor: '#d97706',
+    glowColor: 'rgba(217, 119, 6, 0.6)',
+  },
+  {
+    id: 3,
+    name: 'Leader',
+    metal: 'Silver Laurel',
+    themeColor: '#94a3b8',
+    glowColor: 'rgba(148, 163, 184, 0.6)',
+  },
+  {
+    id: 4,
+    name: 'Elite Leader',
+    metal: 'Cobalt Star',
+    themeColor: '#38bdf8',
+    glowColor: 'rgba(56, 189, 248, 0.6)',
+  },
+  {
+    id: 5,
+    name: 'Executive',
+    metal: 'Amethyst Violet',
+    themeColor: '#c084fc',
+    glowColor: 'rgba(192, 132, 252, 0.6)',
+  },
+  {
+    id: 6,
+    name: 'Crown Executive',
+    metal: 'Emerald Coronet',
+    themeColor: '#34d399',
+    glowColor: 'rgba(52, 211, 153, 0.6)',
+  },
+  {
+    id: 7,
+    name: 'Crown Director',
+    metal: 'Ruby Imperial',
+    themeColor: '#f43f5e',
+    glowColor: 'rgba(244, 63, 94, 0.6)',
+  },
+  {
+    id: 8,
+    name: 'Ambassador',
+    metal: 'Celestial Sapphire',
+    themeColor: '#60a5fa',
+    glowColor: 'rgba(96, 165, 250, 0.6)',
+  },
+  {
+    id: 9,
+    name: 'Crown Ambassador',
+    metal: 'Diamond Diadem',
+    themeColor: '#e2e8f0',
+    glowColor: 'rgba(226, 232, 240, 0.7)',
+  },
+  {
+    id: 10,
+    name: 'President',
+    metal: 'Solar Gold',
+    themeColor: '#fbbf24',
+    glowColor: 'rgba(251, 191, 36, 0.75)',
+  },
+  {
+    id: 11,
+    name: 'Crown President',
+    metal: 'Apex Cosmic Crown',
+    themeColor: '#ffd700',
+    glowColor: 'rgba(255, 215, 0, 0.9)',
+  },
 ];
 
 /**
@@ -258,4 +324,3 @@ export function getRankCrestSvg(index: number): string {
       `;
   }
 }
-

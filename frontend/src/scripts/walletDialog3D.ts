@@ -93,12 +93,72 @@ export function initWalletDialog3D(): void {
   });
 
   const coinConfigs = [
-    { x: -6.0, y: 3.4, z: -2.2, scale: 1.15, rx: 0.016, ry: 0.024, rz: 0.008, offset: 0, speed: 1.4 },
-    { x: 5.8, y: 3.6, z: -2.8, scale: 1.05, rx: -0.018, ry: 0.022, rz: 0.010, offset: 1.8, speed: 1.2 },
-    { x: -5.6, y: -3.3, z: -1.8, scale: 0.98, rx: 0.022, ry: -0.018, rz: 0.006, offset: 3.2, speed: 1.6 },
-    { x: 6.0, y: -3.1, z: -2.4, scale: 1.18, rx: -0.015, ry: -0.024, rz: 0.009, offset: 4.5, speed: 1.3 },
-    { x: -1.8, y: 4.6, z: -5.0, scale: 0.82, rx: 0.012, ry: 0.018, rz: 0.005, offset: 2.1, speed: 1.1 },
-    { x: 2.4, y: -4.4, z: -4.8, scale: 0.88, rx: -0.014, ry: 0.020, rz: 0.007, offset: 5.0, speed: 1.5 },
+    {
+      x: -6.0,
+      y: 3.4,
+      z: -2.2,
+      scale: 1.15,
+      rx: 0.016,
+      ry: 0.024,
+      rz: 0.008,
+      offset: 0,
+      speed: 1.4,
+    },
+    {
+      x: 5.8,
+      y: 3.6,
+      z: -2.8,
+      scale: 1.05,
+      rx: -0.018,
+      ry: 0.022,
+      rz: 0.01,
+      offset: 1.8,
+      speed: 1.2,
+    },
+    {
+      x: -5.6,
+      y: -3.3,
+      z: -1.8,
+      scale: 0.98,
+      rx: 0.022,
+      ry: -0.018,
+      rz: 0.006,
+      offset: 3.2,
+      speed: 1.6,
+    },
+    {
+      x: 6.0,
+      y: -3.1,
+      z: -2.4,
+      scale: 1.18,
+      rx: -0.015,
+      ry: -0.024,
+      rz: 0.009,
+      offset: 4.5,
+      speed: 1.3,
+    },
+    {
+      x: -1.8,
+      y: 4.6,
+      z: -5.0,
+      scale: 0.82,
+      rx: 0.012,
+      ry: 0.018,
+      rz: 0.005,
+      offset: 2.1,
+      speed: 1.1,
+    },
+    {
+      x: 2.4,
+      y: -4.4,
+      z: -4.8,
+      scale: 0.88,
+      rx: -0.014,
+      ry: 0.02,
+      rz: 0.007,
+      offset: 5.0,
+      speed: 1.5,
+    },
   ];
 
   floatingCoins = coinConfigs.map((cfg) => {
@@ -208,7 +268,7 @@ export function initWalletDialog3D(): void {
         targetRotX = ny * 0.18;
         targetRotY = nx * 0.22;
       },
-      { passive: true }
+      { passive: true },
     );
 
     window.addEventListener(
@@ -219,7 +279,7 @@ export function initWalletDialog3D(): void {
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
       },
-      { passive: true }
+      { passive: true },
     );
 
     mouseListenerAttached = true;
@@ -246,9 +306,10 @@ function animateStage(time: number): void {
       coin.group.rotation.x += coin.rotSpeedX;
       coin.group.rotation.y += coin.rotSpeedY;
       coin.group.rotation.z += coin.rotSpeedZ;
-      
+
       // Floating vertical bobbing
-      coin.group.position.y = coin.baseY + Math.sin(t * coin.floatSpeed + coin.floatOffset) * 0.35 + -currentRotX * 1.6;
+      coin.group.position.y =
+        coin.baseY + Math.sin(t * coin.floatSpeed + coin.floatOffset) * 0.35 + -currentRotX * 1.6;
       coin.group.position.x = coin.baseX + currentRotY * 1.8;
     });
   }

@@ -32,8 +32,10 @@ function isAddress(value: string): boolean {
  * until the owner sets VITE_ALLOW_MAINNET_PAYMENTS=true for launch. Covers the $300
  * activation and the instant payout claim. Testnet is never blocked.
  */
-export const REAL_PAYMENTS_LOCKED = BSC_CHAIN_ID !== 97 && import.meta.env.VITE_ALLOW_MAINNET_PAYMENTS !== 'true';
-export const REAL_PAYMENTS_LOCKED_MSG = 'Payments are switched off while DAOVAULT is in development. No real USDT is charged.';
+export const REAL_PAYMENTS_LOCKED =
+  BSC_CHAIN_ID !== 97 && import.meta.env.VITE_ALLOW_MAINNET_PAYMENTS !== 'true';
+export const REAL_PAYMENTS_LOCKED_MSG =
+  'Payments are switched off while DAOVAULT is in development. No real USDT is charged.';
 
 export function isPaymentConfigured(): boolean {
   return isAddress(PAYMENT_ADDRESS) && isAddress(TOKEN_ADDRESS);
@@ -43,14 +45,22 @@ export function isPaymentConfigured(): boolean {
  * Invite code -> sponsor wallet. Empty code = no sponsor. Throws a clear message when the
  * code is unknown, so a member never pays without the sponsor they were invited by.
  */
-export async function resolveSponsor(code: string, self: string): Promise<{ wallet: string; code: string | null; activated: boolean }> {
+export async function resolveSponsor(
+  code: string,
+  self: string,
+): Promise<{ wallet: string; code: string | null; activated: boolean }> {
   const clean = code.trim().toUpperCase();
   if (!clean) return { wallet: ZeroAddress, code: null, activated: true };
   try {
     const sponsor = await getSponsorByCode(clean);
-    if (sponsor.walletAddress.toLowerCase() === self.toLowerCase()) return { wallet: ZeroAddress, code: null, activated: true };
+    if (sponsor.walletAddress.toLowerCase() === self.toLowerCase())
+      return { wallet: ZeroAddress, code: null, activated: true };
     // activated = paid (or the company root); an unpaid sponsor can sponsor (pre-launch teams)
-    return { wallet: sponsor.walletAddress, code: sponsor.referralCode, activated: sponsor.activated !== false };
+    return {
+      wallet: sponsor.walletAddress,
+      code: sponsor.referralCode,
+      activated: sponsor.activated !== false,
+    };
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       throw new Error(`Invite code ${clean} was not found. Check your invite link.`);
@@ -62,11 +72,24 @@ export async function resolveSponsor(code: string, self: string): Promise<{ wall
 /** A paid activation whose backend check failed (network etc.) is retried on the next visit. */
 export async function retryPendingActivation(walletAddress: string): Promise<boolean> {
   let saved: { hash: string; wallet: string; sponsor?: string; kind?: 'topup' } | null = null;
-  try { saved = JSON.parse(localStorage.getItem(PENDING_TX_KEY) || 'null'); } catch { /* ignore */ }
+  try {
+    saved = JSON.parse(localStorage.getItem(PENDING_TX_KEY) || 'null');
+  } catch {
+    /* ignore */
+  }
   if (!saved || saved.wallet !== walletAddress.toLowerCase()) return false;
   if (saved.kind === 'topup') await verifyTopUp({ walletAddress, transactionHash: saved.hash });
-  else await verifyActivation({ walletAddress, transactionHash: saved.hash, sponsorAddress: saved.sponsor ?? ZeroAddress });
-  try { localStorage.removeItem(PENDING_TX_KEY); } catch { /* ignore */ }
+  else
+    await verifyActivation({
+      walletAddress,
+      transactionHash: saved.hash,
+      sponsorAddress: saved.sponsor ?? ZeroAddress,
+    });
+  try {
+    localStorage.removeItem(PENDING_TX_KEY);
+  } catch {
+    /* ignore */
+  }
   return true;
 }
 
@@ -77,7 +100,9 @@ export async function retryPendingActivation(walletAddress: string): Promise<boo
 async function preparePayment() {
   if (REAL_PAYMENTS_LOCKED) throw new Error(REAL_PAYMENTS_LOCKED_MSG);
   if (!isPaymentConfigured()) {
-    throw new Error('Payment contract is not configured. Add VITE_PAYMENT_CONTRACT_ADDRESS and VITE_USDT_CONTRACT_ADDRESS.');
+    throw new Error(
+      'Payment contract is not configured. Add VITE_PAYMENT_CONTRACT_ADDRESS and VITE_USDT_CONTRACT_ADDRESS.',
+    );
   }
 
   const providerObject = getActiveProvider();
@@ -105,7 +130,11 @@ async function preparePayment() {
 }
 
 /** USDT approval for exactly one payment, if the current one is not enough. */
-async function approveOnePayment(token: Contract, walletAddress: string, contractAmount: bigint): Promise<void> {
+async function approveOnePayment(
+  token: Contract,
+  walletAddress: string,
+  contractAmount: bigint,
+): Promise<void> {
   const allowance = await token.allowance(walletAddress, PAYMENT_ADDRESS);
   if (allowance < contractAmount) {
     showToast('Approve the $300 in your wallet...');
@@ -121,13 +150,30 @@ export async function activateWallet(sponsorAddress = ZeroAddress): Promise<stri
   await approveOnePayment(token, walletAddress, contractAmount);
 
   showToast('Confirm activation payment in your wallet...');
-  const activation = await payment.activate(isAddress(sponsorAddress) ? sponsorAddress : ZeroAddress);
+  const activation = await payment.activate(
+    isAddress(sponsorAddress) ? sponsorAddress : ZeroAddress,
+  );
   await activation.wait();
 
   const sponsor = isAddress(sponsorAddress) ? sponsorAddress : ZeroAddress;
-  try { localStorage.setItem(PENDING_TX_KEY, JSON.stringify({ hash: activation.hash, wallet: walletAddress.toLowerCase(), sponsor })); } catch { /* ignore */ }
-  await verifyActivation({ walletAddress, transactionHash: activation.hash, sponsorAddress: sponsor });
-  try { localStorage.removeItem(PENDING_TX_KEY); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(
+      PENDING_TX_KEY,
+      JSON.stringify({ hash: activation.hash, wallet: walletAddress.toLowerCase(), sponsor }),
+    );
+  } catch {
+    /* ignore */
+  }
+  await verifyActivation({
+    walletAddress,
+    transactionHash: activation.hash,
+    sponsorAddress: sponsor,
+  });
+  try {
+    localStorage.removeItem(PENDING_TX_KEY);
+  } catch {
+    /* ignore */
+  }
   return activation.hash;
 }
 
@@ -139,13 +185,25 @@ export async function activateWallet(sponsorAddress = ZeroAddress): Promise<stri
  */
 export async function topUpWallet(): Promise<string> {
   const { walletAddress, token, payment, contractAmount } = await preparePayment();
-  if (!(await payment.isActivated(walletAddress))) throw new Error('Activate this wallet before a top-up.');
+  if (!(await payment.isActivated(walletAddress)))
+    throw new Error('Activate this wallet before a top-up.');
   await approveOnePayment(token, walletAddress, contractAmount);
   showToast('Confirm the $300 top-up in your wallet...');
   const topUp = await payment.topUp();
   await topUp.wait();
-  try { localStorage.setItem(PENDING_TX_KEY, JSON.stringify({ hash: topUp.hash, wallet: walletAddress.toLowerCase(), kind: 'topup' })); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(
+      PENDING_TX_KEY,
+      JSON.stringify({ hash: topUp.hash, wallet: walletAddress.toLowerCase(), kind: 'topup' }),
+    );
+  } catch {
+    /* ignore */
+  }
   await verifyTopUp({ walletAddress, transactionHash: topUp.hash });
-  try { localStorage.removeItem(PENDING_TX_KEY); } catch { /* ignore */ }
+  try {
+    localStorage.removeItem(PENDING_TX_KEY);
+  } catch {
+    /* ignore */
+  }
   return topUp.hash;
 }

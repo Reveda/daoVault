@@ -10,14 +10,22 @@ import { BSC_CHAIN_ID } from './core.ts';
 import { LITE } from './perf.ts';
 import { getRecentActivity, type ActivityItem } from './api.ts';
 
-const RPC = String(import.meta.env.VITE_BSC_RPC_URL || (BSC_CHAIN_ID === 97 ? 'https://data-seed-prebsc-1-s1.bnbchain.org:8545' : 'https://bsc-dataseed.binance.org/'));
+const RPC = String(
+  import.meta.env.VITE_BSC_RPC_URL ||
+    (BSC_CHAIN_ID === 97
+      ? 'https://data-seed-prebsc-1-s1.bnbchain.org:8545'
+      : 'https://bsc-dataseed.binance.org/'),
+);
 const SCAN = BSC_CHAIN_ID === 97 ? 'https://testnet.bscscan.com' : 'https://bscscan.com';
 
 const ICON: Record<ActivityItem['type'], string> = {
-  activation: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
-  topup: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
+  activation:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+  topup:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>',
   rank: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>',
-  withdrawal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
+  withdrawal:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>',
 };
 
 /**
@@ -27,14 +35,50 @@ const ICON: Record<ActivityItem['type'], string> = {
  */
 const minsAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString();
 const SAMPLE: ActivityItem[] = [
-  { type: 'activation', wallet: '0x8a14...3f4b', detail: 'Activated an ID', amountUsd: 300, at: minsAgo(2), txHash: null },
-  { type: 'rank', wallet: '0x4f82...91c2', detail: 'Reached Starter', amountUsd: 150, at: minsAgo(7), txHash: null },
-  { type: 'withdrawal', wallet: '0x1d39...e8a2', detail: 'Withdrew to wallet', amountUsd: 285, at: minsAgo(14), txHash: null },
-  { type: 'topup', wallet: '0x5a29...c018', detail: 'Topped up a package', amountUsd: 300, at: minsAgo(21), txHash: null },
-  { type: 'rank', wallet: '0x7c44...b29f', detail: 'Reached Builder', amountUsd: 300, at: minsAgo(35), txHash: null },
+  {
+    type: 'activation',
+    wallet: '0x8a14...3f4b',
+    detail: 'Activated an ID',
+    amountUsd: 300,
+    at: minsAgo(2),
+    txHash: null,
+  },
+  {
+    type: 'rank',
+    wallet: '0x4f82...91c2',
+    detail: 'Reached Starter',
+    amountUsd: 150,
+    at: minsAgo(7),
+    txHash: null,
+  },
+  {
+    type: 'withdrawal',
+    wallet: '0x1d39...e8a2',
+    detail: 'Withdrew to wallet',
+    amountUsd: 285,
+    at: minsAgo(14),
+    txHash: null,
+  },
+  {
+    type: 'topup',
+    wallet: '0x5a29...c018',
+    detail: 'Topped up a package',
+    amountUsd: 300,
+    at: minsAgo(21),
+    txHash: null,
+  },
+  {
+    type: 'rank',
+    wallet: '0x7c44...b29f',
+    detail: 'Reached Builder',
+    amountUsd: 300,
+    at: minsAgo(35),
+    txHash: null,
+  },
 ];
 
-const money = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+const money = (n: number) =>
+  `$${n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
 function ago(iso: string): string {
   const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
   if (s < 60) return 'just now';
@@ -45,7 +89,11 @@ function ago(iso: string): string {
 
 async function blockNumber(): Promise<number | null> {
   try {
-    const res = await fetch(RPC, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }) });
+    const res = await fetch(RPC, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_blockNumber', params: [] }),
+    });
     const json = await res.json();
     return typeof json.result === 'string' ? parseInt(json.result, 16) : null;
   } catch {
@@ -64,7 +112,13 @@ export function initLiveActivityStream(): void {
   // labelled SAMPLE only BEFORE launch: once payments are open (server says live) never again,
   // also on a later visit with the server asleep (remembered in this browser)
   const LIVE_KEY = 'dv_pulse_live';
-  let live = (() => { try { return localStorage.getItem(LIVE_KEY) === '1'; } catch { return false; } })();
+  let live = (() => {
+    try {
+      return localStorage.getItem(LIVE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  })();
   let sample = !live;
   const title = card.querySelector<HTMLElement>('.ex-pair');
   let index = 0;
@@ -75,7 +129,8 @@ export function initLiveActivityStream(): void {
     const list = sample ? SAMPLE : items;
     const item = list[index % list.length];
     card.classList.toggle('is-sample', sample);
-    if (title) title.innerHTML = `<i class="ex-dot lp-live"></i> ${sample ? 'SAMPLE PREVIEW' : 'LIVE ON-CHAIN'}`;
+    if (title)
+      title.innerHTML = `<i class="ex-dot lp-live"></i> ${sample ? 'SAMPLE PREVIEW' : 'LIVE ON-CHAIN'}`;
     const html = item
       ? `<a class="lp-item is-${item.type}" ${item.txHash ? `href="${SCAN}/tx/${item.txHash}" target="_blank" rel="noopener"` : ''}>
           <span class="lp-icon" aria-hidden="true">${ICON[item.type]}</span>
@@ -85,9 +140,15 @@ export function initLiveActivityStream(): void {
         </a>`
       : `<div class="lp-item is-empty"><span class="lp-icon" aria-hidden="true">${ICON.activation}</span>
           <span class="lp-text">Waiting for the first activation on-chain.</span></div>`;
-    if (!animate || LITE) { feed.innerHTML = html; return; }
+    if (!animate || LITE) {
+      feed.innerHTML = html;
+      return;
+    }
     feed.classList.add('is-out');
-    window.setTimeout(() => { feed.innerHTML = html; feed.classList.remove('is-out'); }, 260);
+    window.setTimeout(() => {
+      feed.innerHTML = html;
+      feed.classList.remove('is-out');
+    }, 260);
   };
 
   const loadEvents = async () => {
@@ -95,19 +156,44 @@ export function initLiveActivityStream(): void {
       const { items: next, live: isLive } = await getRecentActivity();
       const changed = JSON.stringify(next) !== JSON.stringify(items);
       items = next;
-      if (isLive && !live) { live = true; try { localStorage.setItem(LIVE_KEY, '1'); } catch { /* storage blocked */ } }
+      if (isLive && !live) {
+        live = true;
+        try {
+          localStorage.setItem(LIVE_KEY, '1');
+        } catch {
+          /* storage blocked */
+        }
+      }
       const wasSample = sample;
       sample = items.length === 0 && !live; // after launch: real events or the honest "waiting" line
-      if (count) count.textContent = sample ? 'Live data at launch' : items.length ? `${items.length} recent` : 'Waiting for the first activation';
-      if (changed || wasSample !== sample) { index = 0; render(false); }
+      if (count)
+        count.textContent = sample
+          ? 'Live data at launch'
+          : items.length
+            ? `${items.length} recent`
+            : 'Waiting for the first activation';
+      if (changed || wasSample !== sample) {
+        index = 0;
+        render(false);
+      }
     } catch {
       // server asleep: before launch the labelled sample, after launch the honest empty line
-      if (!items.length) { sample = !live; if (count) count.textContent = live ? 'Waiting for the first activation' : 'Live data at launch'; render(false); }
+      if (!items.length) {
+        sample = !live;
+        if (count)
+          count.textContent = live ? 'Waiting for the first activation' : 'Live data at launch';
+        render(false);
+      }
     }
   };
   const loadBlock = async () => {
     const n = await blockNumber();
-    if (block && n) { block.textContent = `#${n.toLocaleString('en-US')}`; block.classList.remove('is-tick'); void block.offsetWidth; block.classList.add('is-tick'); }
+    if (block && n) {
+      block.textContent = `#${n.toLocaleString('en-US')}`;
+      block.classList.remove('is-tick');
+      void block.offsetWidth;
+      block.classList.add('is-tick');
+    }
   };
 
   const start = () => {
@@ -115,18 +201,31 @@ export function initLiveActivityStream(): void {
     void loadEvents();
     void loadBlock();
     timers = [
-      window.setInterval(() => { const n = sample ? SAMPLE.length : items.length; if (n > 1) { index = (index + 1) % n; render(true); } }, 4500),
+      window.setInterval(() => {
+        const n = sample ? SAMPLE.length : items.length;
+        if (n > 1) {
+          index = (index + 1) % n;
+          render(true);
+        }
+      }, 4500),
       window.setInterval(loadBlock, 3500), // BSC makes a block about every 3 s
       window.setInterval(loadEvents, 30_000),
     ];
   };
-  const stop = () => { timers.forEach((t) => window.clearInterval(t)); timers = []; };
+  const stop = () => {
+    timers.forEach((t) => window.clearInterval(t));
+    timers = [];
+  };
 
   render(false);
-  if (!('IntersectionObserver' in window)) { start(); return; }
+  if (!('IntersectionObserver' in window)) {
+    start();
+    return;
+  }
   new IntersectionObserver(([entry]) => {
     if (entry.isIntersecting === visible) return;
     visible = entry.isIntersecting;
-    if (visible) start(); else stop();
+    if (visible) start();
+    else stop();
   }).observe(card);
 }

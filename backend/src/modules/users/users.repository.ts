@@ -7,7 +7,10 @@ export const usersRepository = {
   },
 
   findWithPackageCount(walletAddress: string) {
-    return prisma.user.findUnique({ where: { walletAddress }, include: { _count: { select: { packages: true } } } });
+    return prisma.user.findUnique({
+      where: { walletAddress },
+      include: { _count: { select: { packages: true } } },
+    });
   },
 
   findPublicByWallet(walletAddress: string) {
@@ -31,6 +34,10 @@ export const usersRepository = {
       select: { walletAddress: true, referralCode: true, _count: { select: { packages: true } } },
     });
     if (!user) return null;
-    return { walletAddress: user.walletAddress, referralCode: user.referralCode, activated: user._count.packages > 0 || user.walletAddress === rootWallet() };
+    return {
+      walletAddress: user.walletAddress,
+      referralCode: user.referralCode,
+      activated: user._count.packages > 0 || user.walletAddress === rootWallet(),
+    };
   },
 };

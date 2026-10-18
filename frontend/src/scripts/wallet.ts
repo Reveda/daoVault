@@ -11,9 +11,20 @@ import { BrowserProvider, type JsonRpcSigner } from 'ethers';
 export const BSC_PARAMS = {
   chainId: BSC_CHAIN_HEX,
   chainName: BSC_CHAIN_ID === 97 ? 'BNB Smart Chain Testnet' : 'BNB Smart Chain Mainnet',
-  nativeCurrency: { name: BSC_CHAIN_ID === 97 ? 'tBNB' : 'BNB', symbol: BSC_CHAIN_ID === 97 ? 'tBNB' : 'BNB', decimals: 18 },
-  rpcUrls: [import.meta.env.VITE_BSC_RPC_URL || (BSC_CHAIN_ID === 97 ? 'https://data-seed-prebsc-1-s1.bnbchain.org:8545' : 'https://bsc-dataseed.binance.org/')],
-  blockExplorerUrls: [BSC_CHAIN_ID === 97 ? 'https://testnet.bscscan.com/' : 'https://bscscan.com/'],
+  nativeCurrency: {
+    name: BSC_CHAIN_ID === 97 ? 'tBNB' : 'BNB',
+    symbol: BSC_CHAIN_ID === 97 ? 'tBNB' : 'BNB',
+    decimals: 18,
+  },
+  rpcUrls: [
+    import.meta.env.VITE_BSC_RPC_URL ||
+      (BSC_CHAIN_ID === 97
+        ? 'https://data-seed-prebsc-1-s1.bnbchain.org:8545'
+        : 'https://bsc-dataseed.binance.org/'),
+  ],
+  blockExplorerUrls: [
+    BSC_CHAIN_ID === 97 ? 'https://testnet.bscscan.com/' : 'https://bscscan.com/',
+  ],
 };
 
 // Wallet discovery map (EIP-6963)
@@ -111,15 +122,21 @@ export async function waitForWallet(ms = 3000): Promise<boolean> {
 
 /** True once this tab was opened inside a wallet app by our Connect link (dv_connect). */
 export function isInWalletApp(): boolean {
-  try { return sessionStorage.getItem('dv_in_wallet_app') === '1'; } catch { return false; }
+  try {
+    return sessionStorage.getItem('dv_in_wallet_app') === '1';
+  } catch {
+    return false;
+  }
 }
 
 /**
  * Check if user is on mobile
  */
 export function isMobileDevice(): boolean {
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  return (
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '') ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
 }
 
 let pendingConnect: Promise<string> | null = null;
@@ -131,7 +148,9 @@ export function connectWithProvider(provider: any, walletName: string = 'Wallet'
   // A second tap while the wallet prompt is open would make the wallet reject it
   // ("request already pending", -32002): share the running attempt instead.
   if (!pendingConnect) {
-    pendingConnect = doConnect(provider, walletName).finally(() => { pendingConnect = null; });
+    pendingConnect = doConnect(provider, walletName).finally(() => {
+      pendingConnect = null;
+    });
   }
   return pendingConnect;
 }
@@ -161,7 +180,9 @@ async function doConnect(provider: any, walletName: string): Promise<string> {
     wireProviderEvents(provider);
 
     showToast(`Connected: ${formatAddress(account)}`);
-    window.dispatchEvent(new CustomEvent('daovault:accountConnected', { detail: { account, walletName } }));
+    window.dispatchEvent(
+      new CustomEvent('daovault:accountConnected', { detail: { account, walletName } }),
+    );
 
     return account;
   } catch (err: any) {
@@ -202,7 +223,10 @@ export async function ensureBSCNetwork(provider: any): Promise<void> {
     }
   } catch (err) {
     console.warn('[DAOvault] Network switch warning:', err);
-    showToast(`Please switch your wallet to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BSC Mainnet'}.`, true);
+    showToast(
+      `Please switch your wallet to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BSC Mainnet'}.`,
+      true,
+    );
   }
 }
 
@@ -215,7 +239,9 @@ export async function requireBSCNetwork(provider: any): Promise<void> {
   await ensureBSCNetwork(provider);
   const chainId = parseInt(await provider.request({ method: 'eth_chainId' }), 16);
   if (chainId !== BSC_CHAIN_ID) {
-    throw new Error(`Switch your wallet to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BNB Smart Chain'} and try again.`);
+    throw new Error(
+      `Switch your wallet to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BNB Smart Chain'} and try again.`,
+    );
   }
 }
 
@@ -256,7 +282,9 @@ function wireProviderEvents(provider: any): void {
       currentAccount = accounts[0].toLowerCase();
       localStorage.setItem('daovault_connected_account', currentAccount);
       showToast(`Account changed: ${formatAddress(currentAccount)}`);
-      window.dispatchEvent(new CustomEvent('daovault:accountChanged', { detail: { account: currentAccount } }));
+      window.dispatchEvent(
+        new CustomEvent('daovault:accountChanged', { detail: { account: currentAccount } }),
+      );
     }
   });
 
@@ -266,7 +294,10 @@ function wireProviderEvents(provider: any): void {
     const chainId = parseInt(chainHex, 16);
     window.dispatchEvent(new CustomEvent('daovault:chainChanged', { detail: { chainId } }));
     if (currentAccount && chainId !== BSC_CHAIN_ID) {
-      showToast(`Switch your wallet back to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BNB Smart Chain'} to use DAOVAULT.`, true);
+      showToast(
+        `Switch your wallet back to ${BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BNB Smart Chain'} to use DAOVAULT.`,
+        true,
+      );
     }
   });
 }
@@ -293,7 +324,9 @@ async function askNetworkOnce(provider: any): Promise<void> {
     if (parseInt(await provider.request({ method: 'eth_chainId' }), 16) === BSC_CHAIN_ID) return;
     if (sessionStorage.getItem('dv_net_asked')) return;
     sessionStorage.setItem('dv_net_asked', '1');
-  } catch { /* storage blocked or no chain id: still try once */ }
+  } catch {
+    /* storage blocked or no chain id: still try once */
+  }
   await ensureBSCNetwork(provider);
 }
 
@@ -311,7 +344,9 @@ export async function autoReconnect(): Promise<string | null> {
 
   // Try the wallet the member connected with first, then every other installed wallet.
   const savedName = localStorage.getItem('daovault_connected_wallet');
-  const installed = getInstalledWallets().sort((a, b) => Number(b.name === savedName) - Number(a.name === savedName));
+  const installed = getInstalledWallets().sort(
+    (a, b) => Number(b.name === savedName) - Number(a.name === savedName),
+  );
   for (const wallet of installed) {
     try {
       const accounts: string[] = await wallet.provider.request({ method: 'eth_accounts' });
@@ -334,7 +369,9 @@ export async function autoReconnect(): Promise<string | null> {
   // (which, with Connect redirecting back here, made the page reload in a loop).
   if (isMobileDevice() && installed.length) {
     try {
-      const accounts: string[] = await installed[0].provider.request({ method: 'eth_requestAccounts' });
+      const accounts: string[] = await installed[0].provider.request({
+        method: 'eth_requestAccounts',
+      });
       if (accounts?.length) {
         activeProvider = installed[0].provider;
         currentAccount = accounts[0].toLowerCase();

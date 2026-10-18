@@ -21,17 +21,21 @@ export const app = express();
 app.disable("x-powered-by");
 app.set("trust proxy", env.TRUST_PROXY);
 app.use(helmet());
-const configuredOrigins = env.FRONTEND_URL.split(",").map((origin) => origin.trim()).filter(Boolean);
+const configuredOrigins = env.FRONTEND_URL.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 const allowedOrigins = new Set(configuredOrigins);
-app.use(cors({
-  origin: (origin, callback) => {
-    // Local development may use Vite dev/preview ports or localhost aliases.
-    // Production remains restricted to FRONTEND_URL below.
-    if (env.NODE_ENV === "development") return callback(null, true);
-    if (!origin || allowedOrigins.has(origin)) return callback(null, true);
-    return callback(new Error("Origin is not allowed by CORS"));
-  },
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Local development may use Vite dev/preview ports or localhost aliases.
+      // Production remains restricted to FRONTEND_URL below.
+      if (env.NODE_ENV === "development") return callback(null, true);
+      if (!origin || allowedOrigins.has(origin)) return callback(null, true);
+      return callback(new Error("Origin is not allowed by CORS"));
+    },
+  }),
+);
 app.use(compression());
 app.use(requestId);
 app.use(express.json({ limit: "1mb" }));

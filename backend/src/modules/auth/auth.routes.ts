@@ -15,7 +15,12 @@ const address = z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address"
  */
 const REFRESH_COOKIE = "dv_rt";
 const COOKIE_PATH = `${env.API_PREFIX}/auth`;
-const cookieOptions = { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "strict" as const, path: COOKIE_PATH };
+const cookieOptions = {
+  httpOnly: true,
+  secure: env.NODE_ENV === "production",
+  sameSite: "strict" as const,
+  path: COOKIE_PATH,
+};
 
 /**
  * Admin page gate cookie (authService.issueAdminGate): whole site path, because the browser must
@@ -23,10 +28,18 @@ const cookieOptions = { httpOnly: true, secure: env.NODE_ENV === "production", s
  * gets the page (it opens no data by itself).
  */
 const ADMIN_GATE_COOKIE = "dv_ag";
-const gateOptions = { httpOnly: true, secure: env.NODE_ENV === "production", sameSite: "lax" as const, path: "/" };
+const gateOptions = {
+  httpOnly: true,
+  secure: env.NODE_ENV === "production",
+  sameSite: "lax" as const,
+  path: "/",
+};
 
 function readCookie(req: Request, name: string): string | undefined {
-  const part = (req.headers.cookie ?? "").split(";").map((c) => c.trim()).find((c) => c.startsWith(`${name}=`));
+  const part = (req.headers.cookie ?? "")
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${name}=`));
   if (!part) return undefined;
   try {
     return decodeURIComponent(part.slice(name.length + 1));
@@ -38,7 +51,8 @@ function readCookie(req: Request, name: string): string | undefined {
 const readRefreshCookie = (req: Request) => readCookie(req, REFRESH_COOKIE);
 
 async function sendSession(res: Response, access: AccessSession, refresh: RefreshCookie | null) {
-  if (refresh) res.cookie(REFRESH_COOKIE, refresh.value, { ...cookieOptions, expires: refresh.expiresAt });
+  if (refresh)
+    res.cookie(REFRESH_COOKIE, refresh.value, { ...cookieOptions, expires: refresh.expiresAt });
   const gate = await authService.issueAdminGate(access.walletAddress);
   if (gate) res.cookie(ADMIN_GATE_COOKIE, gate.value, { ...gateOptions, expires: gate.expiresAt });
   else res.clearCookie(ADMIN_GATE_COOKIE, gateOptions);
@@ -48,21 +62,46 @@ async function sendSession(res: Response, access: AccessSession, refresh: Refres
 export const authRouter = Router();
 
 // 1. get the message to sign
-authRouter.post("/challenge", authRateLimiter, authWalletRateLimiter, validateRequest({ body: z.object({ walletAddress: address }) }), async (req, res, next) => {
-  try {
-    res.json({ success: true, data: await authService.createChallenge(req.body.walletAddress, req.get("origin")) });
-  } catch (error) { next(error); }
-});
+authRouter.post(
+  "/challenge",
+  authRateLimiter,
+  authWalletRateLimiter,
+  validateRequest({ body: z.object({ walletAddress: address }) }),
+  async (req, res, next) => {
+    try {
+      res.json({
+        success: true,
+        data: await authService.createChallenge(req.body.walletAddress, req.get("origin")),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 // 2. send the signature back: access token in the body, refresh token as an httpOnly cookie
-authRouter.post("/verify", authRateLimiter, authWalletRateLimiter, validateRequest({
-  body: z.object({ walletAddress: address, signature: z.string().regex(/^0x[a-fA-F0-9]{130}$/, "Invalid signature") }),
-}), async (req, res, next) => {
-  try {
-    const { access, refresh } = await authService.verifySignature(req.body.walletAddress, req.body.signature);
-    await sendSession(res, access, refresh);
-  } catch (error) { next(error); }
-});
+authRouter.post(
+  "/verify",
+  authRateLimiter,
+  authWalletRateLimiter,
+  validateRequest({
+    body: z.object({
+      walletAddress: address,
+      signature: z.string().regex(/^0x[a-fA-F0-9]{130}$/, "Invalid signature"),
+    }),
+  }),
+  async (req, res, next) => {
+    try {
+      const { access, refresh } = await authService.verifySignature(
+        req.body.walletAddress,
+        req.body.signature,
+      );
+      await sendSession(res, access, refresh);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 // 3. new access token from the refresh cookie (rotated on every use)
 authRouter.post("/refresh", authRateLimiter, async (req, res, next) => {
@@ -86,7 +125,9 @@ authRouter.post("/logout", authRateLimiter, async (req, res, next) => {
     res.clearCookie(REFRESH_COOKIE, cookieOptions);
     res.clearCookie(ADMIN_GATE_COOKIE, gateOptions);
     res.json({ success: true, data: { loggedOut: true } });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 });
 
 authRouter.get("/me", requireAuth, (req, res) => {
@@ -95,5 +136,7 @@ authRouter.get("/me", requireAuth, (req, res) => {
 
 // Nginx (auth_request) asks this before serving admin.html / the admin script: 204 = admin, 401 = 404 page
 authRouter.get("/admin-gate", async (req, res) => {
-  res.status((await authService.checkAdminGate(readCookie(req, ADMIN_GATE_COOKIE))) ? 204 : 401).end();
+  res
+    .status((await authService.checkAdminGate(readCookie(req, ADMIN_GATE_COOKIE))) ? 204 : 401)
+    .end();
 });

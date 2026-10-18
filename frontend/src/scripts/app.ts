@@ -51,8 +51,16 @@ import { initMatrixVisualizer } from './matrixVisualizer.ts';
 
 // start waking the backend right away (Render free plan sleeps it); the dashboard needs it next
 wakeBackend();
-import { initAnchorScroll, initScrollSpy, initNavIndicator, initJoinSteps, initDropCards, initSignalCardFlips, initFaqAccordion, initMobileNav } from './landingFx.ts';
-
+import {
+  initAnchorScroll,
+  initScrollSpy,
+  initNavIndicator,
+  initJoinSteps,
+  initDropCards,
+  initSignalCardFlips,
+  initFaqAccordion,
+  initMobileNav,
+} from './landingFx.ts';
 
 document.addEventListener('DOMContentLoaded', async () => {
   initDvLogos(); // animated DAOVAULT logo: preloader, header, footer
@@ -74,20 +82,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   // pre-launch notice on every visit until the launch moment (owner, 2026-10-11): short and
   // simple; the date follows VITE_LAUNCH_DATE (shown in India time, e.g. "22 October")
   if (Date.now() < launchDate().getTime()) {
-    const day = launchDate().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', timeZone: 'Asia/Kolkata' });
-    showLaunchNotice('landing', `We go live on ${day}`,
+    const day = launchDate().toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      timeZone: 'Asia/Kolkata',
+    });
+    showLaunchNotice(
+      'landing',
+      `We go live on ${day}`,
       'Until then, explore DAOVAULT: see how the 20 levels and 11 rank rewards work, and get ready to build your community.',
-      { everyVisit: true, kicker: null, button: 'Explore DAOVAULT' });
+      { everyVisit: true, kicker: null, button: 'Explore DAOVAULT' },
+    );
   }
 
   // after the splash: the heavy setup as separate small tasks (one long task made Chrome
   // report "'setTimeout' handler took 108ms" and held the main thread)
-  bootPreloader(() => runInSteps([
-    initScrollReveal, // fallback IntersectionObserver for [data-reveal] without GSAP
-    initCircuitSpine,
-    initTrophyBoom,
-    initScrollAnimations, // GSAP ScrollTrigger — cinematic per-section scroll animations
-  ]));
+  bootPreloader(() =>
+    runInSteps([
+      initScrollReveal, // fallback IntersectionObserver for [data-reveal] without GSAP
+      initCircuitSpine,
+      initTrophyBoom,
+      initScrollAnimations, // GSAP ScrollTrigger — cinematic per-section scroll animations
+    ]),
+  );
 
   const header = document.querySelector('.top-header');
   window.addEventListener('scroll', () => {
@@ -133,7 +150,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     bounced = sessionStorage.getItem('dv_dash_bounce') === '1';
     sessionStorage.removeItem('dv_dash_bounce');
-  } catch { /* storage blocked */ }
+  } catch {
+    /* storage blocked */
+  }
   const existing = await autoReconnect();
   if (existing) {
     updateConnectButtonUI(existing);
@@ -145,10 +164,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 function recordAutoRedirect(): boolean {
   try {
     const now = Date.now();
-    const recent = (JSON.parse(sessionStorage.getItem('dv_auto_redirects') || '[]') as number[]).filter((t) => now - t < 20_000);
+    const recent = (
+      JSON.parse(sessionStorage.getItem('dv_auto_redirects') || '[]') as number[]
+    ).filter((t) => now - t < 20_000);
     if (recent.length >= 2) return false;
     sessionStorage.setItem('dv_auto_redirects', JSON.stringify([...recent, now]));
-  } catch { /* storage blocked: the dv_dash_bounce guard still applies */ }
+  } catch {
+    /* storage blocked: the dv_dash_bounce guard still applies */
+  }
   return true;
 }
 
@@ -175,7 +198,7 @@ function initHeroMetricsSection(): void {
         observer.disconnect();
       }
     },
-    { threshold: 0.18 }
+    { threshold: 0.18 },
   );
   observer.observe(section);
 }
@@ -190,8 +213,8 @@ function initHeroMetricsInteraction(): void {
       const rect = card.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const y = event.clientY - rect.top;
-      const rotateY = ((x / rect.width) - 0.5) * 8;
-      const rotateX = ((y / rect.height) - 0.5) * -8;
+      const rotateY = (x / rect.width - 0.5) * 8;
+      const rotateX = (y / rect.height - 0.5) * -8;
 
       card.style.setProperty('--card-pointer-x', `${x}px`);
       card.style.setProperty('--card-pointer-y', `${y}px`);
@@ -219,7 +242,9 @@ function initCardTilt(): void {
   // mouse only: on touch screens a tap sends one emulated mousemove and no mouseleave, so
   // the card tilted toward the finger and stayed tilted (the "ugly press effect")
   if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
-  const cards = document.querySelectorAll('.glass:not(.flip-card-front):not(.flip-card-back):not(.matrix-card):not(.wallet-dialog-box)');
+  const cards = document.querySelectorAll(
+    '.glass:not(.flip-card-front):not(.flip-card-back):not(.matrix-card):not(.wallet-dialog-box)',
+  );
   cards.forEach((card) => {
     const el = card as HTMLElement;
     el.addEventListener('mousemove', (e: MouseEvent) => {
@@ -267,7 +292,9 @@ function initFlipCards(): void {
   // only a mouse hovers (same test as the CSS hover-flip); every touch screen flips on tap,
   // including phones that report (hover: hover)
   if (!matchMedia('(hover: hover) and (pointer: fine)').matches) {
-    document.querySelectorAll<HTMLElement>('#about .flip-hint span').forEach((el) => { el.textContent = 'Tap to flip card'; });
+    document.querySelectorAll<HTMLElement>('#about .flip-hint span').forEach((el) => {
+      el.textContent = 'Tap to flip card';
+    });
   }
   // Touch screens: 3D only while turning. At rest the card was still drawn through a
   // preserve-3d context (and the back face as 180deg + 180deg), which phones rasterise at
@@ -300,7 +327,13 @@ function initFlipCards(): void {
 
 /** Big numbers in short form so they fit the cards: 1.5M, 3B, 10T, 10Qa, 100Qi (below a million: 12,345). */
 function shortNumber(n: number): string {
-  const units: Array<[number, string]> = [[1e18, 'Qi'], [1e15, 'Qa'], [1e12, 'T'], [1e9, 'B'], [1e6, 'M']];
+  const units: Array<[number, string]> = [
+    [1e18, 'Qi'],
+    [1e15, 'Qa'],
+    [1e12, 'T'],
+    [1e9, 'B'],
+    [1e6, 'M'],
+  ];
   const unit = units.find(([size]) => n >= size);
   if (!unit) return n.toLocaleString();
   return `${(n / unit[0]).toLocaleString('en-US', { maximumFractionDigits: 2 })}${unit[1]}`;
@@ -381,7 +414,8 @@ function initMatrixCalculator(): void {
     if (smoothPillScroll && activeButton) {
       // Scroll only the horizontal pill rail. scrollIntoView() was also
       // moving the whole page back to the matrix section during autoplay.
-      const targetLeft = activeButton.offsetLeft - (pillsWrap.clientWidth / 2) + (activeButton.offsetWidth / 2);
+      const targetLeft =
+        activeButton.offsetLeft - pillsWrap.clientWidth / 2 + activeButton.offsetWidth / 2;
       pillsWrap.scrollTo({
         left: Math.max(0, targetLeft),
         behavior: 'smooth',
@@ -404,7 +438,7 @@ function initMatrixCalculator(): void {
     pillsWrap.appendChild(btn);
   });
 
-  const updateCalcResult = (cfg: typeof levelConfigs[0]) => {
+  const updateCalcResult = (cfg: (typeof levelConfigs)[0]) => {
     const pctEl = document.getElementById('calcPct');
     const dollarEl = document.getElementById('calcDollar');
     const reqEl = document.getElementById('calcReq');
@@ -434,11 +468,16 @@ function initMatrixCalculator(): void {
   // screens tall, so an 18% threshold on it was never reached and the dial never moved.
   const matrixSection = calcBox ?? document.getElementById('matrix');
   if (matrixSection && 'IntersectionObserver' in window) {
-    const observer = new IntersectionObserver(([entry]) => {
-      // every visit starts again from L1 and ticks round like a clock
-      if (entry.isIntersecting) { selectLevel(0); startAutoLevels(); }
-      else stopAutoLevels();
-    }, { threshold: 0.2 });
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        // every visit starts again from L1 and ticks round like a clock
+        if (entry.isIntersecting) {
+          selectLevel(0);
+          startAutoLevels();
+        } else stopAutoLevels();
+      },
+      { threshold: 0.2 },
+    );
     observer.observe(matrixSection);
   } else {
     startAutoLevels();
@@ -453,15 +492,14 @@ function initMatrixCalculator(): void {
   });
 }
 
-
-
 /**
  * Launch date the hero countdown runs to: one fixed moment, the same for every visitor.
  * (It used to be "now + 14 days" on every page load, so it never actually counted down.)
  * Override without a code change with VITE_LAUNCH_DATE (ISO 8601, e.g. 2026-10-22T00:00:00+05:30).
  */
 const LAUNCH_DATE = new Date(import.meta.env.VITE_LAUNCH_DATE || '2026-10-22T00:00:00+05:30');
-const launchDate = () => (Number.isNaN(LAUNCH_DATE.getTime()) ? new Date('2026-10-22T00:00:00+05:30') : LAUNCH_DATE);
+const launchDate = () =>
+  Number.isNaN(LAUNCH_DATE.getTime()) ? new Date('2026-10-22T00:00:00+05:30') : LAUNCH_DATE;
 
 function initCountdown(): void {
   const targetDate = launchDate();
@@ -478,7 +516,10 @@ function initCountdown(): void {
     el.textContent = value;
     if (document.hidden || !el.animate) return;
     el.animate(
-      [{ opacity: 0, transform: 'translateY(-55%)' }, { opacity: 1, transform: 'none' }],
+      [
+        { opacity: 0, transform: 'translateY(-55%)' },
+        { opacity: 1, transform: 'none' },
+      ],
       { duration: 500, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
     );
   };
@@ -539,7 +580,11 @@ function initWalletPicker(): void {
   modal.addEventListener('click', (e: MouseEvent) => {
     const target = e.target as HTMLElement;
     // Only close if clicking outside the dialog box and floating cards
-    if (target === modal || target.classList.contains('wallet-3d-canvas') || target.classList.contains('wallet-stage-wrap')) {
+    if (
+      target === modal ||
+      target.classList.contains('wallet-3d-canvas') ||
+      target.classList.contains('wallet-stage-wrap')
+    ) {
       hideModal();
     }
   });
@@ -589,9 +634,10 @@ function renderWalletList(): void {
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="#F0B90B"><path d="M12 2.5l3.2 3.2-3.2 3.2-3.2-3.2L12 2.5zm6.8 6.8l3.2 3.2-3.2 3.2-3.2-3.2 3.2-3.2zm-13.6 0l3.2 3.2-3.2 3.2-3.2-3.2 3.2-3.2zM12 9.5l3.2 3.2-3.2 3.2-3.2-3.2L12 9.5zm0 7l3.2 3.2-3.2 3.2-3.2-3.2L12 16.5z"/></svg>`,
       // official format from @binance/w3w-utils getDeeplink(): opens the app's dapp browser
       appLink: (url) => {
-        const bnc = `bnc://app.binance.com/mp/app?appId=yFK5FCqYprrXDiVFbhyRx7`
-          + `&startPagePath=${btoa('/pages/browser/index')}`
-          + `&startPageQuery=${btoa(`url=${url}&defaultChainId=${BSC_CHAIN_ID}`)}`;
+        const bnc =
+          `bnc://app.binance.com/mp/app?appId=yFK5FCqYprrXDiVFbhyRx7` +
+          `&startPagePath=${btoa('/pages/browser/index')}` +
+          `&startPageQuery=${btoa(`url=${url}&defaultChainId=${BSC_CHAIN_ID}`)}`;
         return `https://app.binance.com/en/download?_dp=${btoa(bnc)}`;
       },
       webLink: 'https://www.binance.com/en/web3wallet',
@@ -601,7 +647,8 @@ function renderWalletList(): void {
       id: 'trust',
       name: 'Trust Wallet',
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2.5L4 6.5v5.5c0 5.5 3.5 10.5 8 12 4.5-1.5 8-6.5 8-12V6.5l-8-4z" fill="#0500FF"/><path d="M12 5l5 2.5v4.5c0 3.8-2.2 7.2-5 8.5-2.8-1.3-5-4.7-5-8.5V7.5L12 5z" fill="#0057FF"/></svg>`,
-      appLink: (url) => `https://link.trustwallet.com/open_url?coin_id=20000714&url=${encodeURIComponent(url)}`,
+      appLink: (url) =>
+        `https://link.trustwallet.com/open_url?coin_id=20000714&url=${encodeURIComponent(url)}`,
       webLink: 'https://trustwallet.com/',
       store: { android: 'com.wallet.crypto.trustapp', ios: '1288339409' },
     },
@@ -644,7 +691,7 @@ function renderWalletList(): void {
         <strong>${opt.name}</strong>
       </div>
       <div class="wallet-opt-right">
-        <span class="wallet-badge ${inj ? 'installed' : ''}">${inj ? 'Detected' : (mobile ? 'Open App' : 'Ready')}</span>
+        <span class="wallet-badge ${inj ? 'installed' : ''}">${inj ? 'Detected' : mobile ? 'Open App' : 'Ready'}</span>
         <span class="wallet-opt-arrow">&rarr;</span>
       </div>
     `;
@@ -664,7 +711,12 @@ function renderWalletList(): void {
           showToast('Wallet not ready yet. Please wait a moment and tap again.', true);
         } else if (inj) {
           await connectWithProvider(inj.provider, opt.name);
-        } else if (!mobile && window.ethereum && installed.length === 1 && installed[0].name === 'Browser Wallet') {
+        } else if (
+          !mobile &&
+          window.ethereum &&
+          installed.length === 1 &&
+          installed[0].name === 'Browser Wallet'
+        ) {
           // a single unbranded extension: use it rather than refusing
           await connectWithProvider(window.ethereum, opt.name);
         } else if (mobile && opt.appLink) {
@@ -674,7 +726,11 @@ function renderWalletList(): void {
           openWalletApp(opt, withConnectFlag(window.location.href));
         } else if (mobile) {
           // no app link (SafePal): copy the link for the wallet app's own browser
-          try { await navigator.clipboard.writeText(withConnectFlag(window.location.href)); } catch { /* clipboard blocked */ }
+          try {
+            await navigator.clipboard.writeText(withConnectFlag(window.location.href));
+          } catch {
+            /* clipboard blocked */
+          }
           const download = await confirmNotice({
             kicker: 'Link copied',
             title: `Open ${opt.name}`,
@@ -726,10 +782,17 @@ function renderWalletList(): void {
     }
     // with the referral and the auto-connect flag, so pasting it in the wallet app just works
     const link = withConnectFlag(window.location.href);
-    try { await navigator.clipboard.writeText(link); } catch { /* clipboard blocked */ }
-    showToast(mobile
-      ? 'Link copied. Open your wallet app, go to its Browser / DApps tab and paste the link.'
-      : 'No wallet extension found. Install MetaMask, Trust Wallet or another EVM wallet.', true);
+    try {
+      await navigator.clipboard.writeText(link);
+    } catch {
+      /* clipboard blocked */
+    }
+    showToast(
+      mobile
+        ? 'Link copied. Open your wallet app, go to its Browser / DApps tab and paste the link.'
+        : 'No wallet extension found. Install MetaMask, Trust Wallet or another EVM wallet.',
+      true,
+    );
   });
   listEl.appendChild(wcBtn);
 }
@@ -757,7 +820,11 @@ async function autoConnectFromWalletApp(): Promise<void> {
   url.searchParams.delete('dv_connect');
   history.replaceState(null, '', url.toString());
   // remembered for this tab: from here on Connect never fires the app link again
-  try { sessionStorage.setItem('dv_in_wallet_app', '1'); } catch { /* storage blocked */ }
+  try {
+    sessionStorage.setItem('dv_in_wallet_app', '1');
+  } catch {
+    /* storage blocked */
+  }
   if (getCurrentAccount()) return; // the normal autoReconnect picks the session up
   // in-app browsers inject their wallet a moment after load
   if (!(await waitForWallet(4000))) return;
@@ -774,10 +841,15 @@ function openWalletApp(wallet: WalletOption, currentUrl: string): void {
 
   showToast(`Opening ${wallet.name} app...`);
   let pageLeft = false;
-  const markPageLeft = () => { pageLeft = true; };
+  const markPageLeft = () => {
+    pageLeft = true;
+  };
   window.addEventListener('pagehide', markPageLeft, { once: true });
   const onVisibility = () => {
-    if (document.visibilityState === 'hidden') { pageLeft = true; document.removeEventListener('visibilitychange', onVisibility); }
+    if (document.visibilityState === 'hidden') {
+      pageLeft = true;
+      document.removeEventListener('visibilitychange', onVisibility);
+    }
   };
   document.addEventListener('visibilitychange', onVisibility);
 
@@ -797,19 +869,26 @@ function openWalletApp(wallet: WalletOption, currentUrl: string): void {
       message: `If ${wallet.name} is not installed on this phone, download it, then come back and tap Connect again.`,
       confirm: `Download ${wallet.name}`,
       cancel: 'Close',
-    }).then((download) => { if (download) openStore(wallet); });
+    }).then((download) => {
+      if (download) openStore(wallet);
+    });
   }, 4000);
 }
 
 const PLAY_STORE = 'https://play.google.com/store/apps/details?id=';
 const isAndroid = () => /Android/i.test(navigator.userAgent);
-const isIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isIOS = () =>
+  /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
 /** the wallet's official store page for this phone (Play Store / App Store), else its download site */
 function openStore(wallet: WalletOption): void {
-  const link = wallet.store && isAndroid() ? PLAY_STORE + wallet.store.android
-    : wallet.store && isIOS() ? `https://apps.apple.com/app/id${wallet.store.ios}`
-      : wallet.webLink;
+  const link =
+    wallet.store && isAndroid()
+      ? PLAY_STORE + wallet.store.android
+      : wallet.store && isIOS()
+        ? `https://apps.apple.com/app/id${wallet.store.ios}`
+        : wallet.webLink;
   if (link) window.location.href = link;
 }
 
@@ -834,10 +913,14 @@ function checkInviteCode(): void {
   const ref = new URLSearchParams(window.location.search).get('ref')?.trim().toUpperCase() ?? '';
   if (/^DV[A-F0-9]{6,14}$/.test(ref)) {
     getSponsorByCode(ref).then(
-      () => window.setTimeout(() => showToast(`Invited by ${ref}. Connect your wallet to join.`), 3200),
+      () =>
+        window.setTimeout(() => showToast(`Invited by ${ref}. Connect your wallet to join.`), 3200),
       (error) => {
         if (error instanceof ApiError && error.status === 404) {
-          window.setTimeout(() => showToast(`Invite code ${ref} was not found. Check your invite link.`, true), 3200);
+          window.setTimeout(
+            () => showToast(`Invite code ${ref} was not found. Check your invite link.`, true),
+            3200,
+          );
         }
       },
     );
@@ -855,7 +938,9 @@ const joinChecks = new Map<string, boolean>();
 function showJoiningUnder(): void {
   const el = document.getElementById('walletJoinUnder');
   if (!el) return;
-  const raw = (getPendingReferral() || new URLSearchParams(window.location.search).get('ref') || '').trim().toUpperCase();
+  const raw = (getPendingReferral() || new URLSearchParams(window.location.search).get('ref') || '')
+    .trim()
+    .toUpperCase();
   const code = /^DV[A-F0-9]{6,14}$/.test(raw) ? raw : '';
   const paint = (active: boolean) => {
     el.classList.toggle('is-inactive', !active);
@@ -865,13 +950,24 @@ function showJoiningUnder(): void {
     el.appendChild(b);
     if (!active) el.append(' not found');
   };
-  if (!code) { paint(true); return; }
+  if (!code) {
+    paint(true);
+    return;
+  }
   const known = joinChecks.get(code);
   paint(known ?? true);
   if (known !== undefined) return;
   getSponsorByCode(code).then(
-    () => { joinChecks.set(code, true); paint(true); },
-    (error) => { if (error instanceof ApiError && error.status === 404) { joinChecks.set(code, false); paint(false); } },
+    () => {
+      joinChecks.set(code, true);
+      paint(true);
+    },
+    (error) => {
+      if (error instanceof ApiError && error.status === 404) {
+        joinChecks.set(code, false);
+        paint(false);
+      }
+    },
   );
 }
 

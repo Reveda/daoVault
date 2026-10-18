@@ -23,7 +23,11 @@ dashboardRouter.get(
 
 dashboardRouter.get(
   "/:walletAddress",
-  validateRequest({ params: z.object({ walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address") }) }),
+  validateRequest({
+    params: z.object({
+      walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address"),
+    }),
+  }),
   requireSelfOrAdmin(),
   getDashboard,
 );

@@ -18,7 +18,12 @@ async function hasCode(address: string): Promise<boolean | null> {
     const res = await fetch(BSC_PARAMS.rpcUrls[0], {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_getCode', params: [address, 'latest'] }),
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'eth_getCode',
+        params: [address, 'latest'],
+      }),
     });
     const json = await res.json();
     return typeof json.result === 'string' ? json.result.length > 2 : null;
@@ -46,8 +51,18 @@ export function initChainProof(): void {
   // follows the build: the live site (chain 56) says BSC Mainnet, a testnet build says BSC Testnet
   const network = BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BSC Mainnet';
   rows.innerHTML =
-    row('Activation contract', PAYMENT, 'Receives the $300 USDT activation and records your sponsor on-chain. Every activation is listed there.', 'View transactions on BscScan') +
-    row('USDT token (BEP-20)', USDT, 'The only token the contract accepts.', 'View token on BscScan');
+    row(
+      'Activation contract',
+      PAYMENT,
+      'Receives the $300 USDT activation and records your sponsor on-chain. Every activation is listed there.',
+      'View transactions on BscScan',
+    ) +
+    row(
+      'USDT token (BEP-20)',
+      USDT,
+      'The only token the contract accepts.',
+      'View token on BscScan',
+    );
 
   // "Check any wallet": opens BscScan for the pasted address (its USDT transfers once the token is set)
   const form = document.getElementById('verifyCheck') as HTMLFormElement | null;
@@ -55,7 +70,11 @@ export function initChainProof(): void {
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
     const wallet = (input?.value || '').trim();
-    if (!isAddress(wallet)) { showToast('Paste a full wallet address: 0x followed by 40 characters.', true); input?.focus(); return; }
+    if (!isAddress(wallet)) {
+      showToast('Paste a full wallet address: 0x followed by 40 characters.', true);
+      input?.focus();
+      return;
+    }
     const url = isAddress(USDT) ? `${SCAN}/token/${USDT}?a=${wallet}` : `${SCAN}/address/${wallet}`;
     window.open(url, '_blank', 'noopener');
   });
@@ -63,18 +82,33 @@ export function initChainProof(): void {
   const badge = (cls: string, text: string) => `<span class="vc-badge ${cls} mono">${text}</span>`;
   const configured = isAddress(PAYMENT);
   rows.hidden = !rows.innerHTML.trim();
-  badges.innerHTML = badge('is-net', network) + (configured ? badge('is-wait', 'Checking chain…') : '');
+  badges.innerHTML =
+    badge('is-net', network) + (configured ? badge('is-wait', 'Checking chain…') : '');
   if (!configured) return;
 
   // one RPC call, only when the card comes near the screen
   const run = async () => {
     const live = await hasCode(PAYMENT);
-    badges.innerHTML = badge('is-net', network)
-      + (live === true ? badge('is-live', '&#9679; Live on BSC') : live === false ? badge('is-wait', 'Not deployed on this network') : '');
+    badges.innerHTML =
+      badge('is-net', network) +
+      (live === true
+        ? badge('is-live', '&#9679; Live on BSC')
+        : live === false
+          ? badge('is-wait', 'Not deployed on this network')
+          : '');
   };
-  if (!('IntersectionObserver' in window)) { void run(); return; }
-  const io = new IntersectionObserver((entries) => {
-    if (entries.some((en) => en.isIntersecting)) { io.disconnect(); void run(); }
-  }, { rootMargin: '300px' });
+  if (!('IntersectionObserver' in window)) {
+    void run();
+    return;
+  }
+  const io = new IntersectionObserver(
+    (entries) => {
+      if (entries.some((en) => en.isIntersecting)) {
+        io.disconnect();
+        void run();
+      }
+    },
+    { rootMargin: '300px' },
+  );
   io.observe(card);
 }

@@ -169,7 +169,7 @@ export function initRankGameCard(): void {
           }
         });
       },
-      { threshold: 0.15 }
+      { threshold: 0.15 },
     );
     // watch the card, not the whole section: on phones #ranks is several screens
     // tall and a 15% threshold on it was never reached, so the tour never ran
@@ -217,7 +217,7 @@ export function selectRank(index: number, userClicked = false, direction = 1): v
   const activeBtn = buttons[index];
   const tabsWrap = document.getElementById('rankTabs');
   if (tabsWrap && activeBtn) {
-    const scrollLeft = activeBtn.offsetLeft - (tabsWrap.clientWidth / 2) + (activeBtn.clientWidth / 2);
+    const scrollLeft = activeBtn.offsetLeft - tabsWrap.clientWidth / 2 + activeBtn.clientWidth / 2;
     tabsWrap.scrollTo({ left: scrollLeft, behavior: 'smooth' });
   }
 
@@ -255,7 +255,7 @@ function animateCardTransition(rank: RankTier, direction: number): void {
 
   // a new rank cancels the running transition so nothing is left half-faded
   const detailTargets = card.querySelectorAll<HTMLElement>(
-    '.rank-qualified-tag, .rank-big-reward, #rankDisplayTitle, #rankDisplayDesc, .btn-rank-qualify, .rank-leg-meter > *'
+    '.rank-qualified-tag, .rank-big-reward, #rankDisplayTitle, #rankDisplayDesc, .btn-rank-qualify, .rank-leg-meter > *',
   );
   cardTl?.kill();
   const tl = gsap.timeline({
@@ -304,7 +304,7 @@ function animateCardTransition(rank: RankTier, direction: number): void {
       ...glow('brightness(1)'),
       duration: 0.5,
       ease: 'back.out(1.3)',
-    }
+    },
   );
 
   // 4. Bring the new rank details in as a coordinated reveal instead of
@@ -316,7 +316,7 @@ function animateCardTransition(rank: RankTier, direction: number): void {
       detailTargets,
       { y: 14, opacity: 0 },
       { y: 0, opacity: 1, duration: 0.42, stagger: 0.05, ease: 'power3.out' },
-      '-=0.2'
+      '-=0.2',
     );
   }
 
@@ -326,7 +326,7 @@ function animateCardTransition(rank: RankTier, direction: number): void {
       holoSheen,
       { xPercent: -130, opacity: 0.9 },
       { xPercent: 230, opacity: 0, duration: 0.75, ease: 'power2.out' },
-      '-=0.45'
+      '-=0.45',
     );
   }
 
@@ -334,8 +334,18 @@ function animateCardTransition(rank: RankTier, direction: number): void {
   const legPower = card.querySelector('.leg-power') as HTMLElement;
   const legOther = card.querySelector('.leg-other') as HTMLElement;
   if (legPower && legOther) {
-    tl.fromTo([legPower, legOther], { width: '0%' }, { width: '50%', duration: 0.8, ease: 'power3.out', stagger: 0.12 }, '-=0.45');
-    tl.fromTo(card.querySelector('.leg-split-bar'), { '--sweep': '-30%' }, { '--sweep': '130%', duration: 0.9, ease: 'power2.inOut' }, '-=0.3');
+    tl.fromTo(
+      [legPower, legOther],
+      { width: '0%' },
+      { width: '50%', duration: 0.8, ease: 'power3.out', stagger: 0.12 },
+      '-=0.45',
+    );
+    tl.fromTo(
+      card.querySelector('.leg-split-bar'),
+      { '--sweep': '-30%' },
+      { '--sweep': '130%', duration: 0.9, ease: 'power2.inOut' },
+      '-=0.3',
+    );
     tl.add(() => card.querySelector('.leg-total-row')?.classList.add('is-pulse'), '-=0.2');
     card.querySelector('.leg-total-row')?.classList.remove('is-pulse');
   }
@@ -360,7 +370,14 @@ function renderRankData(rank: RankTier): void {
   const daoRoll = (el: HTMLElement | null, to: number) => {
     if (!el) return;
     const o = { v: 0 };
-    gsap.to(o, { v: to, duration: 0.9, ease: 'power2.out', onUpdate: () => { el.textContent = `${(Math.round(o.v * 10) / 10).toLocaleString()} DAO`; } });
+    gsap.to(o, {
+      v: to,
+      duration: 0.9,
+      ease: 'power2.out',
+      onUpdate: () => {
+        el.textContent = `${(Math.round(o.v * 10) / 10).toLocaleString()} DAO`;
+      },
+    });
   };
   daoRoll(legPowerEl, rank.dao);
   daoRoll(legOtherEl, rank.dao);
@@ -372,7 +389,9 @@ function renderRankData(rank: RankTier): void {
     rewardEl.classList.add('is-shine');
   }
   updateRankEmblem(Math.max(0, RANK_DATA.indexOf(rank)));
-  document.querySelectorAll<HTMLElement>('.rank-slider-tick').forEach((t, i) => t.classList.toggle('is-done', i <= RANK_DATA.indexOf(rank)));
+  document
+    .querySelectorAll<HTMLElement>('.rank-slider-tick')
+    .forEach((t, i) => t.classList.toggle('is-done', i <= RANK_DATA.indexOf(rank)));
 }
 
 /**
@@ -404,8 +423,8 @@ function setupCard3DParallax(card: HTMLElement): void {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const rotX = ((y / rect.height) - 0.5) * -12;
-    const rotY = ((x / rect.width) - 0.5) * 14;
+    const rotX = (y / rect.height - 0.5) * -12;
+    const rotY = (x / rect.width - 0.5) * 14;
 
     gsap.to(card, {
       rotateX: rotX,
@@ -495,20 +514,30 @@ function initCardSwipe(card: HTMLElement): void {
   let x0 = 0;
   let y0 = 0;
   let tracking = false;
-  card.addEventListener('touchstart', (e) => {
-    const t = e.touches[0];
-    x0 = t.clientX; y0 = t.clientY; tracking = e.touches.length === 1;
-  }, { passive: true });
-  card.addEventListener('touchend', (e) => {
-    if (!tracking) return;
-    tracking = false;
-    const t = e.changedTouches[0];
-    const dx = t.clientX - x0;
-    const dy = t.clientY - y0;
-    if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // a scroll, not a swipe
-    const next = currentRankIndex + (dx < 0 ? 1 : -1);
-    if (next >= 0 && next < RANK_DATA.length) selectRank(next, true, dx < 0 ? 1 : -1);
-  }, { passive: true });
+  card.addEventListener(
+    'touchstart',
+    (e) => {
+      const t = e.touches[0];
+      x0 = t.clientX;
+      y0 = t.clientY;
+      tracking = e.touches.length === 1;
+    },
+    { passive: true },
+  );
+  card.addEventListener(
+    'touchend',
+    (e) => {
+      if (!tracking) return;
+      tracking = false;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - x0;
+      const dy = t.clientY - y0;
+      if (Math.abs(dx) < 45 || Math.abs(dx) < Math.abs(dy) * 1.5) return; // a scroll, not a swipe
+      const next = currentRankIndex + (dx < 0 ? 1 : -1);
+      if (next >= 0 && next < RANK_DATA.length) selectRank(next, true, dx < 0 ? 1 : -1);
+    },
+    { passive: true },
+  );
 }
 
 /**

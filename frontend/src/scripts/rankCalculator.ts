@@ -34,11 +34,23 @@ export function initRankCalculator(): void {
   // Interactive 360-degree spin on the 3D crest preview
   const spinPreviewCrest = () => {
     if (!crestPreview) return;
-    try { navigator.vibrate?.(20); } catch { /* no vibration */ }
+    try {
+      navigator.vibrate?.(20);
+    } catch {
+      /* no vibration */
+    }
     const svg = crestPreview.querySelector('svg');
     if (svg) {
-      gsap.fromTo(svg, { rotateY: 0 }, { rotateY: 360, duration: 1.0, ease: 'back.out(1.4)', clearProps: 'transform' });
-      gsap.fromTo(svg, { scale: 1 }, { scale: 1.15, duration: 0.35, yoyo: true, repeat: 1, ease: 'power2.out' });
+      gsap.fromTo(
+        svg,
+        { rotateY: 0 },
+        { rotateY: 360, duration: 1.0, ease: 'back.out(1.4)', clearProps: 'transform' },
+      );
+      gsap.fromTo(
+        svg,
+        { scale: 1 },
+        { scale: 1.15, duration: 0.35, yoyo: true, repeat: 1, ease: 'power2.out' },
+      );
     }
   };
 
@@ -78,7 +90,8 @@ export function initRankCalculator(): void {
       const rank = RANK_DATA[achievedIndex];
       const meta = RANK_CREST_METAS[achievedIndex] || RANK_CREST_METAS[0];
       if (rankTitle) rankTitle.textContent = `${rank.id}. ${rank.title}`;
-      if (rankTier) rankTier.textContent = `Rank ${String(rank.id).padStart(2, '0')} of 11 • ${meta.metal}`;
+      if (rankTier)
+        rankTier.textContent = `Rank ${String(rank.id).padStart(2, '0')} of 11 • ${meta.metal}`;
       if (rewardVal) rewardVal.textContent = `$${rank.reward.toLocaleString()}.00`;
       if (cumVal) cumVal.textContent = `$${cumulativeRewards[achievedIndex].toLocaleString()}.00`;
 
@@ -92,7 +105,8 @@ export function initRankCalculator(): void {
       if (achievedIndex < RANK_DATA.length - 1) {
         const next = RANK_DATA[achievedIndex + 1];
         const needed = next.dao - safeVol;
-        if (nextTarget) nextTarget.textContent = `Next: ${next.title} (needs +${needed.toLocaleString()} DAO on each side)`;
+        if (nextTarget)
+          nextTarget.textContent = `Next: ${next.title} (needs +${needed.toLocaleString()} DAO on each side)`;
       } else {
         if (nextTarget) nextTarget.textContent = `Top rank reached: Crown President`;
       }
@@ -107,7 +121,8 @@ export function initRankCalculator(): void {
       if (rewardVal) rewardVal.textContent = '$0.00';
       if (cumVal) cumVal.textContent = '$0.00';
       const needed = 25 - safeVol;
-      if (nextTarget) nextTarget.textContent = `Next: Starter (needs +${needed} DAO on each side, $150 reward)`;
+      if (nextTarget)
+        nextTarget.textContent = `Next: Starter (needs +${needed} DAO on each side, $150 reward)`;
 
       if (crestPreview) {
         crestPreview.innerHTML = getRankCrestSvg(0);
@@ -161,4 +176,3 @@ export function initRankCalculator(): void {
   // Initial calculation
   updateFromVolume(parseInt(slider.value, 10) || 25, false, true);
 }
-

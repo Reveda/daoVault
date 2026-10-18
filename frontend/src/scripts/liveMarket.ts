@@ -11,7 +11,8 @@ import { BSC_PARAMS } from './wallet.ts';
 
 const REFRESH_MS = 60_000;
 const BINANCE = 'https://api.binance.com/api/v3';
-const COINGECKO = 'https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd&include_24hr_change=true';
+const COINGECKO =
+  'https://api.coingecko.com/api/v3/simple/price?ids=binancecoin&vs_currencies=usd&include_24hr_change=true';
 // gas is always read from BSC mainnet: it is the live network the card describes
 const MAINNET_RPC = 'https://bsc-dataseed.binance.org/';
 
@@ -31,7 +32,9 @@ async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
 
 async function loadPrice(): Promise<{ price: number; change: number } | null> {
   try {
-    const t = await getJson<{ lastPrice: string; priceChangePercent: string }>(`${BINANCE}/ticker/24hr?symbol=BNBUSDT`);
+    const t = await getJson<{ lastPrice: string; priceChangePercent: string }>(
+      `${BINANCE}/ticker/24hr?symbol=BNBUSDT`,
+    );
     return { price: Number(t.lastPrice), change: Number(t.priceChangePercent) };
   } catch {
     try {
@@ -45,7 +48,9 @@ async function loadPrice(): Promise<{ price: number; change: number } | null> {
 
 async function loadSparkline(): Promise<number[] | null> {
   try {
-    const rows = await getJson<Array<[number, string, string, string, string]>>(`${BINANCE}/klines?symbol=BNBUSDT&interval=1h&limit=24`);
+    const rows = await getJson<Array<[number, string, string, string, string]>>(
+      `${BINANCE}/klines?symbol=BNBUSDT&interval=1h&limit=24`,
+    );
     return rows.map((r) => Number(r[4]));
   } catch {
     return null;
@@ -86,7 +91,8 @@ async function refresh(): Promise<void> {
   const [price, closes, gas] = await Promise.all([loadPrice(), loadSparkline(), loadGasGwei()]);
   if (price && Number.isFinite(price.price)) {
     const priceEl = $('mkPrice');
-    if (priceEl) priceEl.textContent = `$${price.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (priceEl)
+      priceEl.textContent = `$${price.price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const badge = $('mkChange');
     if (badge && Number.isFinite(price.change)) {
       const up = price.change >= 0;

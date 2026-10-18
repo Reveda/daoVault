@@ -13,26 +13,58 @@ export const withdrawalsRouter = Router();
 withdrawalsRouter.get("/", requireAuth, async (req, res, next) => {
   try {
     res.json({ success: true, data: await withdrawalsService.summary(req.auth!.sub) });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 });
 
-withdrawalsRouter.post("/", requireAuth, financialRateLimiter, validateRequest({
-  body: z.object({ amountUsd: z.number().positive().max(10_000_000).multipleOf(0.01, "Use at most 2 decimals") }),
-}), async (req, res, next) => {
-  try {
-    res.status(201).json({ success: true, data: await withdrawalsService.request(req.auth!.sub, req.body.amountUsd) });
-  } catch (error) { next(error); }
-});
+withdrawalsRouter.post(
+  "/",
+  requireAuth,
+  financialRateLimiter,
+  validateRequest({
+    body: z.object({
+      amountUsd: z.number().positive().max(10_000_000).multipleOf(0.01, "Use at most 2 decimals"),
+    }),
+  }),
+  async (req, res, next) => {
+    try {
+      res
+        .status(201)
+        .json({
+          success: true,
+          data: await withdrawalsService.request(req.auth!.sub, req.body.amountUsd),
+        });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 // after the member's wallet claimed an instant voucher: verified on-chain, then marked paid
-withdrawalsRouter.post("/:id/confirm", requireAuth, financialRateLimiter, validateRequest({
-  params: z.object({ id: z.string().uuid("Invalid id") }),
-  body: z.object({ txHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Invalid transaction hash") }),
-}), async (req, res, next) => {
-  try {
-    res.json({ success: true, data: await withdrawalsService.confirm(req.auth!.sub, String(req.params.id), req.body.txHash) });
-  } catch (error) { next(error); }
-});
+withdrawalsRouter.post(
+  "/:id/confirm",
+  requireAuth,
+  financialRateLimiter,
+  validateRequest({
+    params: z.object({ id: z.string().uuid("Invalid id") }),
+    body: z.object({ txHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Invalid transaction hash") }),
+  }),
+  async (req, res, next) => {
+    try {
+      res.json({
+        success: true,
+        data: await withdrawalsService.confirm(
+          req.auth!.sub,
+          String(req.params.id),
+          req.body.txHash,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 /** Admin side: /admin/... (wallet in ADMIN_WALLETS, signed in) */
 export const adminRouter = Router();
@@ -43,58 +75,124 @@ const idParam = validateRequest({ params: z.object({ id: z.string().uuid("Invali
 adminRouter.get("/stats", async (_req, res, next) => {
   try {
     res.json({ success: true, data: await withdrawalsService.stats() });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 });
 
 // charts of the admin dashboard (analytics.ts)
 adminRouter.get("/analytics", async (_req, res, next) => {
   try {
     res.json({ success: true, data: await adminAnalytics() });
-  } catch (error) { next(error); }
+  } catch (error) {
+    next(error);
+  }
 });
 
 // treasury ledger grouped by day (30), week (12) or month (12) (owner, 2026-10-18)
-adminRouter.get("/ledger", validateRequest({
-  query: z.object({ group: z.enum(["day", "week", "month"]).optional() }),
-}), async (req, res, next) => {
-  try {
-    res.json({ success: true, data: await adminLedger((req.query.group as LedgerGroup | undefined) ?? "day") });
-  } catch (error) { next(error); }
-});
-
-adminRouter.get("/withdrawals", validateRequest({
-  query: z.object({
-    status: z.enum(WithdrawalStatus).optional(),
-    page: z.coerce.number().int().min(1).max(100_000).optional(),
-    // requested in the last 7 / 30 days, or all (owner, 2026-10-18)
-    period: z.enum(["all", "week", "month"]).optional(),
+adminRouter.get(
+  "/ledger",
+  validateRequest({
+    query: z.object({ group: z.enum(["day", "week", "month"]).optional() }),
   }),
-}), async (req, res, next) => {
-  try {
-    res.json({ success: true, data: await withdrawalsService.list(
-      req.query.status as WithdrawalStatus | undefined, Number(req.query.page ?? 1), (req.query.period as "all" | "week" | "month" | undefined) ?? "all",
-    ) });
-  } catch (error) { next(error); }
-});
+  async (req, res, next) => {
+    try {
+      res.json({
+        success: true,
+        data: await adminLedger((req.query.group as LedgerGroup | undefined) ?? "day"),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
-adminRouter.post("/withdrawals/:id/approve", financialRateLimiter, idParam, async (req, res, next) => {
-  try {
-    res.json({ success: true, data: await withdrawalsService.approve(String(req.params.id), req.auth!.sub) });
-  } catch (error) { next(error); }
-});
+adminRouter.get(
+  "/withdrawals",
+  validateRequest({
+    query: z.object({
+      status: z.enum(WithdrawalStatus).optional(),
+      page: z.coerce.number().int().min(1).max(100_000).optional(),
+      // requested in the last 7 / 30 days, or all (owner, 2026-10-18)
+      period: z.enum(["all", "week", "month"]).optional(),
+    }),
+  }),
+  async (req, res, next) => {
+    try {
+      res.json({
+        success: true,
+        data: await withdrawalsService.list(
+          req.query.status as WithdrawalStatus | undefined,
+          Number(req.query.page ?? 1),
+          (req.query.period as "all" | "week" | "month" | undefined) ?? "all",
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
-adminRouter.post("/withdrawals/:id/reject", financialRateLimiter, idParam, validateRequest({
-  body: z.object({ reason: z.string().trim().min(3).max(280) }),
-}), async (req, res, next) => {
-  try {
-    res.json({ success: true, data: await withdrawalsService.reject(String(req.params.id), req.auth!.sub, req.body.reason) });
-  } catch (error) { next(error); }
-});
+adminRouter.post(
+  "/withdrawals/:id/approve",
+  financialRateLimiter,
+  idParam,
+  async (req, res, next) => {
+    try {
+      res.json({
+        success: true,
+        data: await withdrawalsService.approve(String(req.params.id), req.auth!.sub),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
-adminRouter.post("/withdrawals/:id/complete", financialRateLimiter, idParam, validateRequest({
-  body: z.object({ payoutTxHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Invalid transaction hash") }),
-}), async (req, res, next) => {
-  try {
-    res.json({ success: true, data: await withdrawalsService.complete(String(req.params.id), req.auth!.sub, req.body.payoutTxHash) });
-  } catch (error) { next(error); }
-});
+adminRouter.post(
+  "/withdrawals/:id/reject",
+  financialRateLimiter,
+  idParam,
+  validateRequest({
+    body: z.object({ reason: z.string().trim().min(3).max(280) }),
+  }),
+  async (req, res, next) => {
+    try {
+      res.json({
+        success: true,
+        data: await withdrawalsService.reject(
+          String(req.params.id),
+          req.auth!.sub,
+          req.body.reason,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+adminRouter.post(
+  "/withdrawals/:id/complete",
+  financialRateLimiter,
+  idParam,
+  validateRequest({
+    body: z.object({
+      payoutTxHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/, "Invalid transaction hash"),
+    }),
+  }),
+  async (req, res, next) => {
+    try {
+      res.json({
+        success: true,
+        data: await withdrawalsService.complete(
+          String(req.params.id),
+          req.auth!.sub,
+          req.body.payoutTxHash,
+        ),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);

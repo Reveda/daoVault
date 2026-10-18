@@ -87,6 +87,9 @@ model Package {
   source          PackageSource @default(ON_CHAIN)
   activationTxHash String       @unique @map("activation_tx_hash") @db.VarChar(66)
   createdAt       DateTime      @default(now()) @map("created_at")
+  /// when the member paid ON-CHAIN (the block time of Activated / ToppedUp; owner 2026-10-18): the fast-start
+  /// clock uses it, so a late record never costs a bonus. Null on older rows: created_at stands in.
+  paidAt          DateTime?     @map("paid_at")
   /// set when the plan queue has paid its commissions and added it to the team volumes
   /// (plan_events); only counted packages make DAO volume / leg totals
   countedAt       DateTime?     @map("counted_at")

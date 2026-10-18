@@ -17,11 +17,17 @@ let again = false;
 async function drain(): Promise<number> {
   let total = 0;
   for (let round = 0; round < 500; round++) {
-    const batch = await prisma.$transaction((tx) => processPlanEvents(tx, { limit: BATCH }), { maxWait: 10_000, timeout: 120_000 });
+    const batch = await prisma.$transaction((tx) => processPlanEvents(tx, { limit: BATCH }), {
+      maxWait: 10_000,
+      timeout: 120_000,
+    });
     if (batch.busy) return total; // another copy is draining: it will finish the queue
     total += batch.processed;
     for (const r of batch.rankUps) {
-      if (r.rewardUsd > 0) console.log(`[plan] rank ${r.from} -> ${r.to} for ${r.wallet.slice(0, 8)}…, reward $${r.rewardUsd}`);
+      if (r.rewardUsd > 0)
+        console.log(
+          `[plan] rank ${r.from} -> ${r.to} for ${r.wallet.slice(0, 8)}…, reward $${r.rewardUsd}`,
+        );
     }
     if (batch.processed < BATCH) return total;
   }
@@ -30,13 +36,23 @@ async function drain(): Promise<number> {
 
 /** Processes every queued payment now (resolves with how many this copy processed). Never throws. */
 export function kickPlanQueue(): Promise<number> {
-  if (running) { again = true; return running; }
+  if (running) {
+    again = true;
+    return running;
+  }
   running = (async () => {
     let total = 0;
     try {
-      do { again = false; total += await drain(); } while (again);
+      do {
+        again = false;
+        total += await drain();
+      } while (again);
     } catch (error) {
-      alert("critical", "plan-queue", `Plan queue failed: ${(error as Error).message.slice(0, 300)}. Payments are recorded; commissions wait until it runs again.`);
+      alert(
+        "critical",
+        "plan-queue",
+        `Plan queue failed: ${(error as Error).message.slice(0, 300)}. Payments are recorded; commissions wait until it runs again.`,
+      );
     } finally {
       running = null;
     }
@@ -63,7 +79,14 @@ export function stopPlanQueueTimer(): void {
 export async function planQueueBacklog(): Promise<{ waiting: number; oldestSeconds: number }> {
   const [waiting, oldest] = await Promise.all([
     prisma.planEvent.count({ where: { processedAt: null } }),
-    prisma.planEvent.findFirst({ where: { processedAt: null }, orderBy: { id: "asc" }, select: { createdAt: true } }),
+    prisma.planEvent.findFirst({
+      where: { processedAt: null },
+      orderBy: { id: "asc" },
+      select: { createdAt: true },
+    }),
   ]);
-  return { waiting, oldestSeconds: oldest ? Math.round((Date.now() - oldest.createdAt.getTime()) / 1000) : 0 };
+  return {
+    waiting,
+    oldestSeconds: oldest ? Math.round((Date.now() - oldest.createdAt.getTime()) / 1000) : 0,
+  };
 }

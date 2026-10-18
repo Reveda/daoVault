@@ -7,7 +7,9 @@
 
 /** Highlights the nav link whose section crosses the middle of the screen. */
 export function initScrollSpy(): void {
-  const anchors = [...document.querySelectorAll<HTMLAnchorElement>('.top-header .nav-links a[href^="#"]')];
+  const anchors = [
+    ...document.querySelectorAll<HTMLAnchorElement>('.top-header .nav-links a[href^="#"]'),
+  ];
   const map = new Map<Element, HTMLAnchorElement>();
   anchors.forEach((a) => {
     const target = document.querySelector(a.getAttribute('href') || '');
@@ -15,19 +17,27 @@ export function initScrollSpy(): void {
   });
   if (!map.size || !('IntersectionObserver' in window)) return;
 
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return;
-      const active = map.get(entry.target);
-      anchors.forEach((a) => a.classList.toggle('active', a === active));
-    });
-  }, { rootMargin: '-45% 0px -50% 0px' });
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const active = map.get(entry.target);
+        anchors.forEach((a) => a.classList.toggle('active', a === active));
+      });
+    },
+    { rootMargin: '-45% 0px -50% 0px' },
+  );
   map.forEach((_, section) => io.observe(section));
 
   // above the first tracked section nothing is highlighted
-  window.addEventListener('scroll', () => {
-    if (window.scrollY < window.innerHeight * 0.5) anchors.forEach((a) => a.classList.remove('active'));
-  }, { passive: true });
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (window.scrollY < window.innerHeight * 0.5)
+        anchors.forEach((a) => a.classList.remove('active'));
+    },
+    { passive: true },
+  );
 }
 
 /**
@@ -38,12 +48,18 @@ export function initScrollSpy(): void {
  * visitor cancels the re-aiming.
  */
 export function initAnchorScroll(): void {
-  const smooth: ScrollBehavior = matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+  const smooth: ScrollBehavior = matchMedia('(prefers-reduced-motion: reduce)').matches
+    ? 'auto'
+    : 'smooth';
   let stopCurrent: (() => void) | null = null;
 
   const scrollToSection = (target: Element) => {
     stopCurrent?.();
-    const go = () => window.scrollTo({ top: Math.max(0, window.scrollY + target.getBoundingClientRect().top), behavior: smooth });
+    const go = () =>
+      window.scrollTo({
+        top: Math.max(0, window.scrollY + target.getBoundingClientRect().top),
+        behavior: smooth,
+      });
     let last = window.scrollY;
     let still = 0;
     let tries = 0;
@@ -58,7 +74,10 @@ export function initAnchorScroll(): void {
       // (busy main thread) gets 1.5s before it is sent again
       const settled = started && still >= 3;
       if (!settled && performance.now() - aimedAt < 1500) return;
-      if (Math.abs(target.getBoundingClientRect().top) <= 4 || ++tries > 4) { stop(); return; }
+      if (Math.abs(target.getBoundingClientRect().top) <= 4 || ++tries > 4) {
+        stop();
+        return;
+      }
       still = 0;
       started = false;
       aimedAt = performance.now();
@@ -104,7 +123,10 @@ const JOIN_STEP_MS = 4200;
  * ring, and gold lightning crackles out of the ring (a small arc now and then,
  * a burst whenever the step changes).
  */
-function electrifyStage(stage: HTMLElement): { setProgress(p: number): void; zap(power: number): void } {
+function electrifyStage(stage: HTMLElement): {
+  setProgress(p: number): void;
+  zap(power: number): void;
+} {
   const canvas = stage.querySelector<HTMLCanvasElement>('.join-stage-bolts');
   const ringSvg = stage.querySelector<SVGSVGElement>('.join-ring');
   const spark = stage.querySelector<SVGCircleElement>('.join-ring-spark');
@@ -130,21 +152,41 @@ function electrifyStage(stage: HTMLElement): { setProgress(p: number): void; zap
       placeSpark(shown);
       if (t < 1) sparkRaf = requestAnimationFrame(step);
     };
-    if (reduceMotion) { shown = p; placeSpark(p); } else sparkRaf = requestAnimationFrame(step);
+    if (reduceMotion) {
+      shown = p;
+      placeSpark(p);
+    } else sparkRaf = requestAnimationFrame(step);
   };
 
   // lightning: jagged arcs from the ring's edge outwards, fading in ~0.4s
   type Bolt = { pts: [number, number][]; born: number; width: number };
   let bolts: Bolt[] = [];
   let boltRaf = 0;
-  const jagged = (x0: number, y0: number, x1: number, y1: number, depth: number, rough: number): [number, number][] => {
-    let pts: [number, number][] = [[x0, y0], [x1, y1]];
+  const jagged = (
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    depth: number,
+    rough: number,
+  ): [number, number][] => {
+    let pts: [number, number][] = [
+      [x0, y0],
+      [x1, y1],
+    ];
     let off = Math.hypot(x1 - x0, y1 - y0) * rough;
     for (let d = 0; d < depth; d++) {
       const next: [number, number][] = [pts[0]];
       for (let i = 1; i < pts.length; i++) {
-        const [ax, ay] = pts[i - 1], [bx, by] = pts[i];
-        next.push([(ax + bx) / 2 + (Math.random() - 0.5) * off, (ay + by) / 2 + (Math.random() - 0.5) * off], pts[i]);
+        const [ax, ay] = pts[i - 1],
+          [bx, by] = pts[i];
+        next.push(
+          [
+            (ax + bx) / 2 + (Math.random() - 0.5) * off,
+            (ay + by) / 2 + (Math.random() - 0.5) * off,
+          ],
+          pts[i],
+        );
       }
       pts = next;
       off *= 0.55;
@@ -188,11 +230,13 @@ function electrifyStage(stage: HTMLElement): { setProgress(p: number): void; zap
     const cx = rr.left - sr.left + rr.width / 2;
     const cy = rr.top - sr.top + rr.height / 2;
     const r = (rr.width / 120) * 52;
-    const count = power >= 1 ? 4 + Math.floor(Math.random() * 3) : 1 + Math.floor(Math.random() * 2);
+    const count =
+      power >= 1 ? 4 + Math.floor(Math.random() * 3) : 1 + Math.floor(Math.random() * 2);
     for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
       const len = r * (power >= 1 ? 0.55 + Math.random() * 0.6 : 0.3 + Math.random() * 0.35);
-      const x0 = cx + Math.cos(a) * r, y0 = cy + Math.sin(a) * r;
+      const x0 = cx + Math.cos(a) * r,
+        y0 = cy + Math.sin(a) * r;
       const x1 = cx + Math.cos(a + (Math.random() - 0.5) * 0.5) * (r + len);
       const y1 = cy + Math.sin(a + (Math.random() - 0.5) * 0.5) * (r + len);
       const pts = jagged(x0, y0, x1, y1, 5, 0.35);
@@ -201,7 +245,11 @@ function electrifyStage(stage: HTMLElement): { setProgress(p: number): void; zap
       if (Math.random() < 0.6) {
         const [fx, fy] = pts[8 + Math.floor(Math.random() * 12)];
         const fa = a + (Math.random() - 0.5) * 1.6;
-        bolts.push({ pts: jagged(fx, fy, fx + Math.cos(fa) * len * 0.5, fy + Math.sin(fa) * len * 0.5, 4, 0.4), born: performance.now() + i * 40, width: 0.8 });
+        bolts.push({
+          pts: jagged(fx, fy, fx + Math.cos(fa) * len * 0.5, fy + Math.sin(fa) * len * 0.5, 4, 0.4),
+          born: performance.now() + i * 40,
+          width: 0.8,
+        });
       }
     }
     stage.classList.remove('is-charged');
@@ -243,7 +291,8 @@ export function initJoinSteps(): void {
     });
     if (stageNum) stageNum.textContent = pad(current + 1);
     if (stageLabel) stageLabel.textContent = `STEP ${pad(current + 1)} / ${pad(steps.length)}`;
-    if (stageTitle) stageTitle.textContent = steps[current].querySelector('.join-step-title')?.textContent ?? '';
+    if (stageTitle)
+      stageTitle.textContent = steps[current].querySelector('.join-step-title')?.textContent ?? '';
     if (ring) ring.style.strokeDashoffset = `${circumference * (1 - (current + 1) / steps.length)}`;
     if (stage) {
       stage.classList.remove('is-switching');
@@ -260,14 +309,24 @@ export function initJoinSteps(): void {
   const scheduleCrackle = () => {
     window.clearTimeout(crackle);
     if (!visible) return;
-    crackle = window.setTimeout(() => { stageFx?.zap(0.4); scheduleCrackle(); }, 1800 + Math.random() * 2200);
+    crackle = window.setTimeout(
+      () => {
+        stageFx?.zap(0.4);
+        scheduleCrackle();
+      },
+      1800 + Math.random() * 2200,
+    );
   };
 
   const schedule = () => {
     window.clearTimeout(timer);
     section.classList.toggle('join-cycling', visible && !stopped);
     if (stopped || !visible) return;
-    timer = window.setTimeout(() => { select(current + 1); restartBar(); schedule(); }, JOIN_STEP_MS);
+    timer = window.setTimeout(() => {
+      select(current + 1);
+      restartBar();
+      schedule();
+    }, JOIN_STEP_MS);
   };
   // restart the countdown bar on the newly opened card
   const restartBar = () => {
@@ -287,18 +346,25 @@ export function initJoinSteps(): void {
 
   select(0);
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(([entry]) => {
-      visible = entry.isIntersecting;
-      // let the cards finish dropping in before the first step change
-      if (visible) {
-        window.setTimeout(() => { restartBar(); schedule(); stageFx?.zap(1); }, 900);
-        scheduleCrackle();
-      } else {
-        window.clearTimeout(timer);
-        window.clearTimeout(crackle);
-        section.classList.remove('join-cycling');
-      }
-    }, { threshold: 0.35 }).observe(section.querySelector('.join-flow') ?? section);
+    new IntersectionObserver(
+      ([entry]) => {
+        visible = entry.isIntersecting;
+        // let the cards finish dropping in before the first step change
+        if (visible) {
+          window.setTimeout(() => {
+            restartBar();
+            schedule();
+            stageFx?.zap(1);
+          }, 900);
+          scheduleCrackle();
+        } else {
+          window.clearTimeout(timer);
+          window.clearTimeout(crackle);
+          section.classList.remove('join-cycling');
+        }
+      },
+      { threshold: 0.35 },
+    ).observe(section.querySelector('.join-flow') ?? section);
   }
 }
 
@@ -323,13 +389,19 @@ export function initDropCards(): void {
     return;
   }
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return;
-      groups.get(entry.target)?.forEach((c) => c.classList.add('is-dropped'));
-      io.unobserve(entry.target);
-    });
-  }, { threshold: isMobile ? 0.32 : 0.2, rootMargin: isMobile ? '0px 0px -15% 0px' : '0px 0px -8% 0px' });
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        groups.get(entry.target)?.forEach((c) => c.classList.add('is-dropped'));
+        io.unobserve(entry.target);
+      });
+    },
+    {
+      threshold: isMobile ? 0.32 : 0.2,
+      rootMargin: isMobile ? '0px 0px -15% 0px' : '0px 0px -8% 0px',
+    },
+  );
   groups.forEach((_, group) => io.observe(group));
 }
 
@@ -339,22 +411,27 @@ export function initDropCards(): void {
  * (scrolling back down re-plays them). CSS in main.css ("signal cards flip").
  */
 export function initSignalCardFlips(): void {
-  const cards = [...document.querySelectorAll<HTMLElement>('#heroMetricsGrid .crypto-exchange-card')];
+  const cards = [
+    ...document.querySelectorAll<HTMLElement>('#heroMetricsGrid .crypto-exchange-card'),
+  ];
   if (!cards.length || !('IntersectionObserver' in window)) return;
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      const card = entry.target as HTMLElement;
-      if (entry.isIntersecting) {
-        card.classList.add('fx-flip-in');
-        card.classList.remove('fx-flip-past');
-      } else {
-        const above = entry.boundingClientRect.top < 0;
-        card.classList.remove('fx-flip-in');
-        card.classList.toggle('fx-flip-past', above);
-      }
-    });
-  }, { threshold: isMobile ? 0.45 : 0.3 });
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const card = entry.target as HTMLElement;
+        if (entry.isIntersecting) {
+          card.classList.add('fx-flip-in');
+          card.classList.remove('fx-flip-past');
+        } else {
+          const above = entry.boundingClientRect.top < 0;
+          card.classList.remove('fx-flip-in');
+          card.classList.toggle('fx-flip-past', above);
+        }
+      });
+    },
+    { threshold: isMobile ? 0.45 : 0.3 },
+  );
   cards.forEach((c) => io.observe(c));
 }
 
@@ -388,7 +465,9 @@ export function initNavIndicator(): void {
   };
   const active = () => list.querySelector<HTMLElement>('a.active');
 
-  list.querySelectorAll<HTMLElement>('a').forEach((a) => a.addEventListener('pointerenter', () => moveTo(a)));
+  list
+    .querySelectorAll<HTMLElement>('a')
+    .forEach((a) => a.addEventListener('pointerenter', () => moveTo(a)));
   list.addEventListener('pointerleave', () => moveTo(active()));
   // watch the links' .active class (scrollspy), never the indicator itself
   new MutationObserver((records) => {
@@ -396,7 +475,10 @@ export function initNavIndicator(): void {
   }).observe(list, { subtree: true, attributes: true, attributeFilter: ['class'] });
   window.addEventListener('resize', () => moveTo(active()));
   // the Dashboard link appears once a wallet connects
-  new MutationObserver(() => moveTo(active())).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  new MutationObserver(() => moveTo(active())).observe(document.body, {
+    attributes: true,
+    attributeFilter: ['class'],
+  });
 }
 
 /**
@@ -440,7 +522,6 @@ export function initFaqAccordion(): void {
   });
 }
 
-
 /**
  * Mobile menu (owner, 2026-10-12): the hamburger next to Connect Wallet opens a dark-gold sheet
  * under the header. Tapping a section closes it and scrolls there smoothly (below the fixed header);
@@ -475,20 +556,35 @@ export function initMobileNav(): void {
   };
 
   toggle.addEventListener('click', () => setOpen(!isOpen()));
-  panel.querySelectorAll('[data-mnav-close]').forEach((el) => el.addEventListener('click', () => setOpen(false)));
+  panel
+    .querySelectorAll('[data-mnav-close]')
+    .forEach((el) => el.addEventListener('click', () => setOpen(false)));
   panel.querySelector('.mnav-cta')?.addEventListener('click', () => setOpen(false));
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isOpen()) setOpen(false); });
-  matchMedia('(min-width: 961px)').addEventListener('change', (e) => { if (e.matches) setOpen(false); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && isOpen()) setOpen(false);
+  });
+  matchMedia('(min-width: 961px)').addEventListener('change', (e) => {
+    if (e.matches) setOpen(false);
+  });
 
-  links.forEach((a) => a.addEventListener('click', (e) => {
-    const target = document.querySelector<HTMLElement>(a.hash);
-    if (!target) return;
-    e.preventDefault();
-    setOpen(false);
-    const header = document.querySelector<HTMLElement>('.top-header')?.offsetHeight ?? 64;
-    const y = target.getBoundingClientRect().top + window.scrollY - header - 8;
-    // after the sheet starts closing, so the scroll and the close do not fight
-    window.setTimeout(() => window.scrollTo({ top: y, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }), 120);
-    history.replaceState(null, '', a.hash);
-  }));
+  links.forEach((a) =>
+    a.addEventListener('click', (e) => {
+      const target = document.querySelector<HTMLElement>(a.hash);
+      if (!target) return;
+      e.preventDefault();
+      setOpen(false);
+      const header = document.querySelector<HTMLElement>('.top-header')?.offsetHeight ?? 64;
+      const y = target.getBoundingClientRect().top + window.scrollY - header - 8;
+      // after the sheet starts closing, so the scroll and the close do not fight
+      window.setTimeout(
+        () =>
+          window.scrollTo({
+            top: y,
+            behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+          }),
+        120,
+      );
+      history.replaceState(null, '', a.hash);
+    }),
+  );
 }

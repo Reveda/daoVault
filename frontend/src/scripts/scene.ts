@@ -12,7 +12,11 @@
 
 import { hasWebGL } from './core.ts';
 import { mountDvLogo } from './dvLogo.ts';
-import { createParticleScene, bindSectionScenes, type ParticleSceneController } from './particleScene.ts';
+import {
+  createParticleScene,
+  bindSectionScenes,
+  type ParticleSceneController,
+} from './particleScene.ts';
 
 /**
  * 1. Background scene (#sceneCanvas): the TPR-style morphing particle cloud.
@@ -38,7 +42,8 @@ export function init3DScene(initialScene = 'hero'): ParticleSceneController | nu
   const ctrl = createParticleScene(canvas, { scene: initialScene, flashEl });
   if (ctrl) bindSectionScenes(ctrl);
   if (ctrl && initialScene === 'hero') heroShowcase(ctrl);
-  if (import.meta.env.DEV) (window as unknown as { __daovaultScene?: unknown }).__daovaultScene = ctrl;
+  if (import.meta.env.DEV)
+    (window as unknown as { __daovaultScene?: unknown }).__daovaultScene = ctrl;
   return ctrl;
 }
 

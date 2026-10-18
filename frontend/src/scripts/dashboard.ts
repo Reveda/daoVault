@@ -43,7 +43,15 @@ import {
   type Withdrawal,
 } from './api.ts';
 import { mountDvToken3D } from './dvToken3d.ts';
-import { activateWallet, isPaymentConfigured, resolveSponsor, retryPendingActivation, topUpWallet, REAL_PAYMENTS_LOCKED, REAL_PAYMENTS_LOCKED_MSG } from './payment.ts';
+import {
+  activateWallet,
+  isPaymentConfigured,
+  resolveSponsor,
+  retryPendingActivation,
+  topUpWallet,
+  REAL_PAYMENTS_LOCKED,
+  REAL_PAYMENTS_LOCKED_MSG,
+} from './payment.ts';
 import {
   prepareDashboardReveal,
   revealDashboard,
@@ -100,8 +108,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!account) {
     showToast('Connect your wallet to open the live dashboard.', true);
     // tells the landing page not to send the member straight back here
-    try { sessionStorage.setItem('dv_dash_bounce', '1'); } catch { /* storage blocked */ }
-    window.setTimeout(() => { window.location.href = 'index.html'; }, 900);
+    try {
+      sessionStorage.setItem('dv_dash_bounce', '1');
+    } catch {
+      /* storage blocked */
+    }
+    window.setTimeout(() => {
+      window.location.href = 'index.html';
+    }, 900);
     return;
   }
 
@@ -113,13 +127,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
   window.addEventListener('daovault:disconnected', async () => {
     await logout();
-    try { sessionStorage.setItem('dv_dash_bounce', '1'); } catch { /* storage blocked */ }
+    try {
+      sessionStorage.setItem('dv_dash_bounce', '1');
+    } catch {
+      /* storage blocked */
+    }
     window.location.href = 'index.html';
   });
 
   // pre-launch notice, once per browser (only for a real dashboard visit, not a bounce)
-  showLaunchNotice('dashboard', 'We’ll be live soon',
-    'Your vault and your permanent referral link are ready. The $300 activation and payouts open at launch. See you there!');
+  showLaunchNotice(
+    'dashboard',
+    'We’ll be live soon',
+    'Your vault and your permanent referral link are ready. The $300 activation and payouts open at launch. See you there!',
+  );
 
   // 2. Populate Header Account
   const userAddrEl = document.getElementById('dashWalletAddr');
@@ -141,7 +162,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initDashboardNavigation();
 
   // 5. A paid activation whose backend check failed last time is re-checked first
-  if (await retryPendingActivation(account).catch(() => false)) showToast('Your activation was confirmed.');
+  if (await retryPendingActivation(account).catch(() => false))
+    showToast('Your activation was confirmed.');
 
   // 6. Load live dashboard data from the backend. There is no demo fallback:
   // an unknown wallet must be activated before it can show account data.
@@ -155,7 +177,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   let resigned = false;
   let token = '';
   let leaving = false;
-  window.addEventListener('pagehide', () => { leaving = true; });
+  window.addEventListener('pagehide', () => {
+    leaving = true;
+  });
   const refInput = document.getElementById('dashRefLinkInput') as HTMLInputElement | null;
   if (refInput) refInput.value = 'Loading your invite link…';
   for (let attempt = 0; ; attempt++) {
@@ -176,7 +200,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // first visit: give this wallet its permanent referral code, then load its dashboard
         if (!registered) {
           registered = true;
-          if (await registerWallet(account, token).then(() => true, () => false)) continue;
+          if (
+            await registerWallet(account, token).then(
+              () => true,
+              () => false,
+            )
+          )
+            continue;
         }
         showToast('Activate your wallet to unlock your dashboard.', true);
         break;
@@ -202,7 +232,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // the admin (= company) wallet belongs in the admin panel (owner, 2026-10-10); its own member
   // view stays reachable from there with ?view=member
-  if (dashboardData?.isAdmin && new URLSearchParams(window.location.search).get('view') !== 'member') {
+  if (
+    dashboardData?.isAdmin &&
+    new URLSearchParams(window.location.search).get('view') !== 'member'
+  ) {
     window.location.replace('admin.html');
     return;
   }
@@ -210,9 +243,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   // the package earning now (top-ups wait in line behind a package still under its cap)
   const pkg = dashboardData?.currentPackage ?? dashboardData?.packages?.[0];
   const totalEarned = toNumber(dashboardData?.totalEarned, 0);
-  const capEarned = toNumber(pkg?.totalEarned, 0); // everything earned on this package (all income counts toward the 25x cap)
+  // the whole cap (owner, 2026-10-18): $7,500 per package, added up; all income counts toward it
+  const capEarned = toNumber(dashboardData?.capEarnedUsd ?? pkg?.totalEarned, 0);
   const activeDirects = dashboardData?.activeDirects ?? 0;
-  const maxCap = toNumber(pkg?.maxCapLimit, 0);
+  const maxCap = toNumber(dashboardData?.capTotalUsd ?? pkg?.maxCapLimit, 0);
   const hasLiveData = dashboardData !== null;
   scene?.setScene('dashTop'); // then each section re-forms the cloud as it scrolls in (data-scene)
 
@@ -225,21 +259,41 @@ document.addEventListener('DOMContentLoaded', async () => {
   const isRoot = Boolean(dashboardData?.isRoot);
   let joinCode = '';
   if (dashboardData && !pkg && !isRoot && !dashboardData.placement) {
-    const ref = getPendingReferral().replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    const ref = getPendingReferral()
+      .replace(/[^A-Za-z0-9]/g, '')
+      .toUpperCase();
     if (ref === dashboardData.referralCode) clearPendingReferral(); // their own link
-    const candidates = [ref !== dashboardData.referralCode ? ref : '', dashboardData.pendingSponsorCode ?? '', dashboardData.sponsorCode ?? '']
-      .filter((c, i, all) => c && all.indexOf(c) === i);
+    // last resort (owner, 2026-10-18): a member who arrived without any referral joins under the company
+    const candidates = [
+      ref !== dashboardData.referralCode ? ref : '',
+      dashboardData.pendingSponsorCode ?? '',
+      dashboardData.sponsorCode ?? '',
+      dashboardData.companyCode ?? '',
+    ].filter((c, i, all) => c && all.indexOf(c) === i);
     for (const code of candidates) {
       try {
         await getSponsorByCode(code);
         joinCode = code;
         break;
       } catch (error) {
-        if (!(error instanceof ApiError && error.status === 404)) { joinCode = code; break; } // server busy: let the join itself report it
-        if (code === ref) { clearPendingReferral(); showToast(`Invite code ${code} was not found. Check your invite link.`, true); }
+        if (!(error instanceof ApiError && error.status === 404)) {
+          joinCode = code;
+          break;
+        } // server busy: let the join itself report it
+        if (code === ref) {
+          clearPendingReferral();
+          showToast(`Invite code ${code} was not found. Check your invite link.`, true);
+        }
       }
     }
-    if (joinCode) showJoinGate(account, joinCode, token, () => void logOut());
+    if (joinCode)
+      showJoinGate(
+        account,
+        joinCode,
+        token,
+        () => void logOut(),
+        joinCode === dashboardData.companyCode,
+      );
   } else if (dashboardData?.placement) {
     clearPendingReferral(); // joined: an invite link opened later changes nothing
   }
@@ -248,13 +302,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (dashboardData?.isAdmin) {
     const link = document.getElementById('walletAdminLink');
     if (link) link.hidden = false;
-    getAdminStats(token).then((stats) => {
-      const section = document.getElementById('companySection');
-      const grid = document.getElementById('companyStats');
-      if (!section || !grid) return;
-      renderCompanyOverview(grid, stats);
-      section.hidden = false;
-    }).catch(() => { /* not an admin any more, or the server is busy: the member view still works */ });
+    getAdminStats(token)
+      .then((stats) => {
+        const section = document.getElementById('companySection');
+        const grid = document.getElementById('companyStats');
+        if (!section || !grid) return;
+        renderCompanyOverview(grid, stats);
+        section.hidden = false;
+      })
+      .catch(() => {
+        /* not an admin any more, or the server is busy: the member view still works */
+      });
   }
 
   initReferralLink(account, dashboardData, serverDown);
@@ -268,10 +326,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   // pay with the sponsor the server recorded (the team tree), so the on-chain sponsor always matches it;
   // a member who still has to pick Left / Right joins first (joinCode)
-  if (!adminWallet) initActivation(account, Boolean(pkg) || isRoot, serverDown, dashboardData?.sponsorCode ?? '',
-    Boolean(dashboardData?.canTopUp), dashboardData?.packageCount ?? 0, dashboardData?.paymentsOpenAt ?? null, dashboardData?.paymentsOpen ?? true, joinCode);
+  if (!adminWallet)
+    initActivation(
+      account,
+      Boolean(pkg) || isRoot,
+      serverDown,
+      dashboardData?.sponsorCode ?? '',
+      Boolean(dashboardData?.canTopUp),
+      dashboardData?.packageCount ?? 0,
+      dashboardData?.paymentsOpenAt ?? null,
+      dashboardData?.paymentsOpen ?? true,
+      joinCode,
+    );
   // the rank the member sees includes Power Business (shown as normal business); money stays official
-  updateOverviewMetrics(activeDirects, totalEarned, capEarned, maxCap, Math.max(dashboardData?.currentRank ?? 0, dashboardData?.powerBusiness?.rank ?? 0), pkg?.status);
+  updateOverviewMetrics(
+    activeDirects,
+    totalEarned,
+    capEarned,
+    maxCap,
+    Math.max(dashboardData?.currentRank ?? 0, dashboardData?.powerBusiness?.rank ?? 0),
+    pkg?.status,
+  );
   renderPowerBusiness(dashboardData);
   initDvToken(dashboardData);
   updateMemberDetails(dashboardData, Boolean(pkg) || isRoot, capEarned, maxCap);
@@ -290,15 +365,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderFastStart(dashboardData);
 
   // 9. Withdrawals (wallet-signature sign-in)
-  if (!adminWallet) initWithdrawals(account, hasLiveData ? dashboardData!.availableUsd : 0, dashboardData);
+  if (!adminWallet)
+    initWithdrawals(account, hasLiveData ? dashboardData!.availableUsd : 0, dashboardData);
 });
 
 /** No section nav on the dashboard: the logo just takes the member back to the top. */
 function initDashboardNavigation(): void {
-  document.querySelector<HTMLAnchorElement>('.top-header .brand')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
+  document
+    .querySelector<HTMLAnchorElement>('.top-header .brand')
+    ?.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
 }
 
 /**
@@ -316,11 +394,17 @@ function showPaymentsCountdown(button: HTMLButtonElement, openAt: string): void 
   const at = new Date(openAt);
   button.disabled = true;
   button.textContent = 'Opens soon';
-  if (title) title.textContent = `Activation opens on ${at.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
+  if (title)
+    title.textContent = `Activation opens on ${at.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`;
   const tick = () => {
     const left = at.getTime() - Date.now();
-    if (left <= 0) { window.location.reload(); return; }
-    const d = Math.floor(left / 86_400_000), h = Math.floor(left / 3_600_000) % 24, m = Math.floor(left / 60_000) % 60;
+    if (left <= 0) {
+      window.location.reload();
+      return;
+    }
+    const d = Math.floor(left / 86_400_000),
+      h = Math.floor(left / 3_600_000) % 24,
+      m = Math.floor(left / 60_000) % 60;
     const inText = d > 0 ? `${d}d ${h}h ${m}m` : h > 0 ? `${h}h ${m}m` : `${Math.max(1, m)}m`;
     if (status) status.textContent = `Opens in ${inText}`;
   };
@@ -334,7 +418,13 @@ function showPaymentsCountdown(button: HTMLButtonElement, openAt: string): void 
  * tells them which), confirm that the spot is permanent, and the dashboard opens (page reload with
  * the new placement). The only other way out is Log out.
  */
-function showJoinGate(account: string, code: string, token: string, onLogout: () => void): void {
+function showJoinGate(
+  account: string,
+  code: string,
+  token: string,
+  onLogout: () => void,
+  company = false,
+): void {
   const card = document.createElement('div');
   card.className = 'sign-gate join-gate';
   card.setAttribute('role', 'dialog');
@@ -352,7 +442,8 @@ function showJoinGate(account: string, code: string, token: string, onLogout: ()
       </div>
       <button type="button" class="join-gate-out mono" data-out>Not your wallet? Log out</button>
     </div>`;
-  card.querySelector('.grad-text')!.textContent = code;
+  // no referral: the member joins the company account (owner, 2026-10-18)
+  card.querySelector('.grad-text')!.textContent = company ? `DAOVAULT (${code})` : code;
   document.body.appendChild(card);
   // the dashboard behind stays still until the member has joined
   document.documentElement.classList.add('lv-lock');
@@ -360,7 +451,7 @@ function showJoinGate(account: string, code: string, token: string, onLogout: ()
   card.querySelector<HTMLButtonElement>('[data-side]')?.focus({ preventScroll: true });
   card.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((button) => {
     button.addEventListener('click', async () => {
-      const side = button.dataset.side === 'RIGHT' ? 'RIGHT' : 'LEFT' as Side;
+      const side = button.dataset.side === 'RIGHT' ? 'RIGHT' : ('LEFT' as Side);
       const sideName = side === 'LEFT' ? 'Left' : 'Right';
       const go = await confirmNotice({
         kicker: 'Join your team',
@@ -371,36 +462,60 @@ function showJoinGate(account: string, code: string, token: string, onLogout: ()
         cancel: 'Back',
       });
       if (!go) return;
-      card.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) => { b.disabled = true; });
+      card.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) => {
+        b.disabled = true;
+      });
       try {
         const joined = await joinTeam(account, code, side, token);
         clearPendingReferral();
-        showToast(`Joined: ${sideName} side under ${joined.placement.underCode}. Opening your dashboard...`);
+        showToast(
+          `Joined: ${sideName} side under ${joined.placement.underCode}. Opening your dashboard...`,
+        );
         window.setTimeout(() => window.location.reload(), 1200);
       } catch (error) {
-        card.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) => { b.disabled = false; });
+        card.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) => {
+          b.disabled = false;
+        });
         if (error instanceof ApiError && error.status === 404) clearPendingReferral();
-        showToast(error instanceof Error ? error.message : 'Could not join right now. Please try again.', true);
+        showToast(
+          error instanceof Error ? error.message : 'Could not join right now. Please try again.',
+          true,
+        );
       }
     });
   });
 }
 
-function initActivation(account: string, activated: boolean, serverDown = false, sponsorCode = '', canTopUp = false, packageCount = 0,
-  paymentsOpenAt: string | null = null, paymentsOpen = true, joinCode = ''): void {
+function initActivation(
+  account: string,
+  activated: boolean,
+  serverDown = false,
+  sponsorCode = '',
+  canTopUp = false,
+  packageCount = 0,
+  paymentsOpenAt: string | null = null,
+  paymentsOpen = true,
+  joinCode = '',
+): void {
   const card = document.getElementById('activationCard');
   const button = document.getElementById('dashActivateBtn') as HTMLButtonElement | null;
   const status = document.getElementById('activationStatus');
   const topUp = activated && canTopUp;
   // without the server we cannot tell an activated member from a new one: never offer
   // the $300 payment on a guess
-  if ((activated && !topUp) || serverDown) { card?.setAttribute('hidden', ''); return; }
+  if ((activated && !topUp) || serverDown) {
+    card?.setAttribute('hidden', '');
+    return;
+  }
   if (!button) return;
-  if (!paymentsOpen && paymentsOpenAt) { showPaymentsCountdown(button, paymentsOpenAt); return; }
+  if (!paymentsOpen && paymentsOpenAt) {
+    showPaymentsCountdown(button, paymentsOpenAt);
+    return;
+  }
   if (topUp) {
     const title = document.getElementById('activationTitle');
-    if (title) title.textContent = 'Cap reached: top up to keep earning';
-    button.textContent = 'Approve & Top-up $300';
+    if (title) title.textContent = 'Add a package: +$7,500 earnings cap';
+    button.textContent = 'Approve & Add $300 package';
   }
   if (REAL_PAYMENTS_LOCKED) {
     button.disabled = true;
@@ -415,15 +530,18 @@ function initActivation(account: string, activated: boolean, serverDown = false,
   // binary placement: pick Left / Right in the join card first, then pay
   if (joinCode && !topUp) {
     button.disabled = true;
-    if (status) status.textContent = `Join a side (Left or Right) under ${joinCode} first, then activate.`;
+    if (status)
+      status.textContent = `Join a side (Left or Right) under ${joinCode} first, then activate.`;
     return;
   }
   const code = sponsorCode.replace(/[^A-Za-z0-9]/g, '');
   // the member sees whose team they join before paying
   if (status) {
     status.textContent = topUp
-      ? `${packageCount > 1 ? `All ${packageCount} packages` : 'Your package'} reached the 25× cap ($7,500 each). A new $300 package restarts your level income: same ID, same team.`
-      : code ? `You are joining under ${code} · one-time $300 USDT` : 'Joining without a sponsor · one-time $300 USDT';
+      ? `You hold ${packageCount} ${packageCount === 1 ? 'package' : 'packages'}: a total cap of $${(packageCount * 7500).toLocaleString()}. Each new $300 package adds $7,500 to it, any time: same ID, same team.`
+      : code
+        ? `You are joining under ${code} · one-time $300 USDT`
+        : 'Joining without a sponsor · one-time $300 USDT';
   }
   button.addEventListener('click', async () => {
     button.disabled = true;
@@ -436,12 +554,16 @@ function initActivation(account: string, activated: boolean, serverDown = false,
         const go = await confirmNotice({
           kicker: 'Before you activate',
           title: "Your sponsor's ID is not active yet",
-          message: 'You are joining under {highlight}. Their ID has not been activated yet, so they will not receive a reward from your activation. Your own ID, team and earnings are not affected, and they receive rewards from new activations once their ID is active.',
+          message:
+            'You are joining under {highlight}. Their ID has not been activated yet, so they will not receive a reward from your activation. Your own ID, team and earnings are not affected, and they receive rewards from new activations once their ID is active.',
           highlight: sponsor.code,
           confirm: 'Continue to activation',
           cancel: 'Not now',
         });
-        if (!go) { button.disabled = false; return; }
+        if (!go) {
+          button.disabled = false;
+          return;
+        }
       }
       const txHash = topUp ? await topUpWallet() : await activateWallet(sponsor!.wallet);
       if (status) status.textContent = `Confirmed: ${txHash.slice(0, 10)}...`;
@@ -470,11 +592,17 @@ function initDvToken(data: DashboardData | null): void {
   const fmt = (n: number) => Math.round(n).toLocaleString('en-US');
   const packages = data.packages ?? [];
   const count = packages.length;
-  const el = (tag: string, className: string, text?: string) => Object.assign(document.createElement(tag), { className, ...(text !== undefined ? { textContent: text } : {}) });
+  const el = (tag: string, className: string, text?: string) =>
+    Object.assign(document.createElement(tag), {
+      className,
+      ...(text !== undefined ? { textContent: text } : {}),
+    });
 
   // months to the planned launch (from the server's date), shown as "about N months away"
   const launchAt = dv.launchDate ? new Date(`${dv.launchDate}T00:00:00Z`) : null;
-  const months = launchAt ? Math.max(0, Math.round((launchAt.getTime() - Date.now()) / (30.44 * 86_400_000))) : null;
+  const months = launchAt
+    ? Math.max(0, Math.round((launchAt.getTime() - Date.now()) / (30.44 * 86_400_000)))
+    : null;
 
   if (card) {
     card.hidden = false;
@@ -484,16 +612,31 @@ function initDvToken(data: DashboardData | null): void {
     if (calc) {
       calc.replaceChildren();
       if (count > 0) {
-        calc.append(el('span', 'dv-calc-chip', `${count} package${count === 1 ? '' : 's'}`), el('span', 'dv-calc-op', '\u00d7'),
-          el('span', 'dv-calc-chip', `${fmt(dv.perPackage)} DV`), el('span', 'dv-calc-op', '='), el('span', 'dv-calc-chip is-total', `${fmt(dv.allocated)} DV`));
+        calc.append(
+          el('span', 'dv-calc-chip', `${count} package${count === 1 ? '' : 's'}`),
+          el('span', 'dv-calc-op', '\u00d7'),
+          el('span', 'dv-calc-chip', `${fmt(dv.perPackage)} DV`),
+          el('span', 'dv-calc-op', '='),
+          el('span', 'dv-calc-chip is-total', `${fmt(dv.allocated)} DV`),
+        );
       } else {
-        calc.append(el('span', 'dv-calc-hint', `Activate your $300 package to receive ${fmt(dv.perPackage)} DV`));
+        calc.append(
+          el(
+            'span',
+            'dv-calc-hint',
+            `Activate your $300 package to receive ${fmt(dv.perPackage)} DV`,
+          ),
+        );
       }
     }
     const launch = document.getElementById('dvTokenLaunch');
     if (launch) launch.textContent = `Planned launch \u00b7 ${dv.launch}`;
     const net = document.getElementById('dvTokenNet');
-    if (net) net.textContent = months !== null && months > 0 ? `${dv.network} \u00b7 about ${months} months away` : dv.network;
+    if (net)
+      net.textContent =
+        months !== null && months > 0
+          ? `${dv.network} \u00b7 about ${months} months away`
+          : dv.network;
   }
 
   // the token as a minted 3D coin (falls back to the flat logo + CSS spin on lite phones)
@@ -512,23 +655,46 @@ function initDvToken(data: DashboardData | null): void {
   if (rows) {
     rows.replaceChildren();
     if (!count) {
-      rows.append(el('li', 'dv-row is-empty', `No package yet. Each $300 package adds ${fmt(dv.perPackage)} DV.`));
+      rows.append(
+        el(
+          'li',
+          'dv-row is-empty',
+          `No package yet. Each $300 package adds ${fmt(dv.perPackage)} DV.`,
+        ),
+      );
     } else {
       packages.forEach((p, i) => {
         const li = el('li', 'dv-row');
-        const when = p.createdAt ? new Date(p.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+        const when = p.createdAt
+          ? new Date(p.createdAt).toLocaleDateString(undefined, {
+              day: 'numeric',
+              month: 'short',
+              year: 'numeric',
+            })
+          : '';
         const left = el('span', 'dv-row-what');
-        left.append(el('b', '', `Package #${i + 1}`), el('small', 'mono', [i === 0 ? 'Activation' : 'Top-up', when].filter(Boolean).join(' \u00b7 ')));
+        left.append(
+          el('b', '', `Package #${i + 1}`),
+          el(
+            'small',
+            'mono',
+            [i === 0 ? 'Activation' : 'Top-up', when].filter(Boolean).join(' \u00b7 '),
+          ),
+        );
         li.append(left, el('span', 'dv-row-amt mono', `+${fmt(dv.perPackage)} DV`));
         rows.append(li);
       });
       const sum = el('li', 'dv-row is-sum');
-      sum.append(el('span', 'dv-row-what', `${count} \u00d7 ${fmt(dv.perPackage)} DV`), el('span', 'dv-row-amt mono', `${fmt(dv.allocated)} DV`));
+      sum.append(
+        el('span', 'dv-row-what', `${count} \u00d7 ${fmt(dv.perPackage)} DV`),
+        el('span', 'dv-row-amt mono', `${fmt(dv.allocated)} DV`),
+      );
       rows.append(sum);
     }
   }
   const foot = document.getElementById('dvPanelFoot');
-  if (foot) foot.textContent = `${fmt(dv.perPackage)} DV per $300 package \u00b7 planned launch ${dv.launch} on ${dv.network}`;
+  if (foot)
+    foot.textContent = `${fmt(dv.perPackage)} DV per $300 package \u00b7 planned launch ${dv.launch} on ${dv.network}`;
 
   // open / close like the wallet menu: click, outside click, Escape
   const btn = document.getElementById('dvMenuBtn');
@@ -540,9 +706,16 @@ function initDvToken(data: DashboardData | null): void {
     btn.setAttribute('aria-expanded', String(open));
     menu.classList.toggle('is-open', open);
   };
-  btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(panel.hidden); });
-  document.addEventListener('click', (e) => { if (!panel.hidden && !menu.contains(e.target as Node)) setOpen(false); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !panel.hidden) setOpen(false); });
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOpen(panel.hidden);
+  });
+  document.addEventListener('click', (e) => {
+    if (!panel.hidden && !menu.contains(e.target as Node)) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !panel.hidden) setOpen(false);
+  });
 }
 
 function formatUsd(n: number): string {
@@ -554,7 +727,14 @@ function toNumber(value: number | string | undefined, fallback: number): number 
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function updateOverviewMetrics(activeDirects: number, totalEarned: number, capEarned: number, maxCap: number, rank?: number, status?: string): void {
+function updateOverviewMetrics(
+  activeDirects: number,
+  totalEarned: number,
+  capEarned: number,
+  maxCap: number,
+  rank?: number,
+  status?: string,
+): void {
   const directsEl = document.getElementById('metricDirectsVal');
   const earnedEl = document.getElementById('metricEarnedVal');
   const capEl = document.getElementById('metricCapVal');
@@ -564,14 +744,30 @@ function updateOverviewMetrics(activeDirects: number, totalEarned: number, capEa
   rollNumber(earnedEl, totalEarned, formatUsd);
   if (capEl) {
     capEl.innerHTML = `<span class="cap-roll"></span> <span style="font-size: 1rem; color: var(--text-dim);">/ $${maxCap.toLocaleString()}</span>`;
-    rollNumber(capEl.querySelector<HTMLElement>('.cap-roll'), capEarned, (n) => `${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`);
+    rollNumber(
+      capEl.querySelector<HTMLElement>('.cap-roll'),
+      capEarned,
+      (n) => `${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    );
   }
   if (capStatusEl) {
     const capped = status === 'CAPPED';
-    capStatusEl.textContent = capped ? '• Cap reached: top up $300 to keep earning' : maxCap > 0 ? '• Active package' : '• No live package';
-    capStatusEl.style.color = capped ? 'var(--red)' : maxCap > 0 ? 'var(--green)' : 'var(--text-muted)';
+    capStatusEl.textContent = capped
+      ? '• Cap reached: add a $300 package to keep earning'
+      : maxCap > 0
+        ? '• Earning'
+        : '• No live package';
+    capStatusEl.style.color = capped
+      ? 'var(--red)'
+      : maxCap > 0
+        ? 'var(--green)'
+        : 'var(--text-muted)';
   }
-  if (rankEl) rankEl.textContent = typeof rank === 'number' && rank > 0 ? (RANK_TIERS[rank - 1]?.name ?? `Rank ${rank}`) : 'Unranked';
+  if (rankEl)
+    rankEl.textContent =
+      typeof rank === 'number' && rank > 0
+        ? (RANK_TIERS[rank - 1]?.name ?? `Rank ${rank}`)
+        : 'Unranked';
 }
 
 /**
@@ -580,7 +776,9 @@ function updateOverviewMetrics(activeDirects: number, totalEarned: number, capEa
  * income, a reward, a withdrawal or DV tokens. Its rank uses the official both-sides rule.
  */
 function renderPowerBusiness(data: DashboardData | null): void {
-  const cards = document.querySelectorAll<HTMLElement>('.power-dao-metric, .power-business-total-metric');
+  const cards = document.querySelectorAll<HTMLElement>(
+    '.power-dao-metric, .power-business-total-metric',
+  );
   const dao = document.getElementById('metricPowerDaoVal');
   const daoNote = document.getElementById('metricPowerDaoNote');
   const business = document.getElementById('metricPowerBusinessVal');
@@ -589,7 +787,9 @@ function renderPowerBusiness(data: DashboardData | null): void {
   const pb = data?.powerBusiness;
   const own = Number(pb?.totalUsd ?? 0);
   const show = Boolean(pb) && own > 0;
-  cards.forEach((card) => { card.hidden = !show; });
+  cards.forEach((card) => {
+    card.hidden = !show;
+  });
   if (!show || !pb || !dao || !daoNote || !business || !businessNote) return;
   dao.textContent = `${pb.dao.toLocaleString('en-US')} DAO`;
   daoNote.textContent = `Left ${pb.legs.left.toLocaleString('en-US')} · Right ${pb.legs.right.toLocaleString('en-US')} DAO`;
@@ -599,11 +799,22 @@ function renderPowerBusiness(data: DashboardData | null): void {
 }
 
 /** Header tag + metric captions, written from the live data so every line means something. */
-function updateMemberDetails(data: DashboardData | null, active: boolean, capEarned: number, cap: number): void {
+function updateMemberDetails(
+  data: DashboardData | null,
+  active: boolean,
+  capEarned: number,
+  cap: number,
+): void {
   const net = BSC_CHAIN_ID === 97 ? 'BSC Testnet' : 'BSC Mainnet';
   const tag = document.getElementById('dashMemberTag');
   if (tag) {
-    tag.textContent = data?.isRoot ? `• Company root ID · ${net}` : active ? `• Active member · ${net}` : data ? `• Not activated yet · ${net}` : `• Wallet connected · ${net}`;
+    tag.textContent = data?.isRoot
+      ? `• Company root ID · ${net}`
+      : active
+        ? `• Active member · ${net}`
+        : data
+          ? `• Not activated yet · ${net}`
+          : `• Wallet connected · ${net}`;
     tag.classList.toggle('is-active', active);
   }
   // the member's own proof: their $300 activation transaction on BscScan (public chain data)
@@ -615,14 +826,28 @@ function updateMemberDetails(data: DashboardData | null, active: boolean, capEar
     if (valid) proof.href = scanTx(txHash);
   }
   const unlocked = data?.levelsUnlocked ?? 0;
-  const set = (id: string, text: string) => { const el = document.getElementById(id); if (el) el.textContent = text; };
-  set('metricDirectsNote', unlocked >= 20 ? 'All 20 levels unlocked' : `Levels unlocked: ${unlocked} / 20`);
-  set('metricEarnedNote', cap > 0
-    ? `Level $${(data?.levelIncomeUsd ?? 0).toLocaleString()} · Rank $${(data?.rankRewardsUsd ?? 0).toLocaleString()}${data?.bonusUsd ? ` · Bonus $${data.bonusUsd.toLocaleString()}` : ''} · ${formatUsd(Math.max(cap - capEarned, 0))} to cap`
-    : data?.isRoot ? 'Company root: its commission shares stay in the treasury' : 'Activate the $300 package to start earning');
+  const set = (id: string, text: string) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
+  set(
+    'metricDirectsNote',
+    unlocked >= 20 ? 'All 20 levels unlocked' : `Levels unlocked: ${unlocked} / 20`,
+  );
+  set(
+    'metricEarnedNote',
+    cap > 0
+      ? `Level $${(data?.levelIncomeUsd ?? 0).toLocaleString()} · Rank $${(data?.rankRewardsUsd ?? 0).toLocaleString()}${data?.bonusUsd ? ` · Bonus $${data.bonusUsd.toLocaleString()}` : ''} · ${formatUsd(Math.max(cap - capEarned, 0))} to cap`
+      : data?.isRoot
+        ? 'Company root: its commission shares stay in the treasury'
+        : 'Activate the $300 package to start earning',
+  );
   // same rank as the Current Rank card (Power Business counted as normal business)
   const next = RANK_TIERS[Math.max(data?.currentRank ?? 0, data?.powerBusiness?.rank ?? 0)];
-  set('metricRankNote', next ? `Next: ${next.name} at ${next.volume.toLocaleString()} DAO` : 'Top rank reached');
+  set(
+    'metricRankNote',
+    next ? `Next: ${next.name} at ${next.volume.toLocaleString()} DAO` : 'Top rank reached',
+  );
 }
 
 /**
@@ -630,7 +855,10 @@ function updateMemberDetails(data: DashboardData | null, active: boolean, capEar
  * the Right side of the member's placement team, each needs the full DAO.
  */
 function renderLegs(data: DashboardData | null): void {
-  const set = (id: string, html: string) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  const set = (id: string, html: string) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  };
   const legs = data?.legs ?? { left: 0, right: 0, total: 0 };
   const next = data?.nextRank;
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 1 });
@@ -638,7 +866,12 @@ function renderLegs(data: DashboardData | null): void {
   // where the member sits: "Left · DV1234" (or not joined yet)
   const placed = data?.placement;
   const placeEl = document.getElementById('legCountVal');
-  if (placeEl) placeEl.textContent = placed ? `${placed.side === 'LEFT' ? 'Left' : 'Right'} · ${placed.underCode ?? '—'}` : data?.isRoot ? 'Top ID' : 'Not joined';
+  if (placeEl)
+    placeEl.textContent = placed
+      ? `${placed.side === 'LEFT' ? 'Left' : 'Right'} · ${placed.underCode ?? '—'}`
+      : data?.isRoot
+        ? 'Top ID'
+        : 'Not joined';
   if (!next) {
     set('legNextTarget', '<strong>Top rank reached: Crown President</strong>');
     set('legPowerVal', `${fmt(legs.left)} DAO`);
@@ -648,7 +881,10 @@ function renderLegs(data: DashboardData | null): void {
   }
   // DAO matching: the rank's DAO is needed on EACH side; matched = the smaller side
   const need = next.volume;
-  set('legNextTarget', `Next target: <strong>${next.name} &middot; ${need.toLocaleString()} DAO each side &middot; $${next.rewardUsd.toLocaleString()} reward</strong>`);
+  set(
+    'legNextTarget',
+    `Next target: <strong>${next.name} &middot; ${need.toLocaleString()} DAO each side &middot; $${next.rewardUsd.toLocaleString()} reward</strong>`,
+  );
   set('legPowerVal', `${fmt(legs.left)} / ${fmt(need)} DAO`);
   set('legOtherVal', `${fmt(legs.right)} / ${fmt(need)} DAO`);
   set('legCountedVal', `${fmt(next.countedVolume)} / ${fmt(need)}`);
@@ -671,46 +907,78 @@ function renderFastStart(data: DashboardData | null): void {
   const tiersEl = document.getElementById('fastStartTiers');
   const fs = data?.fastStart;
   if (!card || !tiersEl || !fs) return;
-  const set = (id: string, text: string) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  const set = (id: string, text: string) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
   const now = Date.now();
   const timeLeft = (deadline: string) => {
     const left = new Date(deadline).getTime() - now;
-    const d = Math.floor(left / 86_400_000), h = Math.floor(left / 3_600_000) % 24;
+    const d = Math.floor(left / 86_400_000),
+      h = Math.floor(left / 3_600_000) % 24;
     return d > 0 ? `${d}d ${h}h left` : `${Math.max(1, h)}h left`;
   };
-  const earned = fs.earnedDays ? fs.tiers.find((t) => t.days === fs.earnedDays) ?? null : null;
-  const open = fs.joinedAt ? fs.tiers.find((t) => t.deadline && new Date(t.deadline).getTime() > now) ?? null : null;
+  const earned = fs.earnedDays ? (fs.tiers.find((t) => t.days === fs.earnedDays) ?? null) : null;
+  const open = fs.joinedAt
+    ? (fs.tiers.find((t) => t.deadline && new Date(t.deadline).getTime() > now) ?? null)
+    : null;
   card.hidden = false;
   // one row per bonus, with its own state
-  tiersEl.innerHTML = fs.tiers.map((t) => {
-    const state = !fs.eligible ? ''
-      : earned ? (t === earned ? `Earned +$${fs.earnedUsd.toLocaleString()}` : '')
-        : !t.deadline ? 'Starts when you activate'
-          : new Date(t.deadline).getTime() > now ? `${Math.min(t.directs, fs.directsNeeded)} / ${fs.directsNeeded} · ${timeLeft(t.deadline)}`
-            : 'Closed';
-    const cls = earned === t ? ' is-earned' : t === open ? ' is-open' : state === 'Closed' ? ' is-closed' : '';
-    return `<div class="fs-tier${cls}"><span class="fs-tier-name">${t.name}</span><span class="fs-tier-rule">${fs.directsNeeded} directs within ${t.days} days</span>`
-      + `<b class="mono">$${t.rewardUsd}</b>${state ? `<small class="fs-tier-state mono">${state}</small>` : ''}</div>`;
-  }).join('');
+  tiersEl.innerHTML = fs.tiers
+    .map((t) => {
+      const state = !fs.eligible
+        ? ''
+        : earned
+          ? t === earned
+            ? `Earned +$${fs.earnedUsd.toLocaleString()}`
+            : ''
+          : !t.deadline
+            ? 'Starts when you activate'
+            : new Date(t.deadline).getTime() > now
+              ? `${Math.min(t.directs, fs.directsNeeded)} / ${fs.directsNeeded} · ${timeLeft(t.deadline)}`
+              : 'Closed';
+      const cls =
+        earned === t
+          ? ' is-earned'
+          : t === open
+            ? ' is-open'
+            : state === 'Closed'
+              ? ' is-closed'
+              : '';
+      return (
+        `<div class="fs-tier${cls}"><span class="fs-tier-name">${t.name}</span><span class="fs-tier-rule">${fs.directsNeeded} directs within ${t.days} days</span>` +
+        `<b class="mono">$${t.rewardUsd}</b>${state ? `<small class="fs-tier-state mono">${state}</small>` : ''}</div>`
+      );
+    })
+    .join('');
 
   const count = document.getElementById('fastStartCount');
   if (!fs.eligible) {
     set('fastStartTitle', 'Fast-start bonuses for members');
-    set('fastStartText', 'Members earn these when 10 of their directs activate soon after they do. The company root does not receive them.');
+    set(
+      'fastStartText',
+      'Members earn these when 10 of their directs activate soon after they do. The company root does not receive them.',
+    );
     if (count) count.hidden = true;
     return;
   }
   if (earned) {
     card.classList.add('is-earned');
     set('fastStartTitle', `${earned.name} earned`);
-    set('fastStartText', `${fs.directsNeeded} directs activated within ${earned.days} days: +$${fs.earnedUsd.toLocaleString()} added to your balance.`);
+    set(
+      'fastStartText',
+      `${fs.directsNeeded} directs activated within ${earned.days} days: +$${fs.earnedUsd.toLocaleString()} added to your balance.`,
+    );
     set('fastStartCount', `${fs.directsNeeded} / ${fs.directsNeeded}`);
     card.style.setProperty('--fs-fill', '100%');
     return;
   }
   if (!fs.joinedAt) {
     set('fastStartTitle', 'Earn up to $100 extra');
-    set('fastStartText', `The clock starts the day you activate your ID. Get ${fs.directsNeeded} directs activated within 3 days for $100, or within 7 days for $50.`);
+    set(
+      'fastStartText',
+      `The clock starts the day you activate your ID. Get ${fs.directsNeeded} directs activated within 3 days for $100, or within 7 days for $50.`,
+    );
     set('fastStartCount', `0 / ${fs.directsNeeded}`);
     card.style.setProperty('--fs-fill', '0%');
     return;
@@ -718,14 +986,23 @@ function renderFastStart(data: DashboardData | null): void {
   if (!open) {
     const last = fs.tiers[fs.tiers.length - 1];
     set('fastStartTitle', 'Fast-start window closed');
-    set('fastStartText', `${Math.min(last.directs, fs.directsNeeded)} of ${fs.directsNeeded} directs activated within ${last.days} days of joining.`);
+    set(
+      'fastStartText',
+      `${Math.min(last.directs, fs.directsNeeded)} of ${fs.directsNeeded} directs activated within ${last.days} days of joining.`,
+    );
     set('fastStartCount', `${Math.min(last.directs, fs.directsNeeded)} / ${fs.directsNeeded}`);
     card.classList.add('is-closed');
-    card.style.setProperty('--fs-fill', `${Math.min(100, (last.directs / fs.directsNeeded) * 100)}%`);
+    card.style.setProperty(
+      '--fs-fill',
+      `${Math.min(100, (last.directs / fs.directsNeeded) * 100)}%`,
+    );
     return;
   }
   set('fastStartTitle', `${open.name}: $${open.rewardUsd}`);
-  set('fastStartText', `Get ${fs.directsNeeded} directs activated within ${open.days} days of joining. ${timeLeft(open.deadline!)}.`);
+  set(
+    'fastStartText',
+    `Get ${fs.directsNeeded} directs activated within ${open.days} days of joining. ${timeLeft(open.deadline!)}.`,
+  );
   set('fastStartCount', `${Math.min(open.directs, fs.directsNeeded)} / ${fs.directsNeeded}`);
   card.style.setProperty('--fs-fill', `${Math.min(100, (open.directs / fs.directsNeeded) * 100)}%`);
 }
@@ -734,17 +1011,23 @@ function renderFastStart(data: DashboardData | null): void {
 function renderIncome(data: DashboardData | null): void {
   const list = document.getElementById('incomeList');
   const split = document.getElementById('incomeSplit');
-  if (split && data) split.textContent = `Level $${data.levelIncomeUsd.toLocaleString()} · Rank $${data.rankRewardsUsd.toLocaleString()}${data.bonusUsd ? ` · Bonus $${data.bonusUsd.toLocaleString()}` : ''}`;
+  if (split && data)
+    split.textContent = `Level $${data.levelIncomeUsd.toLocaleString()} · Rank $${data.rankRewardsUsd.toLocaleString()}${data.bonusUsd ? ` · Bonus $${data.bonusUsd.toLocaleString()}` : ''}`;
   if (!list || !data?.recentEarnings.length) return;
-  list.innerHTML = data.recentEarnings.map((e) => {
-    const what = e.type === 'RANK_REWARD'
-      ? `Rank reward &middot; ${RANK_TIERS[(e.level ?? 1) - 1]?.name ?? ''}`
-      : e.type === 'FAST_START_BONUS'
-        ? (e.level === 3 ? 'Rocket Start Bonus &middot; 10 directs in 3 days' : 'Fast Start Bonus &middot; 10 directs in 7 days')
-        : `Level ${e.level} &middot; from ${formatAddress(e.from)}`;
-    const when = new Date(e.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-    return `<li class="${e.type === 'LEVEL_COMMISSION' ? '' : 'is-rank'}"><span>${what}</span><span class="income-when">${when}</span><b>+${formatUsd(e.amountUsd)}</b></li>`;
-  }).join('');
+  list.innerHTML = data.recentEarnings
+    .map((e) => {
+      const what =
+        e.type === 'RANK_REWARD'
+          ? `Rank reward &middot; ${RANK_TIERS[(e.level ?? 1) - 1]?.name ?? ''}`
+          : e.type === 'FAST_START_BONUS'
+            ? e.level === 3
+              ? 'Rocket Start Bonus &middot; 10 directs in 3 days'
+              : 'Fast Start Bonus &middot; 10 directs in 7 days'
+            : `Level ${e.level} &middot; from ${formatAddress(e.from)}`;
+      const when = new Date(e.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+      return `<li class="${e.type === 'LEVEL_COMMISSION' ? '' : 'is-rank'}"><span>${what}</span><span class="income-when">${when}</span><b>+${formatUsd(e.amountUsd)}</b></li>`;
+    })
+    .join('');
 }
 
 /**
@@ -761,9 +1044,11 @@ function initReferralLink(account: string, data: DashboardData | null, serverDow
   const fullLink = `${origin}/index.html?ref=${refCode}`;
 
   if (inputEl) {
-    inputEl.value = data ? fullLink
-      : serverDown ? 'Server unavailable · refresh in a minute to see your link'
-      : 'Activate your ID to get your invite link';
+    inputEl.value = data
+      ? fullLink
+      : serverDown
+        ? 'Server unavailable · refresh in a minute to see your link'
+        : 'Activate your ID to get your invite link';
   }
   const idEl = document.getElementById('dashMemberId');
   if (idEl) idEl.textContent = data ? refCode : '–';
@@ -772,12 +1057,20 @@ function initReferralLink(account: string, data: DashboardData | null, serverDow
   const activated = Boolean(data?.packages?.length) || Boolean(data?.isRoot); // the root sponsors without paying
   // the member's own invite code is never their sponsor (they opened their own link)
   // before payment the sponsor is the latest invite saved on the server (browser copy if offline)
-  let pendingRef = (getPendingReferral() || data?.pendingSponsorCode || '').replace(/[^A-Za-z0-9]/g, '');
-  if (data && pendingRef === refCode) { clearPendingReferral(); pendingRef = ''; }
+  let pendingRef = (getPendingReferral() || data?.pendingSponsorCode || '').replace(
+    /[^A-Za-z0-9]/g,
+    '',
+  );
+  if (data && pendingRef === refCode) {
+    clearPendingReferral();
+    pendingRef = '';
+  }
   if (sponsorTag) {
     // before activation the sponsor is still the invite code this visitor arrived with
     const sponsor = data?.sponsorCode ?? (activated ? null : pendingRef);
-    sponsorTag.innerHTML = sponsor ? `Sponsor <b>${sponsor.replace(/[^A-Za-z0-9]/g, '')}</b>` : 'Joined direct';
+    sponsorTag.innerHTML = sponsor
+      ? `Sponsor <b>${sponsor.replace(/[^A-Za-z0-9]/g, '')}</b>`
+      : 'Joined direct';
     // say it now, not at payment time, when the invite code does not exist
     if (!data?.sponsorCode && !activated && pendingRef) {
       getSponsorByCode(pendingRef).catch((error) => {
@@ -815,9 +1108,7 @@ function initCapMeter(currentEarned: number, maxCap: number = 7500): void {
   const barEl = document.getElementById('capFillBar') as HTMLElement | null;
   const pctEl = document.getElementById('capPctText');
 
-  const percentage = maxCap > 0
-    ? Math.min(100, Math.round((currentEarned / maxCap) * 100))
-    : 0;
+  const percentage = maxCap > 0 ? Math.min(100, Math.round((currentEarned / maxCap) * 100)) : 0;
 
   if (earnedEl) countUp(earnedEl, currentEarned, '$', 1000);
   if (maxEl) maxEl.textContent = `$${maxCap.toLocaleString()}`;
@@ -835,7 +1126,8 @@ function renderLevelTable(data: DashboardData | null): void {
   const tbody = document.getElementById('levelTableBody');
   if (!tbody) return;
   const note = document.getElementById('levelTableNote');
-  if (note) note.textContent = data ? `${data.levelsUnlocked} / 20 levels unlocked` : 'Live data required';
+  if (note)
+    note.textContent = data ? `${data.levelsUnlocked} / 20 levels unlocked` : 'Live data required';
 
   tbody.innerHTML = '';
   LEVEL_MATRIX.forEach((row, idx) => {
@@ -866,7 +1158,12 @@ function renderLevelTable(data: DashboardData | null): void {
       tr.setAttribute('aria-label', `Level ${row.level}: see ${live?.members ?? 0} members`);
       const open = () => openLevelModal(data.walletAddress, row.level);
       tr.addEventListener('click', open);
-      tr.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+      tr.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          open();
+        }
+      });
     }
     tbody.appendChild(tr);
   });
@@ -886,8 +1183,11 @@ const STATUS_LABEL: Record<string, string> = {
   REJECTED: 'Rejected',
 };
 
-const PAYOUT_ABI = ['function claim(bytes32 id, uint256 amount, uint256 deadline, bytes signature)'];
-const scanTx = (hash: string) => `https://${BSC_CHAIN_ID === 97 ? 'testnet.' : ''}bscscan.com/tx/${hash}`;
+const PAYOUT_ABI = [
+  'function claim(bytes32 id, uint256 amount, uint256 deadline, bytes signature)',
+];
+const scanTx = (hash: string) =>
+  `https://${BSC_CHAIN_ID === 97 ? 'testnet.' : ''}bscscan.com/tx/${hash}`;
 
 /**
  * Instant payout: the member's wallet submits the signed voucher to the payout contract,
@@ -900,9 +1200,18 @@ async function claimVoucher(token: string, w: Withdrawal): Promise<Withdrawal> {
   if (!provider) throw new Error('Reconnect your wallet to receive the payout.');
   await requireBSCNetwork(provider);
   // the voucher pays msg.sender, so it must be the member's own account
-  const payout = new Contract(w.voucher.contract, PAYOUT_ABI, await getSignerFor(provider, w.destinationWallet));
+  const payout = new Contract(
+    w.voucher.contract,
+    PAYOUT_ABI,
+    await getSignerFor(provider, w.destinationWallet),
+  );
   showToast('Confirm in your wallet to receive your USDT...');
-  const tx = await payout.claim(w.voucher.id, w.voucher.amount, w.voucher.deadline, w.voucher.signature);
+  const tx = await payout.claim(
+    w.voucher.id,
+    w.voucher.amount,
+    w.voucher.deadline,
+    w.voucher.signature,
+  );
   showToast('Sending your USDT...');
   await tx.wait();
   return confirmWithdrawal(token, w.id, tx.hash);
@@ -912,22 +1221,42 @@ function renderWithdrawalSummary(summary: WithdrawalSummary): void {
   const availEl = document.getElementById('withAvailBalance');
   const meta = document.getElementById('withMeta');
   rollNumber(availEl, summary.availableUsd, (n) => `${formatUsd(n)} USDT`);
-  if (meta) meta.textContent = `Pending ${formatUsd(summary.pendingUsd)} · Withdrawn ${formatUsd(summary.withdrawnUsd)} · Min ${formatUsd(summary.minimumUsd)}`;
+  if (meta)
+    meta.textContent = `Pending ${formatUsd(summary.pendingUsd)} · Withdrawn ${formatUsd(summary.withdrawnUsd)} · Min ${formatUsd(summary.minimumUsd)}`;
   const box = document.getElementById('withHistory');
   const list = document.getElementById('withHistoryList');
   if (!box || !list) return;
   box.hidden = summary.items.length === 0;
-  list.innerHTML = summary.items.map((w) => {
-    const date = new Date(w.createdAt).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-    const tx = w.payoutTxHash ? ` <a href="${scanTx(w.payoutTxHash)}" target="_blank" rel="noopener">tx&nearr;</a>` : '';
-    const reason = w.rejectReason ? `<small>${w.rejectReason.replace(/[<>&"]/g, '')}</small>` : '';
-    const label = w.voucher ? 'Ready to receive' : w.status === 'COMPLETED' && w.instant ? 'Paid instantly' : STATUS_LABEL[w.status] ?? w.status;
-    const claim = w.voucher ? `<button type="button" class="with-claim" data-claim="${w.id}">Receive now &rarr;</button>` : '';
-    return `<li class="is-${w.status.toLowerCase()}"><span>${date} · ${formatUsd(w.grossUsd)} → <b>${formatUsd(w.netUsd)}</b></span><span class="with-status">${label}${tx}</span>${claim}${reason}</li>`;
-  }).join('');
+  list.innerHTML = summary.items
+    .map((w) => {
+      const date = new Date(w.createdAt).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+      });
+      const tx = w.payoutTxHash
+        ? ` <a href="${scanTx(w.payoutTxHash)}" target="_blank" rel="noopener">tx&nearr;</a>`
+        : '';
+      const reason = w.rejectReason
+        ? `<small>${w.rejectReason.replace(/[<>&"]/g, '')}</small>`
+        : '';
+      const label = w.voucher
+        ? 'Ready to receive'
+        : w.status === 'COMPLETED' && w.instant
+          ? 'Paid instantly'
+          : (STATUS_LABEL[w.status] ?? w.status);
+      const claim = w.voucher
+        ? `<button type="button" class="with-claim" data-claim="${w.id}">Receive now &rarr;</button>`
+        : '';
+      return `<li class="is-${w.status.toLowerCase()}"><span>${date} · ${formatUsd(w.grossUsd)} → <b>${formatUsd(w.netUsd)}</b></span><span class="with-status">${label}${tx}</span>${claim}${reason}</li>`;
+    })
+    .join('');
 }
 
-function initWithdrawals(wallet: string, availableBalance: number, data: DashboardData | null): void {
+function initWithdrawals(
+  wallet: string,
+  availableBalance: number,
+  data: DashboardData | null,
+): void {
   const availEl = document.getElementById('withAvailBalance');
   const inputEl = document.getElementById('withAmountInput') as HTMLInputElement | null;
   const grossEl = document.getElementById('withGrossVal');
@@ -942,7 +1271,8 @@ function initWithdrawals(wallet: string, availableBalance: number, data: Dashboa
 
   rollNumber(availEl, available, (n) => `${formatUsd(n)} USDT`);
   const meta = document.getElementById('withMeta');
-  if (meta && data) meta.textContent = `Pending ${formatUsd(data.pendingWithdrawalUsd)} · Withdrawn ${formatUsd(data.withdrawnUsd)}`;
+  if (meta && data)
+    meta.textContent = `Pending ${formatUsd(data.pendingWithdrawalUsd)} · Withdrawn ${formatUsd(data.withdrawnUsd)}`;
 
   const updateMath = (): void => {
     const amount = Math.max(0, parseFloat(inputEl?.value || '0') || 0);
@@ -965,9 +1295,10 @@ function initWithdrawals(wallet: string, availableBalance: number, data: Dashboa
     available = summary.availableUsd;
     feePercent = summary.feePercent;
     items = summary.items;
-    if (note) note.textContent = summary.instant
-      ? '• Instant: confirm once in your wallet and the USDT arrives in seconds (a tiny BNB network fee applies). Signing in costs no gas.'
-      : '• Withdrawals open soon. Your balance stays safe here until then.';
+    if (note)
+      note.textContent = summary.instant
+        ? '• Instant: confirm once in your wallet and the USDT arrives in seconds (a tiny BNB network fee applies). Signing in costs no gas.'
+        : '• Withdrawals open soon. Your balance stays safe here until then.';
     renderWithdrawalSummary(summary);
     updateMath();
   };
@@ -978,7 +1309,8 @@ function initWithdrawals(wallet: string, availableBalance: number, data: Dashboa
       return 'Session expired. Tap again to sign in.';
     }
     const code = (error as { code?: string | number })?.code;
-    if (code === 'ACTION_REJECTED' || code === 4001) return 'Cancelled in your wallet. You can receive it from "Your withdrawals" before it expires.';
+    if (code === 'ACTION_REJECTED' || code === 4001)
+      return 'Cancelled in your wallet. You can receive it from "Your withdrawals" before it expires.';
     return error instanceof Error ? error.message : 'Withdrawal failed.';
   };
 
@@ -1000,8 +1332,14 @@ function initWithdrawals(wallet: string, availableBalance: number, data: Dashboa
   submitBtn.addEventListener('click', async (e: MouseEvent) => {
     e.preventDefault();
     const amount = Math.round((parseFloat(inputEl?.value || '0') || 0) * 100) / 100;
-    if (amount <= 0) { showToast('Enter the amount you want to withdraw.', true); return; }
-    if (amount > available) { showToast('That is more than your available balance.', true); return; }
+    if (amount <= 0) {
+      showToast('Enter the amount you want to withdraw.', true);
+      return;
+    }
+    if (amount > available) {
+      showToast('That is more than your available balance.', true);
+      return;
+    }
     submitBtn.disabled = true;
     try {
       const session = await signIn(wallet);
@@ -1031,7 +1369,10 @@ function initWithdrawals(wallet: string, availableBalance: number, data: Dashboa
     if (!button) return;
     const w = items.find((x) => x.id === button.dataset.claim);
     const session = savedSession(wallet);
-    if (!w || !session) { showToast('Sign in again to receive this payout.', true); return; }
+    if (!w || !session) {
+      showToast('Sign in again to receive this payout.', true);
+      return;
+    }
     button.disabled = true;
     try {
       await receive(session, w, button);

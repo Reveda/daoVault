@@ -62,7 +62,11 @@ function initRetopupCycle(): void {
       onComplete: () => {
         // Step 3: 25x Cap Reached
         highlightStation(2);
-        try { navigator.vibrate?.([30, 50, 30]); } catch { /* no vibration */ }
+        try {
+          navigator.vibrate?.([30, 50, 30]);
+        } catch {
+          /* no vibration */
+        }
         if (capAlert) capAlert.classList.add('is-visible');
         if (statusPill) statusPill.textContent = `25× cap reached · $7,500 earned on this package`;
 
@@ -81,7 +85,11 @@ function initRetopupCycle(): void {
   // Manual Buy Button Click -> Renew for next cycle without losing team
   if (manualBuyBtn) {
     manualBuyBtn.addEventListener('click', () => {
-      try { navigator.vibrate?.(25); } catch { /* no vibration */ }
+      try {
+        navigator.vibrate?.(25);
+      } catch {
+        /* no vibration */
+      }
       currentCycle++;
       if (cycleCountBadge) cycleCountBadge.textContent = `PACKAGE #${currentCycle}`;
       if (capAlert) capAlert.classList.remove('is-visible');
@@ -91,7 +99,8 @@ function initRetopupCycle(): void {
       // Reset progress to 0 for the fresh $7,500 room
       meterFill.style.width = '0%';
       meterVal.textContent = '$0 / $7,500 USDT';
-      if (statusPill) statusPill.textContent = `Package #${currentCycle} active · new $7,500 cap · same ID and team`;
+      if (statusPill)
+        statusPill.textContent = `Package #${currentCycle} active · new $7,500 cap · same ID and team`;
       highlightStation(0);
 
       gsap.fromTo(meterFill, { opacity: 0.3 }, { opacity: 1, duration: 0.4 });

@@ -7,6 +7,7 @@
  *  - lines never carry secrets, tokens, keys or full wallet addresses
  */
 import { env } from "./env.js";
+import { logger } from "./logger.js";
 
 type Level = "critical" | "warning" | "info";
 const lastSent = new Map<string, number>();
@@ -20,5 +21,6 @@ export function alert(level: Level, key: string, message: string): void {
   if (now - last < env.ALERT_REPEAT_MINUTES * 60_000) return;
   lastSent.set(key, now);
   if (lastSent.size > 1_000) lastSent.clear();
-  (level === "info" ? console.log : console.error)(`[alert] ${level.toUpperCase()} ${message}`);
+  // JSON field alert=<level> for log tools; the "[alert]" text keeps a plain grep working
+  logger[level === "critical" ? "error" : level === "warning" ? "warn" : "info"]({ alert: level, alertKey: key }, `[alert] ${level.toUpperCase()} ${message}`);
 }

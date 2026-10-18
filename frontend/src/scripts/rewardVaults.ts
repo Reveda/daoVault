@@ -26,13 +26,22 @@ export const RANK_TIERS = [
 ];
 
 const money = (n: number) => `$${n.toLocaleString('en-US')}`;
-const openedKey = (wallet: string, rank: number) => `daovault_box_opened_${wallet.toLowerCase()}_${rank}`;
+const openedKey = (wallet: string, rank: number) =>
+  `daovault_box_opened_${wallet.toLowerCase()}_${rank}`;
 
 function isOpened(wallet: string, rank: number): boolean {
-  try { return localStorage.getItem(openedKey(wallet, rank)) === '1'; } catch { return false; }
+  try {
+    return localStorage.getItem(openedKey(wallet, rank)) === '1';
+  } catch {
+    return false;
+  }
 }
 function markOpened(wallet: string, rank: number): void {
-  try { localStorage.setItem(openedKey(wallet, rank), '1'); } catch { /* storage blocked */ }
+  try {
+    localStorage.setItem(openedKey(wallet, rank), '1');
+  } catch {
+    /* storage blocked */
+  }
 }
 
 /** Draws the 11 boxes. `currentRank` is the rank number from the backend (0 = unranked). */
@@ -53,7 +62,10 @@ export function renderRewardVaults(wallet: string, currentRank: number): void {
       btn.type = 'button';
       btn.className = `reward-box is-${state}`;
       btn.style.setProperty('--i', String(i));
-      btn.setAttribute('aria-label', `${tier.name} box: ${state === 'locked' ? 'sealed' : state === 'ready' ? 'ready to open' : `opened, ${money(tier.reward)}`}`);
+      btn.setAttribute(
+        'aria-label',
+        `${tier.name} box: ${state === 'locked' ? 'sealed' : state === 'ready' ? 'ready to open' : `opened, ${money(tier.reward)}`}`,
+      );
       btn.innerHTML = `
         <span class="rb-art" aria-hidden="true">
           <span class="rb-lid"></span><span class="rb-body"><img src="/favicon.png" alt="" /></span>
@@ -63,30 +75,43 @@ export function renderRewardVaults(wallet: string, currentRank: number): void {
         <span class="rb-name">${tier.name}</span>
         <span class="rb-reward">${state === 'opened' ? money(tier.reward) : '???'}</span>
         <span class="rb-state mono">${state === 'locked' ? `${tier.volume.toLocaleString()} DAO matching` : state === 'ready' ? 'Ready to open' : 'Opened'}</span>`;
-      btn.addEventListener('click', () => openGiftBox({
-        rank: tier.name,
-        reward: tier.reward,
-        requirement: `${tier.volume.toLocaleString()} DAO matching on each side (${tier.name} rank)`,
-        mode: state,
-        onOpened: () => {
-          markOpened(wallet, rank);
-          draw();
-        },
-      }));
+      btn.addEventListener('click', () =>
+        openGiftBox({
+          rank: tier.name,
+          reward: tier.reward,
+          requirement: `${tier.volume.toLocaleString()} DAO matching on each side (${tier.name} rank)`,
+          mode: state,
+          onOpened: () => {
+            markOpened(wallet, rank);
+            draw();
+          },
+        }),
+      );
       grid.appendChild(btn);
     });
     // finished entrance animations are dropped (they kept a GPU layer per box on phones)
     grid.classList.remove('is-settled');
     window.setTimeout(() => grid.classList.add('is-settled'), 1400);
 
-    const set = (id: string, text: string) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    const set = (id: string, text: string) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
     const reachedTier = RANK_TIERS[currentRank - 1];
     const next = RANK_TIERS[currentRank];
     set('rankNow', reachedTier ? reachedTier.name : 'Unranked');
     set('rankBoxesOpen', `${opened} / ${RANK_TIERS.length} opened`);
-    set('rankNext', next ? `Next: ${next.name} at ${next.volume.toLocaleString()} DAO matching (each side)` : 'Top rank reached: Crown President');
+    set(
+      'rankNext',
+      next
+        ? `Next: ${next.name} at ${next.volume.toLocaleString()} DAO matching (each side)`
+        : 'Top rank reached: Crown President',
+    );
     const bar = document.getElementById('rankBar');
-    if (bar) window.setTimeout(() => { bar.style.width = `${(Math.min(currentRank, RANK_TIERS.length) / RANK_TIERS.length) * 100}%`; }, 400);
+    if (bar)
+      window.setTimeout(() => {
+        bar.style.width = `${(Math.min(currentRank, RANK_TIERS.length) / RANK_TIERS.length) * 100}%`;
+      }, 400);
   };
   draw();
 }
@@ -98,33 +123,50 @@ export function initWalletMenu(wallet: string): void {
   const panel = wrap?.querySelector<HTMLElement>('.wallet-menu-panel');
   if (!wrap || !btn || !panel) return;
   const scan = document.getElementById('walletScanLink') as HTMLAnchorElement | null;
-  if (scan) scan.href = `https://${BSC_CHAIN_ID === 97 ? 'testnet.' : ''}bscscan.com/address/${wallet}`;
+  if (scan)
+    scan.href = `https://${BSC_CHAIN_ID === 97 ? 'testnet.' : ''}bscscan.com/address/${wallet}`;
 
   const jumps = Array.from(panel.querySelectorAll<HTMLAnchorElement>('[data-jump]'));
   const targetOf = (a: HTMLAnchorElement) => document.getElementById(a.hash.slice(1));
   const setOpen = (open: boolean) => {
     // a shortcut shows only when its section is on this member's dashboard
-    if (open) jumps.forEach((a) => { const t = targetOf(a); a.hidden = !t || t.closest('[hidden]') !== null; });
+    if (open)
+      jumps.forEach((a) => {
+        const t = targetOf(a);
+        a.hidden = !t || t.closest('[hidden]') !== null;
+      });
     panel.hidden = !open;
     btn.setAttribute('aria-expanded', String(open));
     wrap.classList.toggle('is-open', open);
   };
   // section shortcuts (owner, 2026-10-11): smooth scroll under the header, then a short gold flash
-  jumps.forEach((a) => a.addEventListener('click', (e) => {
-    const target = targetOf(a);
-    if (!target) return;
-    e.preventDefault();
-    setOpen(false);
-    target.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
-    target.classList.remove('jump-flash');
-    window.setTimeout(() => {
-      target.classList.add('jump-flash');
-      window.setTimeout(() => target.classList.remove('jump-flash'), 1400);
-    }, 450);
-  }));
-  btn.addEventListener('click', (e) => { e.stopPropagation(); setOpen(panel.hidden); });
-  document.addEventListener('click', (e) => { if (!wrap.contains(e.target as Node)) setOpen(false); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
+  jumps.forEach((a) =>
+    a.addEventListener('click', (e) => {
+      const target = targetOf(a);
+      if (!target) return;
+      e.preventDefault();
+      setOpen(false);
+      target.scrollIntoView({
+        behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+        block: 'start',
+      });
+      target.classList.remove('jump-flash');
+      window.setTimeout(() => {
+        target.classList.add('jump-flash');
+        window.setTimeout(() => target.classList.remove('jump-flash'), 1400);
+      }, 450);
+    }),
+  );
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setOpen(panel.hidden);
+  });
+  document.addEventListener('click', (e) => {
+    if (!wrap.contains(e.target as Node)) setOpen(false);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') setOpen(false);
+  });
   document.getElementById('walletCopyBtn')?.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText(wallet);

@@ -10,12 +10,22 @@ import { redis } from "./redis.js";
 const local = new Map<string, { until: number; value: string }>();
 const MAX_LOCAL = 5_000;
 
-export async function cached<T>(key: string, ttlSeconds: number, load: () => Promise<T>): Promise<T> {
+export async function cached<T>(
+  key: string,
+  ttlSeconds: number,
+  load: () => Promise<T>,
+): Promise<T> {
   const full = `dv:cache:${key}`;
   try {
-    const hit = redis ? await redis.get(full) : (local.get(full)?.until ?? 0) > Date.now() ? local.get(full)!.value : null;
+    const hit = redis
+      ? await redis.get(full)
+      : (local.get(full)?.until ?? 0) > Date.now()
+        ? local.get(full)!.value
+        : null;
     if (hit) return JSON.parse(hit) as T;
-  } catch { /* cache down: just load */ }
+  } catch {
+    /* cache down: just load */
+  }
   const value = await load();
   const text = JSON.stringify(value);
   try {
@@ -24,6 +34,8 @@ export async function cached<T>(key: string, ttlSeconds: number, load: () => Pro
       if (local.size >= MAX_LOCAL) local.clear();
       local.set(full, { until: Date.now() + ttlSeconds * 1000, value: text });
     }
-  } catch { /* cache down: fine */ }
+  } catch {
+    /* cache down: fine */
+  }
   return value;
 }

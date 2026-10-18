@@ -19,8 +19,13 @@ export const requireAuth: RequestHandler = (req, res, next) => {
     return;
   }
   authService.verifyToken(token).then(
-    (claims) => { req.auth = claims; next(); },
-    () => { res.status(401).json({ success: false, error: "Session expired. Sign in again." }); },
+    (claims) => {
+      req.auth = claims;
+      next();
+    },
+    () => {
+      res.status(401).json({ success: false, error: "Session expired. Sign in again." });
+    },
   );
 };
 
@@ -39,15 +44,19 @@ export const requireAdmin: RequestHandler = (req, res, next) => {
  * A member's own data only: signed in as the wallet in the URL (or in the body for POSTs),
  * or as an admin. Anyone else gets 403, so knowing an address is not enough to read it.
  */
-export const requireSelfOrAdmin = (source: "params" | "body" = "params"): RequestHandler => (req, res, next) => {
-  requireAuth(req, res, () => {
-    const wallet = String((source === "params" ? req.params : req.body)?.walletAddress ?? "").toLowerCase();
-    const self = req.auth?.sub === wallet;
-    const admin = req.auth?.role === "admin" && isAdminWallet(req.auth.sub);
-    if (!self && !admin) {
-      res.status(403).json({ success: false, error: "You can only open your own vault." });
-      return;
-    }
-    next();
-  });
-};
+export const requireSelfOrAdmin =
+  (source: "params" | "body" = "params"): RequestHandler =>
+  (req, res, next) => {
+    requireAuth(req, res, () => {
+      const wallet = String(
+        (source === "params" ? req.params : req.body)?.walletAddress ?? "",
+      ).toLowerCase();
+      const self = req.auth?.sub === wallet;
+      const admin = req.auth?.role === "admin" && isAdminWallet(req.auth.sub);
+      if (!self && !admin) {
+        res.status(403).json({ success: false, error: "You can only open your own vault." });
+        return;
+      }
+      next();
+    });
+  };

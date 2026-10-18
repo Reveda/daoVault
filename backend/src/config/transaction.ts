@@ -19,7 +19,8 @@ export async function serializable<T>(fn: (tx: Tx) => Promise<T>, attempts = 10)
       });
     } catch (error) {
       const code = (error as { code?: string })?.code;
-      const conflict = code === "P2034" || /could not serialize|40001/i.test(String((error as Error)?.message));
+      const conflict =
+        code === "P2034" || /could not serialize|40001/i.test(String((error as Error)?.message));
       if (!conflict || attempt >= attempts) throw error;
       // exponential backoff with jitter (launch bursts: many requests retrying at once must spread out)
       const base = Math.min(2_000, 25 * 2 ** attempt);

@@ -7,10 +7,20 @@ import { redis } from "../config/redis.js";
 // one shared counter per limiter in Redis when several API copies run; in memory otherwise
 const sharedStore = (name: string) =>
   redis
-    ? new RedisStore({ prefix: `rl:${name}:`, sendCommand: (...args: string[]) => redis!.sendCommand(args) })
+    ? new RedisStore({
+        prefix: `rl:${name}:`,
+        sendCommand: (...args: string[]) => redis!.sendCommand(args),
+      })
     : undefined;
 
-const createLimiter = (name: string, windowMs: number, limit: number, message: string, keyGenerator?: (req: Request) => string, passOnStoreError = true) =>
+const createLimiter = (
+  name: string,
+  windowMs: number,
+  limit: number,
+  message: string,
+  keyGenerator?: (req: Request) => string,
+  passOnStoreError = true,
+) =>
   rateLimit({
     windowMs,
     limit,
@@ -51,7 +61,10 @@ export const authWalletRateLimiter = createLimiter(
   env.AUTH_WALLET_RATE_LIMIT_MAX,
   "Too many sign-in attempts for this wallet. Please wait a few minutes.",
   (req) => {
-    const wallet = typeof req.body?.walletAddress === "string" ? req.body.walletAddress.trim().toLowerCase() : "";
+    const wallet =
+      typeof req.body?.walletAddress === "string"
+        ? req.body.walletAddress.trim().toLowerCase()
+        : "";
     return /^0x[0-9a-f]{40}$/.test(wallet) ? `w:${wallet}` : `ip:${ipKeyGenerator(req.ip ?? "")}`;
   },
   false,

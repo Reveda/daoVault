@@ -7,7 +7,13 @@
  *    silently, so the member signs again only after the refresh token expires (30 days),
  *    after Log out, or when the wallet changes.
  */
-import { ApiError, getAuthChallenge, logoutAuthSession, refreshAuthSession, verifyAuthSignature } from './api.ts';
+import {
+  ApiError,
+  getAuthChallenge,
+  logoutAuthSession,
+  refreshAuthSession,
+  verifyAuthSignature,
+} from './api.ts';
 import { hexlify, toUtf8Bytes } from 'ethers';
 import { getActiveProvider } from './wallet.ts';
 import { showToast } from './core.ts';
@@ -20,8 +26,12 @@ const pending = new Map<string, Promise<string>>();
 for (const getStore of [() => localStorage, () => sessionStorage]) {
   try {
     const store = getStore(); // even reading the property throws when storage is blocked
-    Object.keys(store).filter((k) => k.startsWith('daovault_session_')).forEach((k) => store.removeItem(k));
-  } catch { /* storage blocked */ }
+    Object.keys(store)
+      .filter((k) => k.startsWith('daovault_session_'))
+      .forEach((k) => store.removeItem(k));
+  } catch {
+    /* storage blocked */
+  }
 }
 
 const remember = (wallet: string, token: string, expiresAt: string) => {
@@ -31,7 +41,9 @@ const remember = (wallet: string, token: string, expiresAt: string) => {
 
 /** The in-memory access token for this wallet, if it is still valid for at least a minute. */
 export function savedSession(wallet: string): string | null {
-  return access && access.wallet === wallet.toLowerCase() && access.expiresAt > Date.now() + 60_000 ? access.token : null;
+  return access && access.wallet === wallet.toLowerCase() && access.expiresAt > Date.now() + 60_000
+    ? access.token
+    : null;
 }
 
 /** Forget the access token (e.g. the server said it ended); the next call refreshes. */
@@ -74,7 +86,10 @@ async function refreshFor(wallet: string): Promise<string | null> {
  * who is not signed in as an admin sees a plain "page not found" and nothing else.
  * null = no session; server errors (asleep / down) are thrown so the caller can retry.
  */
-export async function silentSession(): Promise<{ wallet: string; role: 'member' | 'admin' } | null> {
+export async function silentSession(): Promise<{
+  wallet: string;
+  role: 'member' | 'admin';
+} | null> {
   try {
     const session = await refreshAuthSession();
     remember(session.walletAddress, session.token, session.expiresAt);
@@ -101,12 +116,19 @@ export function signIn(wallet: string): Promise<string> {
     showToast('Sign the message in your wallet (free, no gas)...');
     // straight personal_sign: signing a message needs no network, so a pending "switch to
     // BSC" prompt (autoReconnect) can never break it the way an ethers provider would
-    const signature: string = await provider.request({ method: 'personal_sign', params: [hexlify(toUtf8Bytes(message)), wallet] });
+    const signature: string = await provider.request({
+      method: 'personal_sign',
+      params: [hexlify(toUtf8Bytes(message)), wallet],
+    });
     const session = await verifyAuthSignature(wallet, signature);
     return remember(wallet, session.token, session.expiresAt);
   })();
   pending.set(key, job);
-  job.finally(() => pending.delete(key)).catch(() => { /* handled by the caller */ });
+  job
+    .finally(() => pending.delete(key))
+    .catch(() => {
+      /* handled by the caller */
+    });
   return job;
 }
 
@@ -147,7 +169,14 @@ export async function requireSession(wallet: string, onLogout: () => void): Prom
         gate.remove();
         resolve(token);
       } catch (error) {
-        showToast(isUserRejection(error) ? 'Signing was cancelled. Your vault stays locked until you sign.' : error instanceof Error ? error.message : 'Sign-in failed.', true);
+        showToast(
+          isUserRejection(error)
+            ? 'Signing was cancelled. Your vault stays locked until you sign.'
+            : error instanceof Error
+              ? error.message
+              : 'Sign-in failed.',
+          true,
+        );
       } finally {
         signBtn.disabled = false;
       }

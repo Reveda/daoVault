@@ -33,15 +33,22 @@ const GOLD: Rgb = [1, 0.78, 0.3];
 function sampleGift(count: number): { pos: number[]; col: number[] } {
   const pos: number[] = [];
   const col: number[] = [];
-  const push = (x: number, y: number, z: number, c: Rgb) => { pos.push(x, y, z); col.push(...c); };
+  const push = (x: number, y: number, z: number, c: Rgb) => {
+    pos.push(x, y, z);
+    col.push(...c);
+  };
   const rnd = (a: number, b: number) => a + Math.random() * (b - a);
   const inSeal = (u: number, v: number, cy: number) => Math.hypot(u, v - cy) < 0.4;
 
   const bodyN = Math.round(count * 0.4);
   for (let i = 0; i < bodyN; i++) {
     const side = Math.floor(Math.random() * 4); // front, back, left, right
-    const a = rnd(-1, 1), y = rnd(-1.1, 0.5);
-    if (inSeal(a, y, -0.3)) { i--; continue; }
+    const a = rnd(-1, 1),
+      y = rnd(-1.1, 0.5);
+    if (inSeal(a, y, -0.3)) {
+      i--;
+      continue;
+    }
     const ribbon = Math.abs(a) < 0.17;
     if (side < 2) push(a, y, side === 0 ? 1.01 : -1.01, ribbon ? WHITE : RED);
     else push(side === 2 ? -1.01 : 1.01, y, a, ribbon ? WHITE : RED);
@@ -49,11 +56,15 @@ function sampleGift(count: number): { pos: number[]; col: number[] } {
   const lidN = Math.round(count * 0.22);
   for (let i = 0; i < lidN; i++) {
     const face = Math.random();
-    if (face < 0.5) { // top
-      const x = rnd(-1.09, 1.09), z = rnd(-1.09, 1.09);
+    if (face < 0.5) {
+      // top
+      const x = rnd(-1.09, 1.09),
+        z = rnd(-1.09, 1.09);
       push(x, 0.94, z, Math.abs(x) < 0.18 || Math.abs(z) < 0.18 ? WHITE : RED);
     } else {
-      const side = Math.floor(Math.random() * 4), a = rnd(-1.09, 1.09), y = rnd(0.51, 0.93);
+      const side = Math.floor(Math.random() * 4),
+        a = rnd(-1.09, 1.09),
+        y = rnd(0.51, 0.93);
       const c = y < 0.58 ? GOLD : Math.abs(a) < 0.18 ? WHITE : RED;
       if (side < 2) push(a, y, side === 0 ? 1.1 : -1.1, c);
       else push(side === 2 ? -1.1 : 1.1, y, a, c);
@@ -62,7 +73,10 @@ function sampleGift(count: number): { pos: number[]; col: number[] } {
   // gold seal rims on all four sides
   const rimN = Math.round(count * 0.08);
   for (let i = 0; i < rimN; i++) {
-    const t = Math.random() * Math.PI * 2, side = i % 4, u = Math.cos(t) * 0.37, v = -0.3 + Math.sin(t) * 0.37;
+    const t = Math.random() * Math.PI * 2,
+      side = i % 4,
+      u = Math.cos(t) * 0.37,
+      v = -0.3 + Math.sin(t) * 0.37;
     if (side === 0) push(u, v, 1.05, GOLD);
     else if (side === 1) push(-u, v, -1.05, GOLD);
     else if (side === 2) push(-1.05, v, u, GOLD);
@@ -71,11 +85,17 @@ function sampleGift(count: number): { pos: number[]; col: number[] } {
   // the edges of the body and the lid, a little denser so the outline reads crisp
   const edgeN = Math.round(count * 0.12);
   for (let i = 0; i < edgeN; i++) {
-    const e = i % 6, a = rnd(-1, 1), sx = Math.random() < 0.5 ? -1 : 1, sz = Math.random() < 0.5 ? -1 : 1;
-    if (e === 0) push(sx * 1.01, rnd(-1.1, 0.5), sz * 1.01, RED); // body uprights
-    else if (e === 1) push(a, -1.1, sz * 1.01, Math.abs(a) < 0.17 ? WHITE : RED); // body bottom edges
+    const e = i % 6,
+      a = rnd(-1, 1),
+      sx = Math.random() < 0.5 ? -1 : 1,
+      sz = Math.random() < 0.5 ? -1 : 1;
+    if (e === 0)
+      push(sx * 1.01, rnd(-1.1, 0.5), sz * 1.01, RED); // body uprights
+    else if (e === 1)
+      push(a, -1.1, sz * 1.01, Math.abs(a) < 0.17 ? WHITE : RED); // body bottom edges
     else if (e === 2) push(sx * 1.01, -1.1, a, Math.abs(a) < 0.17 ? WHITE : RED);
-    else if (e === 3) push(a * 1.09, 0.94, sz * 1.1, Math.abs(a) < 0.17 ? WHITE : RED); // lid top edges
+    else if (e === 3)
+      push(a * 1.09, 0.94, sz * 1.1, Math.abs(a) < 0.17 ? WHITE : RED); // lid top edges
     else if (e === 4) push(sx * 1.1, 0.94, a * 1.09, Math.abs(a) < 0.17 ? WHITE : RED);
     else push(sx * 1.1, rnd(0.51, 0.94), sz * 1.1, RED); // lid corners
   }
@@ -83,13 +103,23 @@ function sampleGift(count: number): { pos: number[]; col: number[] } {
   const bowN = count - bodyN - lidN - rimN - edgeN;
   const tmp = new THREE.Vector3();
   for (let i = 0; i < bowN; i++) {
-    if (i % 6 === 0) { // knot
-      tmp.set(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1)).normalize().multiply(new THREE.Vector3(0.17, 0.14, 0.15));
+    if (i % 6 === 0) {
+      // knot
+      tmp
+        .set(rnd(-1, 1), rnd(-1, 1), rnd(-1, 1))
+        .normalize()
+        .multiply(new THREE.Vector3(0.17, 0.14, 0.15));
       push(tmp.x, 1.04 + tmp.y, tmp.z, WHITE);
       continue;
     }
-    const dir = i % 2 ? 1 : -1, u = Math.random() * Math.PI * 2, w = Math.random() * Math.PI * 2;
-    tmp.set((0.34 + 0.085 * Math.cos(w)) * Math.cos(u), (0.34 + 0.085 * Math.cos(w)) * Math.sin(u) * 0.7, 0.085 * Math.sin(w));
+    const dir = i % 2 ? 1 : -1,
+      u = Math.random() * Math.PI * 2,
+      w = Math.random() * Math.PI * 2;
+    tmp.set(
+      (0.34 + 0.085 * Math.cos(w)) * Math.cos(u),
+      (0.34 + 0.085 * Math.cos(w)) * Math.sin(u) * 0.7,
+      0.085 * Math.sin(w),
+    );
     tmp.applyEuler(new THREE.Euler(0, dir * 0.35, dir * 0.38));
     push(tmp.x + dir * 0.36, tmp.y + 1.17, tmp.z, WHITE);
   }
@@ -112,18 +142,32 @@ function logoPoints(img: HTMLImageElement | null, count: number): { pos: number[
     if (g) {
       g.drawImage(img, 0, 0, n, n);
       const d = g.getImageData(0, 0, n, n).data;
-      for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
-        const k = (y * n + x) * 4, r = d[k], gg = d[k + 1], b = d[k + 2];
-        if (d[k + 3] > 120 && r + gg + b > 330) px.push([x / n - 0.5, y / n - 0.5, [r / 255, gg / 255, b / 255]]);
-      }
+      for (let y = 0; y < n; y++)
+        for (let x = 0; x < n; x++) {
+          const k = (y * n + x) * 4,
+            r = d[k],
+            gg = d[k + 1],
+            b = d[k + 2];
+          if (d[k + 3] > 120 && r + gg + b > 330)
+            px.push([x / n - 0.5, y / n - 0.5, [r / 255, gg / 255, b / 255]]);
+        }
     }
   }
-  if (!px.length) px = Array.from({ length: 200 }, () => [Math.random() - 0.5, Math.random() - 0.5, GOLD] as [number, number, Rgb]);
+  if (!px.length)
+    px = Array.from(
+      { length: 200 },
+      () => [Math.random() - 0.5, Math.random() - 0.5, GOLD] as [number, number, Rgb],
+    );
   for (let i = 0; i < count; i++) {
     const [u, v, c] = px[Math.floor(Math.random() * px.length)];
-    const x = u * 0.6, y = -v * 0.6;
-    if (Math.hypot(x, y) > 0.35) { i--; continue; }
-    const side = i % 4, yy = -0.3 + y;
+    const x = u * 0.6,
+      y = -v * 0.6;
+    if (Math.hypot(x, y) > 0.35) {
+      i--;
+      continue;
+    }
+    const side = i % 4,
+      yy = -0.3 + y;
     if (side === 0) pos.push(x, yy, 1.06);
     else if (side === 1) pos.push(1.06, yy, -x);
     else if (side === 2) pos.push(-x, yy, -1.06);
@@ -213,15 +257,25 @@ function giftMaterial(size: number) {
     depthWrite: false,
     blending: THREE.AdditiveBlending,
     uniforms: {
-      uTime: { value: 0 }, uPx: { value: 1 }, uSize: { value: size }, uForm: { value: 0 },
-      uSweep: { value: -2 }, uBurst: { value: 0 }, uFlash: { value: 0 }, uOpacity: { value: 1 }, uNear: { value: 6.5 },
+      uTime: { value: 0 },
+      uPx: { value: 1 },
+      uSize: { value: size },
+      uForm: { value: 0 },
+      uSweep: { value: -2 },
+      uBurst: { value: 0 },
+      uFlash: { value: 0 },
+      uOpacity: { value: 1 },
+      uNear: { value: 6.5 },
       uProgress: { value: 1 },
     },
   });
 }
 
 async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
-  if (!hasWebGL()) { stage.classList.add('is-static'); return; }
+  if (!hasWebGL()) {
+    stage.classList.add('is-static');
+    return;
+  }
 
   const canvas = document.createElement('canvas');
   canvas.className = 'gift-showcase-canvas';
@@ -234,7 +288,12 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
 
   let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, powerPreference: 'high-performance' });
+    renderer = new THREE.WebGLRenderer({
+      canvas,
+      alpha: true,
+      antialias: false,
+      powerPreference: 'high-performance',
+    });
   } catch {
     canvas.remove();
     stage.classList.add('is-static');
@@ -246,7 +305,8 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
   const size = () => {
-    const w = slot.clientWidth || 360, h = slot.clientHeight || 360;
+    const w = slot.clientWidth || 360,
+      h = slot.clientHeight || 360;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     // narrow cards: step back so the gift and its portal stay in frame
@@ -270,10 +330,16 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
   const allCol = [...giftPts.col, ...logoPts.col];
   const count = allPos.length / 3;
   const order = Array.from({ length: count }, (_, i) => i);
-  for (let i = count - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+  for (let i = count - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
   const target = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
-  order.forEach((from, i) => { target.set(allPos.slice(from * 3, from * 3 + 3), i * 3); colors.set(allCol.slice(from * 3, from * 3 + 3), i * 3); });
+  order.forEach((from, i) => {
+    target.set(allPos.slice(from * 3, from * 3 + 3), i * 3);
+    colors.set(allCol.slice(from * 3, from * 3 + 3), i * 3);
+  });
   const start = new Float32Array(count * 3);
   const delay = new Float32Array(count);
   const swirl = new Float32Array(count);
@@ -281,7 +347,9 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
   const sizes = new Float32Array(count);
   for (let i = 0; i < count; i++) {
     // scattered in a wide shell around the gift, a little above it
-    const th = Math.random() * Math.PI * 2, ph = Math.acos(Math.random() * 2 - 1), r = 3.2 + Math.random() * 3.4;
+    const th = Math.random() * Math.PI * 2,
+      ph = Math.acos(Math.random() * 2 - 1),
+      r = 3.2 + Math.random() * 3.4;
     start[i * 3] = r * Math.sin(ph) * Math.cos(th);
     start[i * 3 + 1] = r * Math.cos(ph) * 0.7 + 0.8;
     start[i * 3 + 2] = r * Math.sin(ph) * Math.sin(th);
@@ -315,7 +383,8 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
   const ringSeed = new Float32Array(ringCount);
   const ringSize = new Float32Array(ringCount);
   for (let i = 0; i < ringCount; i++) {
-    const a = (i / ringCount) * Math.PI * 2, r = 1.95 + (Math.random() - 0.5) * 0.18;
+    const a = (i / ringCount) * Math.PI * 2,
+      r = 1.95 + (Math.random() - 0.5) * 0.18;
     ringPos.set([Math.cos(a) * r, (Math.random() - 0.5) * 0.08, Math.sin(a) * r], i * 3);
     ringCol.set([1, 0.8 + Math.random() * 0.15, 0.35], i * 3);
     ringSeed[i] = Math.random();
@@ -343,28 +412,40 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
   const bolts = strikeX.map(() => {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(BOLT_POINTS * 3), 3));
-    const line = new THREE.Line(g, new THREE.LineBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const line = new THREE.Line(
+      g,
+      new THREE.LineBasicMaterial({
+        color: 0xfff3c4,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
     line.visible = false;
     scene.add(line);
     return line;
   });
-  const rebuildBolts = () => bolts.forEach((line, b) => {
-    const arr = (line.geometry.attributes.position as THREE.BufferAttribute).array as Float32Array;
-    for (let i = 0; i < BOLT_POINTS; i++) {
-      const k = i / (BOLT_POINTS - 1);
-      const jitter = i === 0 || i === BOLT_POINTS - 1 ? 0 : 0.32;
-      arr[i * 3] = strikeX[b] * (1 - k) + (Math.random() - 0.5) * jitter;
-      arr[i * 3 + 1] = 5 - (5 - 1.15) * k;
-      arr[i * 3 + 2] = 0.3 * (1 - k) + (Math.random() - 0.5) * jitter;
-    }
-    line.geometry.attributes.position.needsUpdate = true;
-  });
+  const rebuildBolts = () =>
+    bolts.forEach((line, b) => {
+      const arr = (line.geometry.attributes.position as THREE.BufferAttribute)
+        .array as Float32Array;
+      for (let i = 0; i < BOLT_POINTS; i++) {
+        const k = i / (BOLT_POINTS - 1);
+        const jitter = i === 0 || i === BOLT_POINTS - 1 ? 0 : 0.32;
+        arr[i * 3] = strikeX[b] * (1 - k) + (Math.random() - 0.5) * jitter;
+        arr[i * 3 + 1] = 5 - (5 - 1.15) * k;
+        arr[i * 3 + 2] = 0.3 * (1 - k) + (Math.random() - 0.5) * jitter;
+      }
+      line.geometry.attributes.position.needsUpdate = true;
+    });
 
   /* ---------- scroll progress: 0 = section just below the screen, 1 = card well in view */
   const progress = () => {
     // by the gift's centre (phones stack it under the text, so its top came in much later): it starts
     // forming as the centre enters the screen and is complete when the centre is just below the middle
-    const r = stage.getBoundingClientRect(), vh = window.innerHeight || 800;
+    const r = stage.getBoundingClientRect(),
+      vh = window.innerHeight || 800;
     const centre = r.top + r.height / 2;
     return clamp01((vh * 1.05 - centre) / (vh * 0.45));
   };
@@ -424,7 +505,10 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
       }
       const since = strikeAt < 0 ? -1 : now - strikeAt;
       const boltsOn = since >= 0 && since < 520;
-      if (boltsOn && now - boltAt > 60) { rebuildBolts(); boltAt = now; }
+      if (boltsOn && now - boltAt > 60) {
+        rebuildBolts();
+        boltAt = now;
+      }
       bolts.forEach((l) => {
         l.visible = boltsOn;
         (l.material as THREE.LineBasicMaterial).opacity = boltsOn && Math.random() < 0.8 ? 0.95 : 0;
@@ -449,22 +533,37 @@ async function build(stage: HTMLElement, slot: HTMLElement): Promise<void> {
     ringMat.uniforms.uOpacity.value = formedAmount;
     ring.visible = formedAmount > 0.02;
 
-    portal.update(now, dt, still ? 0 : (formed ? 0.15 : p * 0.4));
+    portal.update(now, dt, still ? 0 : formed ? 0.15 : p * 0.4);
     renderer.render(scene, camera);
     if (!still) raf = requestAnimationFrame(frame);
   };
-  const run = () => { if (!raf && visible) { last = performance.now(); raf = requestAnimationFrame(frame); } };
+  const run = () => {
+    if (!raf && visible) {
+      last = performance.now();
+      raf = requestAnimationFrame(frame);
+    }
+  };
 
   size();
   new IntersectionObserver(([entry]) => {
     visible = entry.isIntersecting;
-    if (visible) run(); else if (raf) { cancelAnimationFrame(raf); raf = 0; }
+    if (visible) run();
+    else if (raf) {
+      cancelAnimationFrame(raf);
+      raf = 0;
+    }
   }).observe(stage);
   if ('ResizeObserver' in window) {
-    new ResizeObserver(() => { size(); if (!raf) renderer.render(scene, camera); }).observe(slot);
+    new ResizeObserver(() => {
+      size();
+      if (!raf) renderer.render(scene, camera);
+    }).observe(slot);
   }
 
-  const burst = () => { if (formed || still) burstAt = performance.now(); run(); };
+  const burst = () => {
+    if (formed || still) burstAt = performance.now();
+    run();
+  };
   stage.addEventListener('pointerenter', burst);
   stage.addEventListener('click', burst);
 }
@@ -474,17 +573,29 @@ export function initGiftShowcase(): void {
   const stage = document.getElementById('giftShowcase');
   const slot = document.getElementById('giftShowcaseSlot');
   if (!stage || !slot) return;
-  const go = () => { build(stage, slot).catch(() => stage.classList.add('is-static')); };
-  const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
+  const go = () => {
+    build(stage, slot).catch(() => stage.classList.add('is-static'));
+  };
+  const idle = (
+    window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => void }
+  ).requestIdleCallback;
   if (LITE) {
-    if (idle) idle(go, { timeout: 1200 }); else window.setTimeout(go, 300);
+    if (idle) idle(go, { timeout: 1200 });
+    else window.setTimeout(go, 300);
     return;
   }
-  if (!('IntersectionObserver' in window)) { go(); return; }
-  const io = new IntersectionObserver(([entry]) => {
-    if (!entry.isIntersecting) return;
-    io.disconnect();
-    if (idle) idle(go, { timeout: 600 }); else window.setTimeout(go, 0);
-  }, { rootMargin: '700px 0px' });
+  if (!('IntersectionObserver' in window)) {
+    go();
+    return;
+  }
+  const io = new IntersectionObserver(
+    ([entry]) => {
+      if (!entry.isIntersecting) return;
+      io.disconnect();
+      if (idle) idle(go, { timeout: 600 });
+      else window.setTimeout(go, 0);
+    },
+    { rootMargin: '700px 0px' },
+  );
   io.observe(stage);
 }

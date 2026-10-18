@@ -33,7 +33,11 @@ export function getPendingReferral(): string {
 
 /** Forget the captured invite code (e.g. it was the member's own code). */
 export function clearPendingReferral(): void {
-  try { localStorage.removeItem('daovault_pending_ref'); } catch { /* storage blocked */ }
+  try {
+    localStorage.removeItem('daovault_pending_ref');
+  } catch {
+    /* storage blocked */
+  }
 }
 
 /**
@@ -42,7 +46,10 @@ export function clearPendingReferral(): void {
 export function hasWebGL(): boolean {
   try {
     const canvas = document.createElement('canvas');
-    return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+    return !!(
+      window.WebGLRenderingContext &&
+      (canvas.getContext('webgl') || canvas.getContext('experimental-webgl'))
+    );
   } catch (e) {
     return false;
   }
@@ -64,8 +71,17 @@ export function bootPreloader(onComplete?: () => void): void {
 
   // the page must also be loaded; never wait longer than 3s extra for slow assets
   let loaded = document.readyState === 'complete';
-  if (!loaded) window.addEventListener('load', () => { loaded = true; }, { once: true });
-  window.setTimeout(() => { loaded = true; }, duration + 1500);
+  if (!loaded)
+    window.addEventListener(
+      'load',
+      () => {
+        loaded = true;
+      },
+      { once: true },
+    );
+  window.setTimeout(() => {
+    loaded = true;
+  }, duration + 1500);
 
   let shown = 0;
   const tick = (now: number) => {
@@ -92,7 +108,9 @@ export function bootPreloader(onComplete?: () => void): void {
       // started, not inside this frame (it stalled the splash exit for ~240ms). The hero
       // reveal goes in the same task so its intro animation never flashes.
       window.setTimeout(() => {
-        document.querySelectorAll('#hero .hero-left, #hero .hero-right').forEach((el) => el.classList.add('revealed'));
+        document
+          .querySelectorAll('#hero .hero-left, #hero .hero-right')
+          .forEach((el) => el.classList.add('revealed'));
         if (onComplete) onComplete();
       }, 40);
       return;
@@ -106,7 +124,12 @@ export function bootPreloader(onComplete?: () => void): void {
 /**
  * Animated Number Count-Up (Cubic Ease-Out)
  */
-export function countUp(element: HTMLElement | null, toValue: number, prefix: string = '$', duration: number = 1200): void {
+export function countUp(
+  element: HTMLElement | null,
+  toValue: number,
+  prefix: string = '$',
+  duration: number = 1200,
+): void {
   if (!element) return;
   const t0 = performance.now();
   const el = element as HTMLElement & { _raf?: number };
@@ -132,22 +155,34 @@ export function countUp(element: HTMLElement | null, toValue: number, prefix: st
  * Scroll Reveal Observer
  */
 export function initScrollReveal(): void {
-  const elements = document.querySelectorAll('[data-reveal], .section-head, .level-matrix-grid, .steps-list, .rank-tabs');
+  const elements = document.querySelectorAll(
+    '[data-reveal], .section-head, .level-matrix-grid, .steps-list, .rank-tabs',
+  );
   if (!elements.length || !('IntersectionObserver' in window)) return;
 
   // Items that arrive together cascade in one after another (TPR's reveal stagger).
   // The delay is cleared afterwards so it never slows hover transitions.
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-  const observer = new IntersectionObserver((entries) => {
-    entries.filter((entry) => entry.isIntersecting).forEach((entry, i) => {
-      const el = entry.target as HTMLElement;
-      const delay = Math.min(i * 90, 450);
-      el.style.transitionDelay = `${delay}ms`;
-      el.classList.add('revealed');
-      window.setTimeout(() => { el.style.transitionDelay = ''; }, delay + 900);
-      observer.unobserve(el);
-    });
-  }, { threshold: isMobile ? 0.22 : 0.12, rootMargin: isMobile ? '0px 0px -12% 0px' : '0px 0px -6% 0px' });
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries
+        .filter((entry) => entry.isIntersecting)
+        .forEach((entry, i) => {
+          const el = entry.target as HTMLElement;
+          const delay = Math.min(i * 90, 450);
+          el.style.transitionDelay = `${delay}ms`;
+          el.classList.add('revealed');
+          window.setTimeout(() => {
+            el.style.transitionDelay = '';
+          }, delay + 900);
+          observer.unobserve(el);
+        });
+    },
+    {
+      threshold: isMobile ? 0.22 : 0.12,
+      rootMargin: isMobile ? '0px 0px -12% 0px' : '0px 0px -6% 0px',
+    },
+  );
 
   elements.forEach((el) => observer.observe(el));
 
@@ -156,7 +191,8 @@ export function initScrollReveal(): void {
   const revealRest = () => {
     if (window.scrollY + window.innerHeight < document.documentElement.scrollHeight - 4) return;
     elements.forEach((el) => {
-      if (el.classList.contains('revealed') || el.getBoundingClientRect().top > window.innerHeight) return;
+      if (el.classList.contains('revealed') || el.getBoundingClientRect().top > window.innerHeight)
+        return;
       el.classList.add('revealed');
       observer.unobserve(el);
     });
@@ -174,7 +210,8 @@ export function initScrollReveal(): void {
  * see the Performance block in main.css). Saves battery and keeps scrolling smooth.
  */
 /** Cards that glow gold when touched (main.css .tap-glow). */
-const TAP_GLOW_CARDS = '.compare-matrix tbody tr, .glass, .glass-v2, .metric-card, .calc-stat, .step-card, .reward-box, .crypto-exchange-card, .faq-item, .rank-item';
+const TAP_GLOW_CARDS =
+  '.compare-matrix tbody tr, .glass, .glass-v2, .metric-card, .calc-stat, .step-card, .reward-box, .crypto-exchange-card, .faq-item, .rank-item';
 
 /**
  * Touch feedback. iOS Safari only applies :active (the card press in main.css) when the page
@@ -196,61 +233,97 @@ export function enableTouchPress(): void {
     lit = card;
   };
   let start: { x: number; y: number; card: Element | null } | null = null;
-  document.addEventListener('touchstart', (e) => {
-    const t = e.touches[0];
-    start = t ? { x: t.clientX, y: t.clientY, card: (e.target as Element | null)?.closest?.(TAP_GLOW_CARDS) ?? null } : null;
-  }, { passive: true });
-  document.addEventListener('touchend', (e) => {
-    const t = e.changedTouches[0];
-    // a scroll (finger moved) changes nothing; a real tap lights its card, or clears outside a card
-    if (!start || !t || Math.hypot(t.clientX - start.x, t.clientY - start.y) > 10) { start = null; return; }
-    light(start.card);
-    start = null;
-  }, { passive: true });
+  document.addEventListener(
+    'touchstart',
+    (e) => {
+      const t = e.touches[0];
+      start = t
+        ? {
+            x: t.clientX,
+            y: t.clientY,
+            card: (e.target as Element | null)?.closest?.(TAP_GLOW_CARDS) ?? null,
+          }
+        : null;
+    },
+    { passive: true },
+  );
+  document.addEventListener(
+    'touchend',
+    (e) => {
+      const t = e.changedTouches[0];
+      // a scroll (finger moved) changes nothing; a real tap lights its card, or clears outside a card
+      if (!start || !t || Math.hypot(t.clientX - start.x, t.clientY - start.y) > 10) {
+        start = null;
+        return;
+      }
+      light(start.card);
+      start = null;
+    },
+    { passive: true },
+  );
   const timers = new WeakMap<Element, number>();
-  document.addEventListener('pointerdown', (e) => {
-    if (e.pointerType !== 'mouse' || e.button !== 0) return;
-    const card = (e.target as Element | null)?.closest?.(TAP_GLOW_CARDS);
-    if (!card) return;
-    card.classList.add('tap-glow');
-    window.clearTimeout(timers.get(card));
-    timers.set(card, window.setTimeout(() => card.classList.remove('tap-glow'), 900));
-  }, { passive: true });
+  document.addEventListener(
+    'pointerdown',
+    (e) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      const card = (e.target as Element | null)?.closest?.(TAP_GLOW_CARDS);
+      if (!card) return;
+      card.classList.add('tap-glow');
+      window.clearTimeout(timers.get(card));
+      timers.set(
+        card,
+        window.setTimeout(() => card.classList.remove('tap-glow'), 900),
+      );
+    },
+    { passive: true },
+  );
 }
 
 export function initOffscreenPause(): void {
   if (!('IntersectionObserver' in window)) return;
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((e) => {
-      const off = !e.isIntersecting;
-      if (e.target.classList.contains('is-offscreen') !== off) e.target.classList.toggle('is-offscreen', off);
-    });
-    // a whole screen of margin: a section is awake well before it scrolls in, even when the
-    // observer runs late during a fast phone scroll (sections showed blank for a moment)
-  }, { rootMargin: '100% 0px' });
-  document.querySelectorAll('main > section, main > div > section, .dash-shell section, .main-footer').forEach((el) => io.observe(el));
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e) => {
+        const off = !e.isIntersecting;
+        if (e.target.classList.contains('is-offscreen') !== off)
+          e.target.classList.toggle('is-offscreen', off);
+      });
+      // a whole screen of margin: a section is awake well before it scrolls in, even when the
+      // observer runs late during a fast phone scroll (sections showed blank for a moment)
+    },
+    { rootMargin: '100% 0px' },
+  );
+  document
+    .querySelectorAll('main > section, main > div > section, .dash-shell section, .main-footer')
+    .forEach((el) => io.observe(el));
 }
 
 export function initTrophyBoom(): void {
   const card = document.getElementById('trophyCard');
   if (!card) return;
-  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (
+    !('IntersectionObserver' in window) ||
+    matchMedia('(prefers-reduced-motion: reduce)').matches
+  ) {
     card.classList.add('boomed');
     return;
   }
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
 
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      const vh = window.innerHeight || document.documentElement.clientHeight;
-      if (entry.isIntersecting || entry.boundingClientRect.bottom <= 0) {
-        card.classList.add('boomed');
-      } else if (entry.boundingClientRect.top > vh) {
-        // Only reset if user has scrolled all the way back up above the card
-        card.classList.remove('boomed');
-      }
-    });
-  }, { threshold: isMobile ? 0.05 : 0.15 });
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        if (entry.isIntersecting || entry.boundingClientRect.bottom <= 0) {
+          card.classList.add('boomed');
+        } else if (entry.boundingClientRect.top > vh) {
+          // Only reset if user has scrolled all the way back up above the card
+          card.classList.remove('boomed');
+        }
+      });
+    },
+    { threshold: isMobile ? 0.05 : 0.15 },
+  );
 
   observer.observe(card);
 }
@@ -292,13 +365,19 @@ export function showLaunchNotice(
   if (!options.everyVisit) {
     try {
       if (localStorage.getItem(storageKey)) return;
-    } catch { return; } // storage blocked: better no popup than one on every visit
+    } catch {
+      return;
+    } // storage blocked: better no popup than one on every visit
   }
   const kicker = options.kicker === undefined ? 'DAOVAULT · Launching soon' : options.kicker;
 
   const open = () => {
     if (!options.everyVisit) {
-      try { localStorage.setItem(storageKey, '1'); } catch { /* ignore */ }
+      try {
+        localStorage.setItem(storageKey, '1');
+      } catch {
+        /* ignore */
+      }
     }
     const overlay = document.createElement('div');
     overlay.className = 'launch-notice';
@@ -319,9 +398,13 @@ export function showLaunchNotice(
       document.removeEventListener('keydown', onKey);
       window.setTimeout(() => overlay.remove(), 350);
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
     btn?.addEventListener('click', close);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close();
+    });
     document.addEventListener('keydown', onKey);
   };
 
@@ -356,20 +439,53 @@ export function confirmNotice(options: {
     card.setAttribute('role', 'dialog');
     card.setAttribute('aria-modal', 'true');
     card.setAttribute('aria-labelledby', 'confirmNoticeTitle');
-    const logo = Object.assign(document.createElement('img'), { className: 'launch-notice-logo', src: '/favicon.png', alt: '', width: 56, height: 56 });
+    const logo = Object.assign(document.createElement('img'), {
+      className: 'launch-notice-logo',
+      src: '/favicon.png',
+      alt: '',
+      width: 56,
+      height: 56,
+    });
     card.append(logo);
-    if (options.kicker) card.append(Object.assign(document.createElement('span'), { className: 'launch-notice-kicker mono', textContent: options.kicker }));
-    card.append(Object.assign(document.createElement('h3'), { id: 'confirmNoticeTitle', textContent: options.title }));
+    if (options.kicker)
+      card.append(
+        Object.assign(document.createElement('span'), {
+          className: 'launch-notice-kicker mono',
+          textContent: options.kicker,
+        }),
+      );
+    card.append(
+      Object.assign(document.createElement('h3'), {
+        id: 'confirmNoticeTitle',
+        textContent: options.title,
+      }),
+    );
     const p = document.createElement('p');
     const parts = options.highlight ? options.message.split('{highlight}') : [options.message];
     parts.forEach((part, i) => {
       p.append(part);
-      if (i < parts.length - 1) p.append(Object.assign(document.createElement('b'), { className: 'launch-notice-sponsor', textContent: options.highlight! }));
+      if (i < parts.length - 1)
+        p.append(
+          Object.assign(document.createElement('b'), {
+            className: 'launch-notice-sponsor',
+            textContent: options.highlight!,
+          }),
+        );
     });
     card.append(p);
-    const actions = Object.assign(document.createElement('div'), { className: 'launch-notice-actions' });
-    const cancel = Object.assign(document.createElement('button'), { type: 'button', className: 'launch-notice-cancel', textContent: options.cancel ?? 'Cancel' });
-    const ok = Object.assign(document.createElement('button'), { type: 'button', className: 'btn btn-grad launch-notice-btn', textContent: options.confirm });
+    const actions = Object.assign(document.createElement('div'), {
+      className: 'launch-notice-actions',
+    });
+    const cancel = Object.assign(document.createElement('button'), {
+      type: 'button',
+      className: 'launch-notice-cancel',
+      textContent: options.cancel ?? 'Cancel',
+    });
+    const ok = Object.assign(document.createElement('button'), {
+      type: 'button',
+      className: 'btn btn-grad launch-notice-btn',
+      textContent: options.confirm,
+    });
     actions.append(cancel, ok);
     card.append(actions);
     overlay.append(card);
@@ -383,10 +499,14 @@ export function confirmNotice(options: {
       window.setTimeout(() => overlay.remove(), 350);
       resolve(answer);
     };
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(false); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close(false);
+    };
     ok.addEventListener('click', () => close(true));
     cancel.addEventListener('click', () => close(false));
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(false); });
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) close(false);
+    });
     document.addEventListener('keydown', onKey);
   });
 }
@@ -394,7 +514,8 @@ export function confirmNotice(options: {
 const TOAST_MS = 4200;
 const TOAST_ICONS = {
   ok: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-  error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 7v6.5M12 17.2v.1"/></svg>',
+  error:
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 7v6.5M12 17.2v.1"/></svg>',
 };
 
 /**
@@ -415,7 +536,10 @@ export function showToast(message: string, isError: boolean = false): void {
       <div class="toast-body"><strong class="toast-title"></strong><span class="toast-text"></span></div>
       <button type="button" class="toast-close" aria-label="Close">&times;</button>
       <i class="toast-timer"></i>`;
-    const hide = () => { clearTimeout(toastTimeout); toast?.classList.remove('show'); };
+    const hide = () => {
+      clearTimeout(toastTimeout);
+      toast?.classList.remove('show');
+    };
     toast.querySelector('.toast-close')?.addEventListener('click', hide);
     document.body.appendChild(toast);
   }

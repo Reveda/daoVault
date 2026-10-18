@@ -34,22 +34,41 @@ async function record(log: Log): Promise<"recorded" | "skipped"> {
   if (!parsed) return "skipped";
   const walletAddress = String(parsed.args[0]);
   try {
-    const result = parsed.name === "Activated"
-      ? await activationService.verify({ walletAddress, transactionHash: log.transactionHash, sponsorAddress: String(parsed.args[1]) })
-      : await activationService.verifyTopUp({ walletAddress, transactionHash: log.transactionHash });
-    if (!result.alreadyProcessed) console.log(`[indexer] ${parsed.name} ${walletAddress} recorded from ${log.transactionHash}`);
+    const result =
+      parsed.name === "Activated"
+        ? await activationService.verify({
+            walletAddress,
+            transactionHash: log.transactionHash,
+            sponsorAddress: String(parsed.args[1]),
+          })
+        : await activationService.verifyTopUp({
+            walletAddress,
+            transactionHash: log.transactionHash,
+          });
+    if (!result.alreadyProcessed)
+      console.log(`[indexer] ${parsed.name} ${walletAddress} recorded from ${log.transactionHash}`);
     return "recorded";
   } catch (error) {
     if (!isPermanent(error)) throw error;
-    console.warn(`[indexer] ${parsed.name} ${walletAddress} in ${log.transactionHash} NOT recorded: ${(error as Error).message}`);
+    console.warn(
+      `[indexer] ${parsed.name} ${walletAddress} in ${log.transactionHash} NOT recorded: ${(error as Error).message}`,
+    );
     // an on-chain payment from our contract that our checks refuse for good: someone paid and has no package
-    alert("critical", `unrecorded-${log.transactionHash.toLowerCase()}`, // same key as activation.service: one message per payment
-      `PAID BUT NOT RECORDED: ${parsed.name} by ${shortWallet(walletAddress.toLowerCase())} (tx ${log.transactionHash.slice(0, 10)}…, block ${log.blockNumber}) was refused: ${(error as Error).message.slice(0, 160)}. Needs a look.`);
+    alert(
+      "critical",
+      `unrecorded-${log.transactionHash.toLowerCase()}`, // same key as activation.service: one message per payment
+      `PAID BUT NOT RECORDED: ${parsed.name} by ${shortWallet(walletAddress.toLowerCase())} (tx ${log.transactionHash.slice(0, 10)}…, block ${log.blockNumber}) was refused: ${(error as Error).message.slice(0, 160)}. Needs a look.`,
+    );
     return "skipped";
   }
 }
 
-export async function indexPaymentEvents(): Promise<{ from?: number; to?: number; events: number; skipped: number }> {
+export async function indexPaymentEvents(): Promise<{
+  from?: number;
+  to?: number;
+  events: number;
+  skipped: number;
+}> {
   if (!env.PAYMENT_CONTRACT_ADDRESS) return { events: 0, skipped: 0 };
   const cursor = await prisma.chainCursor.findUnique({ where: { name: CURSOR } });
   let from: number;
@@ -58,7 +77,11 @@ export async function indexPaymentEvents(): Promise<{ from?: number; to?: number
   else {
     // starting "from now" would save a cursor past every earlier payment and skip them for good:
     // wait for the deploy block instead (payments reported by the website are still recorded)
-    alert("critical", "indexer-no-start-block", "Chain indexer is NOT running: set INDEXER_START_BLOCK to the activation contract's deploy block (BscScan -> contract -> first transaction), then restart the worker.");
+    alert(
+      "critical",
+      "indexer-no-start-block",
+      "Chain indexer is NOT running: set INDEXER_START_BLOCK to the activation contract's deploy block (BscScan -> contract -> first transaction), then restart the worker.",
+    );
     return { events: 0, skipped: 0 };
   }
   const provider = indexerProvider();
@@ -69,11 +92,19 @@ export async function indexPaymentEvents(): Promise<{ from?: number; to?: number
   let skipped = 0;
   for (let chunk = 0; chunk < MAX_CHUNKS_PER_RUN && from <= safeHead; chunk++) {
     const to = Math.min(safeHead, from + env.INDEXER_BLOCK_CHUNK - 1);
-    const logs = await provider.getLogs({ address: env.PAYMENT_CONTRACT_ADDRESS, fromBlock: from, toBlock: to, topics: [[ACTIVATED, TOPPED_UP]] })
+    const logs = await provider
+      .getLogs({
+        address: env.PAYMENT_CONTRACT_ADDRESS,
+        fromBlock: from,
+        toBlock: to,
+        topics: [[ACTIVATED, TOPPED_UP]],
+      })
       .catch((error: Error) => {
         // checked 2026-10-11: bnbchain.org / binance.org dataseeds answer "limit exceeded" to any
         // eth_getLogs; publicnode.com allows 5,000 blocks; paid RPCs more
-        throw new Error(`eth_getLogs ${from}-${to} refused (${error.message.slice(0, 80)}). Set INDEXER_RPC_URL to an RPC that allows it, or lower INDEXER_BLOCK_CHUNK.`);
+        throw new Error(
+          `eth_getLogs ${from}-${to} refused (${error.message.slice(0, 80)}). Set INDEXER_RPC_URL to an RPC that allows it, or lower INDEXER_BLOCK_CHUNK.`,
+        );
       });
     logs.sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index); // sponsors before their members
     for (const log of logs) {

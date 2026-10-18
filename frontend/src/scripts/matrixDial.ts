@@ -22,8 +22,8 @@ const LEVELS = [
 
 const N = LEVELS.length;
 const STEP = 360 / N;
-const C = 200;          // centre of the 400x400 viewBox
-const NODE_R = 158;     // radius the level nodes sit on
+const C = 200; // centre of the 400x400 viewBox
+const NODE_R = 158; // radius the level nodes sit on
 
 const polar = (r: number, deg: number): [number, number] => {
   const a = ((deg - 90) * Math.PI) / 180;
@@ -49,7 +49,9 @@ export function initMatrixDial(): void {
   if (!mount || !pillsWrap) return;
   const pills = () => [...pillsWrap.querySelectorAll<HTMLButtonElement>('.level-pill-btn')];
   // the pills stay as the engine behind the dial, out of the tab order
-  pills().forEach((p) => { p.tabIndex = -1; });
+  pills().forEach((p) => {
+    p.tabIndex = -1;
+  });
 
   const ticks = Array.from({ length: 60 }, (_, i) => {
     const [x0, y0] = polar(186, i * 6);
@@ -117,7 +119,7 @@ export function initMatrixDial(): void {
   const show = (i: number) => {
     // turn the shortest way round, like a real dial
     let diff = (i - active) * STEP;
-    diff = ((diff % 360) + 540) % 360 - 180;
+    diff = (((diff % 360) + 540) % 360) - 180;
     if (i !== active || handDeg === 0) handDeg += diff;
     active = i;
     hand.style.transform = `rotate(${handDeg}deg)`;
@@ -173,7 +175,10 @@ export function initMatrixDial(): void {
     const i = levelAt(e);
     if (i !== active) choose(i);
   });
-  const endDrag = () => { dragging = false; svg.classList.remove('is-dragging'); };
+  const endDrag = () => {
+    dragging = false;
+    svg.classList.remove('is-dragging');
+  };
   svg.addEventListener('pointerup', endDrag);
   svg.addEventListener('pointercancel', endDrag);
 
@@ -185,13 +190,19 @@ export function initMatrixDial(): void {
     arc.setAttribute('d', unlockedArc(unlocked - 1));
     const perMember = LEVELS.slice(0, unlocked).reduce((s, l) => s + l.usd, 0);
     const next = LEVELS.find((l) => l.req > d);
-    const set = (id: string, text: string) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+    const set = (id: string, text: string) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
     set('matrixDirectsVal', String(d));
     set('matrixUnlocked', `${unlocked} / ${N}`);
     set('matrixPerMember', `$${perMember}`);
-    set('matrixNext', next
-      ? `Next: L${LEVELS.indexOf(next) + 1} unlocks at ${next.req} directs`
-      : 'All 20 levels unlocked: full depth');
+    set(
+      'matrixNext',
+      next
+        ? `Next: L${LEVELS.indexOf(next) + 1} unlocks at ${next.req} directs`
+        : 'All 20 levels unlocked: full depth',
+    );
     if (range) range.style.setProperty('--fill', `${(d / 15) * 100}%`);
     refreshLock();
   };
@@ -201,5 +212,10 @@ export function initMatrixDial(): void {
   // browsers restore a moved slider after a refresh, which looked like the visitor's own data
   if (range) range.value = '10';
   setDirects(10);
-  show(Math.max(0, pills().findIndex((p) => p.classList.contains('active'))));
+  show(
+    Math.max(
+      0,
+      pills().findIndex((p) => p.classList.contains('active')),
+    ),
+  );
 }

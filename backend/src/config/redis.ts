@@ -29,10 +29,14 @@ if (redis) {
 // promise resolves false and the existing route-specific fail-open/fail-closed policy remains in
 // charge; the client keeps reconnecting in the background.
 export const redisReady: Promise<boolean> = redis
-  ? redis.connect()
-    .then(() => true)
-    .catch((error: Error) => {
-      console.error("[redis] first connection failed, retrying in the background:", error.message);
-      return false;
-    })
+  ? redis
+      .connect()
+      .then(() => true)
+      .catch((error: Error) => {
+        console.error(
+          "[redis] first connection failed, retrying in the background:",
+          error.message,
+        );
+        return false;
+      })
   : Promise.resolve(true);

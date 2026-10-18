@@ -4,13 +4,15 @@
 // fail on every payment (review, 2026-10-14). Render then keeps the previous version online;
 // Docker restarts the container and the logs show the migration error.
 // `--no` stops npx from downloading a different Prisma version.
-import { execSync } from 'node:child_process';
+import { execSync } from "node:child_process";
 
 try {
-  execSync('npx --no prisma migrate deploy', { stdio: 'inherit' });
+  execSync("npx --no prisma migrate deploy", { stdio: "inherit" });
 } catch {
-  console.error('[start] prisma migrate deploy FAILED: the API is not started. Fix the migration (see the log above), then deploy again.');
+  console.error(
+    "[start] prisma migrate deploy FAILED: the API is not started. Fix the migration (see the log above), then deploy again.",
+  );
   process.exit(1);
 }
 
-await import('../dist/server.js');
+await import("../dist/server.js");

@@ -1,6 +1,17 @@
 import { EarningType, PackageStatus, Prisma } from "@prisma/client";
-import { CAP_MULTIPLIER, FAST_START, FAST_START_DIRECTS, LEVELS, RANKS, fromCents, isLevelUnlocked, rankForLegs, summarizeLegs, toCents } from "../plan/plan.js";
-import { isRootWallet } from "../../config/root.js";
+import {
+  CAP_MULTIPLIER,
+  FAST_START,
+  FAST_START_DIRECTS,
+  LEVELS,
+  RANKS,
+  fromCents,
+  isLevelUnlocked,
+  rankForLegs,
+  summarizeLegs,
+  toCents,
+} from "../plan/plan.js";
+import { isRootWallet, rootWallet } from "../../config/root.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -14,7 +25,9 @@ const ZERO = "0x0000000000000000000000000000000000000000";
 const PLAN_LOCK = 0x44_56_50_51; // "DVPQ"
 const lockPlan = (tx: Tx) => tx.$executeRaw`SELECT pg_advisory_xact_lock(${PLAN_LOCK}::bigint)`;
 async function tryLockPlan(tx: Tx): Promise<boolean> {
-  const [row] = await tx.$queryRaw<Array<{ ok: boolean }>>`SELECT pg_try_advisory_xact_lock(${PLAN_LOCK}::bigint) AS ok`;
+  const [row] = await tx.$queryRaw<
+    Array<{ ok: boolean }>
+  >`SELECT pg_try_advisory_xact_lock(${PLAN_LOCK}::bigint) AS ok`;
   return Boolean(row?.ok);
 }
 
@@ -32,19 +45,26 @@ export type Side = "LEFT" | "RIGHT";
 type SideVolume = Map<string, { left: number; right: number }>;
 const addTo = (volume: SideVolume, id: string, side: Side, dao: number) => {
   const v = volume.get(id) ?? { left: 0, right: 0 };
-  if (side === "LEFT") v.left += dao; else v.right += dao;
+  if (side === "LEFT") v.left += dao;
+  else v.right += dao;
   volume.set(id, v);
 };
 
 export type ActivationInput = {
-  walletAddress: string;   // lowercase
-  sponsorAddress: string;  // lowercase, zero address = no sponsor
+  walletAddress: string; // lowercase
+  sponsorAddress: string; // lowercase, zero address = no sponsor
   transactionHash: string;
   amountUsd: number;
+  /** block time of the on-chain payment (event timestamp); empty = now */
+  paidAt?: Date;
 };
 
 export type Commission = { level: number; wallet: string; amountUsd: number };
-export type Skipped = { level: number; wallet: string; reason: "no_package" | "capped" | "level_locked" };
+export type Skipped = {
+  level: number;
+  wallet: string;
+  reason: "no_package" | "capped" | "level_locked";
+};
 export type RankUp = { wallet: string; from: number; to: number; rewardUsd: number };
 
 export type ActivationResult = {
@@ -66,13 +86,15 @@ export type ActivationResult = {
   rankUps: RankUp[];
 };
 
-const httpError = (message: string, statusCode: number) => Object.assign(new Error(message), { statusCode });
+const httpError = (message: string, statusCode: number) =>
+  Object.assign(new Error(message), { statusCode });
 
 /** "DV" + first 6 hex chars; longer if that code is already taken (codes must stay unique). */
 export async function uniqueReferralCode(tx: Pick<Tx, "user">, wallet: string): Promise<string> {
   for (let len = 6; len <= 14; len += 2) {
     const code = `DV${wallet.slice(2, 2 + len).toUpperCase()}`;
-    if (!(await tx.user.findUnique({ where: { referralCode: code }, select: { id: true } }))) return code;
+    if (!(await tx.user.findUnique({ where: { referralCode: code }, select: { id: true } })))
+      return code;
   }
   throw httpError("Could not allocate a referral code.", 500);
 }
@@ -94,7 +116,10 @@ async function ancestorsOf(tx: Tx, userId: string): Promise<Array<{ id: string; 
  * Every member above `userId` in the PLACEMENT tree, nearest first, with the side of theirs this
  * member's business arrives on. Depth-guarded like ancestorsOf.
  */
-async function placementAncestorsOf(tx: Tx, userId: string): Promise<Array<{ id: string; side: Side }>> {
+async function placementAncestorsOf(
+  tx: Tx,
+  userId: string,
+): Promise<Array<{ id: string; side: Side }>> {
   return tx.$queryRaw<Array<{ id: string; side: Side }>>`
     WITH RECURSIVE chain(id, parent, side, depth) AS (
       SELECT id, placement_id, placement_side, 0 FROM users WHERE id = ${userId}::uuid
@@ -137,7 +162,11 @@ async function addSideVolume(tx: Tx, volume: SideVolume) {
     for (let i = 0; i < ids.length; i += 5_000) {
       await tx.user.updateMany({
         where: { id: { in: ids.slice(i, i + 5_000) } },
-        data: { leftVolume: { increment: left }, rightVolume: { increment: right }, teamVolume: { increment: left + right } },
+        data: {
+          leftVolume: { increment: left },
+          rightVolume: { increment: right },
+          teamVolume: { increment: left + right },
+        },
       });
     }
   }
@@ -168,7 +197,12 @@ export async function linkUpline(tx: Tx, userId: string, sponsorId: string): Pro
  * index is the backstop. Returns the member it now sits under, or null if it was already placed or
  * the spot would be inside its own team.
  */
-export async function placeMember(tx: Tx, userId: string, sponsorId: string, side: Side): Promise<string | null> {
+export async function placeMember(
+  tx: Tx,
+  userId: string,
+  sponsorId: string,
+  side: Side,
+): Promise<string | null> {
   if (userId === sponsorId) return null;
   await lockPlan(tx);
   const me = await tx.user.findUniqueOrThrow({
@@ -187,7 +221,10 @@ export async function placeMember(tx: Tx, userId: string, sponsorId: string, sid
   const parentId = bottom.id;
   const above = await placementAncestorsOf(tx, parentId);
   if (parentId === userId || above.some((a) => a.id === userId)) return null;
-  await tx.user.update({ where: { id: userId }, data: { placementId: parentId, placementSide: side } });
+  await tx.user.update({
+    where: { id: userId },
+    data: { placementId: parentId, placementSide: side },
+  });
   const business = me.leftVolume + me.rightVolume + me._count.packages;
   if (business > 0) {
     const volume: SideVolume = new Map();
@@ -210,7 +247,11 @@ export async function recomputeRanks(tx: Tx, ids: string[]): Promise<RankUp[]> {
   const members = await tx.user.findMany({
     where: { id: { in: ids } },
     select: {
-      id: true, walletAddress: true, currentRank: true, leftVolume: true, rightVolume: true,
+      id: true,
+      walletAddress: true,
+      currentRank: true,
+      leftVolume: true,
+      rightVolume: true,
       packages: { where: { status: PackageStatus.ACTIVE }, orderBy: { createdAt: "asc" } },
     },
   });
@@ -222,24 +263,45 @@ export async function recomputeRanks(tx: Tx, ids: string[]): Promise<RankUp[]> {
     await tx.user.update({ where: { id: m.id }, data: { currentRank: reached } });
     let rewardCents = 0;
     for (let r = m.currentRank + 1; r <= reached; r++) {
-      const paid = await tx.earning.findFirst({ where: { recipientId: m.id, type: EarningType.RANK_REWARD, level: r }, select: { id: true } });
+      const paid = await tx.earning.findFirst({
+        where: { recipientId: m.id, type: EarningType.RANK_REWARD, level: r },
+        select: { id: true },
+      });
       if (paid) continue;
       rewardCents += await creditIntoCap(tx, m.id, m.packages, toCents(RANKS[r - 1].rewardUsd), {
-        sourceId: m.id, type: EarningType.RANK_REWARD, level: r,
+        sourceId: m.id,
+        type: EarningType.RANK_REWARD,
+        level: r,
       });
     }
-    rankUps.push({ wallet: m.walletAddress, from: m.currentRank, to: reached, rewardUsd: fromCents(rewardCents) });
+    rankUps.push({
+      wallet: m.walletAddress,
+      from: m.currentRank,
+      to: reached,
+      rewardUsd: fromCents(rewardCents),
+    });
   }
   return rankUps;
 }
 
 /** adds the package and queues it for the plan (directs, 20 levels, team volume, ranks) */
-async function queuePackage(tx: Tx, userId: string, amountUsd: number, transactionHash: string, isActivation: boolean) {
+async function queuePackage(
+  tx: Tx,
+  userId: string,
+  amountUsd: number,
+  transactionHash: string,
+  isActivation: boolean,
+  paidAt?: Date,
+) {
   const amountCents = toCents(amountUsd);
   const pkg = await tx.package.create({
     data: {
-      userId, packageAmount: amountUsd, maxCapLimit: fromCents(amountCents * CAP_MULTIPLIER),
-      status: PackageStatus.ACTIVE, activationTxHash: transactionHash,
+      userId,
+      packageAmount: amountUsd,
+      maxCapLimit: fromCents(amountCents * CAP_MULTIPLIER),
+      status: PackageStatus.ACTIVE,
+      activationTxHash: transactionHash,
+      paidAt: paidAt ?? new Date(),
     },
   });
   await tx.planEvent.create({ data: { packageId: pkg.id, userId, isActivation, amountCents } });
@@ -256,44 +318,92 @@ async function queuePackage(tx: Tx, userId: string, amountUsd: number, transacti
 export async function processActivation(tx: Tx, input: ActivationInput): Promise<ActivationResult> {
   const { walletAddress, transactionHash, amountUsd } = input;
 
-  const byHash = await tx.package.findUnique({ where: { activationTxHash: transactionHash }, include: { user: true } });
+  const byHash = await tx.package.findUnique({
+    where: { activationTxHash: transactionHash },
+    include: { user: true },
+  });
   if (byHash) {
-    if (byHash.user.walletAddress !== walletAddress) throw httpError("Transaction belongs to another wallet.", 409);
+    if (byHash.user.walletAddress !== walletAddress)
+      throw httpError("Transaction belongs to another wallet.", 409);
     return {
-      walletAddress, referralCode: byHash.user.referralCode, transactionHash, status: byHash.status,
-      alreadyProcessed: true, sponsorLinked: Boolean(byHash.user.uplineId), queued: false, commissions: [], skipped: [], rankUps: [],
+      walletAddress,
+      referralCode: byHash.user.referralCode,
+      transactionHash,
+      status: byHash.status,
+      alreadyProcessed: true,
+      sponsorLinked: Boolean(byHash.user.uplineId),
+      queued: false,
+      commissions: [],
+      skipped: [],
+      rankUps: [],
     };
   }
 
-  let user = await tx.user.findUnique({ where: { walletAddress }, include: { _count: { select: { packages: true, downline: true } } } });
-  if (user && user._count.packages > 0) throw httpError("This wallet already has an activation package.", 409);
+  let user = await tx.user.findUnique({
+    where: { walletAddress },
+    include: { _count: { select: { packages: true, downline: true } } },
+  });
+  if (user && user._count.packages > 0)
+    throw httpError("This wallet already has an activation package.", 409);
   let sponsorMismatch: ActivationResult["sponsorMismatch"];
 
-  const sponsorAddress = input.sponsorAddress && input.sponsorAddress !== ZERO && input.sponsorAddress !== walletAddress
-    ? input.sponsorAddress : null;
+  const sponsorAddress =
+    input.sponsorAddress && input.sponsorAddress !== ZERO && input.sponsorAddress !== walletAddress
+      ? input.sponsorAddress
+      : null;
   const sponsor = sponsorAddress
-    ? await tx.user.findUnique({ where: { walletAddress: sponsorAddress }, include: { _count: { select: { packages: true } } } })
+    ? await tx.user.findUnique({
+        where: { walletAddress: sponsorAddress },
+        include: { _count: { select: { packages: true } } },
+      })
     : null;
   // any registered wallet can sponsor, paid or not (owner, 2026-10-13: teams are built during the
   // pre-launch marketing days; an unpaid sponsor's shares stay with the company until it pays).
   // A root record missing at this point is created so the member is never left without its upline.
-  const validSponsor = sponsorAddress && isRootWallet(sponsorAddress)
-    ? sponsor ?? await tx.user.create({
-      data: { walletAddress: sponsorAddress, referralCode: await uniqueReferralCode(tx, sponsorAddress) },
-      include: { _count: { select: { packages: true } } },
-    })
-    : sponsor;
+  const validSponsor =
+    sponsorAddress && isRootWallet(sponsorAddress)
+      ? (sponsor ??
+        (await tx.user.create({
+          data: {
+            walletAddress: sponsorAddress,
+            referralCode: await uniqueReferralCode(tx, sponsorAddress),
+          },
+          include: { _count: { select: { packages: true } } },
+        })))
+      : sponsor;
+  // nobody stays outside the tree (owner, 2026-10-18): a member who pays with no (known) sponsor and
+  // has no recorded sponsor yet joins under the company root
+  const root = rootWallet();
+  const rootFallback =
+    !validSponsor && !user?.uplineId && root && walletAddress !== root
+      ? ((await tx.user.findUnique({
+          where: { walletAddress: root },
+          include: { _count: { select: { packages: true } } },
+        })) ??
+        (await tx.user.create({
+          data: { walletAddress: root, referralCode: await uniqueReferralCode(tx, root) },
+          include: { _count: { select: { packages: true } } },
+        })))
+      : null;
+  const treeSponsor = validSponsor ?? rootFallback;
 
   if (!user) {
     user = await tx.user.create({
-      data: { walletAddress, referralCode: await uniqueReferralCode(tx, walletAddress), uplineId: validSponsor?.id },
+      data: {
+        walletAddress,
+        referralCode: await uniqueReferralCode(tx, walletAddress),
+        uplineId: treeSponsor?.id,
+      },
       include: { _count: { select: { packages: true, downline: true } } },
     });
-  } else if (!user.uplineId && validSponsor) {
+  } else if (!user.uplineId && treeSponsor) {
     // registered earlier without a sponsor (maybe with a team below it): link now, unless that
     // would make a loop
-    if (await linkUpline(tx, user.id, validSponsor.id)) {
-      user = await tx.user.findUniqueOrThrow({ where: { id: user.id }, include: { _count: { select: { packages: true, downline: true } } } });
+    if (await linkUpline(tx, user.id, treeSponsor.id)) {
+      user = await tx.user.findUniqueOrThrow({
+        where: { id: user.id },
+        include: { _count: { select: { packages: true, downline: true } } },
+      });
     }
   } else if (user.uplineId && validSponsor && user.uplineId !== validSponsor.id) {
     // the member paid on-chain under another sponsor than the invite link recorded (the website
@@ -302,27 +412,47 @@ export async function processActivation(tx: Tx, input: ActivationInput): Promise
     // tree stays, so commissions already paid through it remain consistent.
     // (a rare path: only a direct contract call reaches it; the website pays with the recorded sponsor)
     // a member who already took a placement spot keeps its sponsor (the spot is permanent)
-    if (user.placementId || await teamHasPayment(tx, user.id)) sponsorMismatch = "kept";
+    if (user.placementId || (await teamHasPayment(tx, user.id))) sponsorMismatch = "kept";
     else if (await linkUpline(tx, user.id, validSponsor.id)) {
       sponsorMismatch = "moved";
-      await tx.user.update({ where: { id: user.id }, data: { pendingSponsorCode: validSponsor.referralCode } });
+      await tx.user.update({
+        where: { id: user.id },
+        data: { pendingSponsorCode: validSponsor.referralCode },
+      });
     } else sponsorMismatch = "loop";
-    if (sponsorMismatch === "moved") user = await tx.user.findUniqueOrThrow({ where: { id: user.id }, include: { _count: { select: { packages: true, downline: true } } } });
+    if (sponsorMismatch === "moved")
+      user = await tx.user.findUniqueOrThrow({
+        where: { id: user.id },
+        include: { _count: { select: { packages: true, downline: true } } },
+      });
   }
 
   // paid without choosing a side on the website (e.g. a direct contract call): the bottom of the
   // sponsor's LEFT side (owner, 2026-10-18)
   if (user.uplineId && !user.placementId) await placeMember(tx, user.id, user.uplineId, "LEFT");
 
-  const pkg = await queuePackage(tx, user.id, amountUsd, transactionHash, true);
+  const pkg = await queuePackage(tx, user.id, amountUsd, transactionHash, true, input.paidAt);
   return {
-    walletAddress, referralCode: user.referralCode, transactionHash, status: pkg.status,
-    alreadyProcessed: false, sponsorLinked: Boolean(user.uplineId), queued: true, commissions: [], skipped: [], rankUps: [],
+    walletAddress,
+    referralCode: user.referralCode,
+    transactionHash,
+    status: pkg.status,
+    alreadyProcessed: false,
+    sponsorLinked: Boolean(user.uplineId),
+    queued: true,
+    commissions: [],
+    skipped: [],
+    rankUps: [],
     ...(sponsorMismatch ? { sponsorMismatch } : {}),
   };
 }
 
-type CapPackage = { id: string; totalEarned: { toString(): string }; maxCapLimit: { toString(): string }; status: PackageStatus };
+type CapPackage = {
+  id: string;
+  totalEarned: { toString(): string };
+  maxCapLimit: { toString(): string };
+  status: PackageStatus;
+};
 
 /**
  * Credits up to `cents` to a member inside the 25x cap (owner, 2026-10-18: level income, rank
@@ -333,7 +463,10 @@ type CapPackage = { id: string; totalEarned: { toString(): string }; maxCapLimit
  * cents paid: less than asked (or 0) when the packages are full; the rest stays with the company.
  */
 async function creditIntoCap(
-  tx: Tx, recipientId: string, packages: CapPackage[], cents: number,
+  tx: Tx,
+  recipientId: string,
+  packages: CapPackage[],
+  cents: number,
   earning: { sourceId: string; type: EarningType; level: number; percentage?: number },
 ): Promise<number> {
   let remaining = cents;
@@ -351,13 +484,21 @@ async function creditIntoCap(
     }
     await tx.earning.create({
       data: {
-        recipientId, sourceId: earning.sourceId, packageId: p.id, type: earning.type,
-        level: earning.level, percentage: earning.percentage, amountUsd: fromCents(payCents),
+        recipientId,
+        sourceId: earning.sourceId,
+        packageId: p.id,
+        type: earning.type,
+        level: earning.level,
+        percentage: earning.percentage,
+        amountUsd: fromCents(payCents),
       },
     });
     const newEarned = earnedCents + payCents;
     const status = newEarned >= capCents ? PackageStatus.CAPPED : PackageStatus.ACTIVE;
-    await tx.package.update({ where: { id: p.id }, data: { totalEarned: fromCents(newEarned), status } });
+    await tx.package.update({
+      where: { id: p.id },
+      data: { totalEarned: fromCents(newEarned), status },
+    });
     p.totalEarned = fromCents(newEarned);
     p.status = status;
     remaining -= payCents;
@@ -373,25 +514,39 @@ async function creditIntoCap(
  * the moment the 10th direct is counted (or the member's own activation, when its directs paid
  * first), inside the 25x cap. The company root earns nothing.
  */
-async function awardFastStart(tx: Tx, userId: string): Promise<{ wallet: string; days: number; rewardUsd: number } | null> {
+async function awardFastStart(
+  tx: Tx,
+  userId: string,
+): Promise<{ wallet: string; days: number; rewardUsd: number } | null> {
   const m = await tx.user.findUnique({
     where: { id: userId },
     select: { walletAddress: true, packages: { orderBy: { createdAt: "asc" } } },
   });
   if (!m?.packages.length || isRootWallet(m.walletAddress)) return null;
-  if (await tx.earning.findFirst({ where: { recipientId: userId, type: EarningType.FAST_START_BONUS }, select: { id: true } })) return null;
-  const joined = m.packages[0].createdAt.getTime();
+  if (
+    await tx.earning.findFirst({
+      where: { recipientId: userId, type: EarningType.FAST_START_BONUS },
+      select: { id: true },
+    })
+  )
+    return null;
+  // the clock starts when the member PAID on-chain (owner, 2026-10-18), not when the server recorded it
+  const joined = (m.packages[0].paidAt ?? m.packages[0].createdAt).getTime();
   for (const tier of FAST_START) {
     const deadline = new Date(joined + tier.days * 86_400_000);
     const [row] = await tx.$queryRaw<Array<{ n: number }>>`
       SELECT COUNT(*)::int AS n FROM users d
        WHERE d.upline_id = ${userId}::uuid
-         AND (SELECT MIN(p.created_at) FROM packages p WHERE p.user_id = d.id AND p.counted_at IS NOT NULL) <= ${deadline}`;
+         AND (SELECT MIN(COALESCE(p.paid_at, p.created_at)) FROM packages p WHERE p.user_id = d.id AND p.counted_at IS NOT NULL) <= ${deadline}`;
     if (Number(row?.n ?? 0) < FAST_START_DIRECTS) continue;
     const paid = await creditIntoCap(tx, userId, m.packages, toCents(tier.rewardUsd), {
-      sourceId: userId, type: EarningType.FAST_START_BONUS, level: tier.days,
+      sourceId: userId,
+      type: EarningType.FAST_START_BONUS,
+      level: tier.days,
     });
-    return paid > 0 ? { wallet: m.walletAddress, days: tier.days, rewardUsd: fromCents(paid) } : null;
+    return paid > 0
+      ? { wallet: m.walletAddress, days: tier.days, rewardUsd: fromCents(paid) }
+      : null;
   }
   return null;
 }
@@ -402,14 +557,21 @@ async function awardFastStart(tx: Tx, userId: string): Promise<{ wallet: string;
  * when that one reaches its 25x cap it becomes CAPPED and the rest spills into the next active
  * package (a top-up waiting in line). Unpaid shares stay with the company.
  */
-async function payCommissions(tx: Tx, sourceUserId: string, amountCents: number, chain: Array<{ id: string; depth: number }>) {
+async function payCommissions(
+  tx: Tx,
+  sourceUserId: string,
+  amountCents: number,
+  chain: Array<{ id: string; depth: number }>,
+) {
   const commissions: Commission[] = [];
   const skipped: Skipped[] = [];
   const top = chain.slice(0, LEVELS.length);
   const uplines = await tx.user.findMany({
     where: { id: { in: top.map((c) => c.id) } },
     select: {
-      id: true, walletAddress: true, activeDirectsCount: true,
+      id: true,
+      walletAddress: true,
+      activeDirectsCount: true,
       _count: { select: { packages: true } },
       packages: { where: { status: PackageStatus.ACTIVE }, orderBy: { createdAt: "asc" } },
     },
@@ -419,15 +581,28 @@ async function payCommissions(tx: Tx, sourceUserId: string, amountCents: number,
     const upline = byId.get(id);
     if (!upline) continue;
     const level = depth;
-    if (!upline._count.packages) { skipped.push({ level, wallet: upline.walletAddress, reason: "no_package" }); continue; }
-    if (!upline.packages.length) { skipped.push({ level, wallet: upline.walletAddress, reason: "capped" }); continue; }
-    if (!isLevelUnlocked(level, upline.activeDirectsCount)) { skipped.push({ level, wallet: upline.walletAddress, reason: "level_locked" }); continue; }
+    if (!upline._count.packages) {
+      skipped.push({ level, wallet: upline.walletAddress, reason: "no_package" });
+      continue;
+    }
+    if (!upline.packages.length) {
+      skipped.push({ level, wallet: upline.walletAddress, reason: "capped" });
+      continue;
+    }
+    if (!isLevelUnlocked(level, upline.activeDirectsCount)) {
+      skipped.push({ level, wallet: upline.walletAddress, reason: "level_locked" });
+      continue;
+    }
 
     const share = Math.round((amountCents * LEVELS[level - 1].pct) / 100);
     const paid = await creditIntoCap(tx, upline.id, upline.packages, share, {
-      sourceId: sourceUserId, type: EarningType.LEVEL_COMMISSION, level, percentage: LEVELS[level - 1].pct,
+      sourceId: sourceUserId,
+      type: EarningType.LEVEL_COMMISSION,
+      level,
+      percentage: LEVELS[level - 1].pct,
     });
-    if (paid > 0) commissions.push({ level, wallet: upline.walletAddress, amountUsd: fromCents(paid) });
+    if (paid > 0)
+      commissions.push({ level, wallet: upline.walletAddress, amountUsd: fromCents(paid) });
     else skipped.push({ level, wallet: upline.walletAddress, reason: "capped" });
   }
   return { commissions, skipped };
@@ -436,7 +611,12 @@ async function payCommissions(tx: Tx, sourceUserId: string, amountCents: number,
 export type PlanBatch = {
   busy: boolean;
   processed: number;
-  events: Array<{ packageId: string; wallet: string; commissions: Commission[]; skipped: Skipped[] }>;
+  events: Array<{
+    packageId: string;
+    wallet: string;
+    commissions: Commission[];
+    skipped: Skipped[];
+  }>;
   rankUps: RankUp[];
   /** fast-start bonuses paid in this batch (awardFastStart) */
   bonuses: Array<{ wallet: string; days: number; rewardUsd: number }>;
@@ -452,21 +632,36 @@ export type PlanBatch = {
  * then re-checks the ranks of every member touched. Runs under the plan lock (one runner across
  * all API copies and the worker); `lock: false` only inside the plan self-test's own transaction.
  */
-export async function processPlanEvents(tx: Tx, { limit = 100, lock = true } = {}): Promise<PlanBatch> {
+export async function processPlanEvents(
+  tx: Tx,
+  { limit = 100, lock = true } = {},
+): Promise<PlanBatch> {
   const batch: PlanBatch = { busy: false, processed: 0, events: [], rankUps: [], bonuses: [] };
   if (lock && !(await tryLockPlan(tx))) return { ...batch, busy: true };
-  const events = await tx.planEvent.findMany({ where: { processedAt: null }, orderBy: { id: "asc" }, take: limit });
+  const events = await tx.planEvent.findMany({
+    where: { processedAt: null },
+    orderBy: { id: "asc" },
+    take: limit,
+  });
   if (!events.length) return batch;
 
   const volume: SideVolume = new Map();
   const now = new Date();
   for (const ev of events) {
-    const user = await tx.user.findUniqueOrThrow({ where: { id: ev.userId }, select: { walletAddress: true } });
+    const user = await tx.user.findUniqueOrThrow({
+      where: { id: ev.userId },
+      select: { walletAddress: true },
+    });
     const chain = await ancestorsOf(tx, ev.userId);
     if (ev.isActivation && chain.length) {
-      await tx.user.update({ where: { id: chain[0].id }, data: { activeDirectsCount: { increment: 1 } } });
+      await tx.user.update({
+        where: { id: chain[0].id },
+        data: { activeDirectsCount: { increment: 1 } },
+      });
     }
-    const paid = chain.length ? await payCommissions(tx, ev.userId, ev.amountCents, chain) : { commissions: [], skipped: [] };
+    const paid = chain.length
+      ? await payCommissions(tx, ev.userId, ev.amountCents, chain)
+      : { commissions: [], skipped: [] };
     for (const a of await placementAncestorsOf(tx, ev.userId)) addTo(volume, a.id, a.side, 1);
     await tx.package.update({ where: { id: ev.packageId }, data: { countedAt: now } });
     await tx.planEvent.update({ where: { id: ev.id }, data: { processedAt: now } });
@@ -487,9 +682,11 @@ export async function processPlanEvents(tx: Tx, { limit = 100, lock = true } = {
 }
 
 export type TopUpInput = {
-  walletAddress: string;   // lowercase
+  walletAddress: string; // lowercase
   transactionHash: string;
   amountUsd: number;
+  /** block time of the on-chain payment (event timestamp); empty = now */
+  paidAt?: Date;
 };
 
 /**
@@ -501,20 +698,44 @@ export type TopUpInput = {
  */
 export async function processTopUp(tx: Tx, input: TopUpInput): Promise<ActivationResult> {
   const { walletAddress, transactionHash, amountUsd } = input;
-  const byHash = await tx.package.findUnique({ where: { activationTxHash: transactionHash }, include: { user: true } });
+  const byHash = await tx.package.findUnique({
+    where: { activationTxHash: transactionHash },
+    include: { user: true },
+  });
   if (byHash) {
-    if (byHash.user.walletAddress !== walletAddress) throw httpError("Transaction belongs to another wallet.", 409);
+    if (byHash.user.walletAddress !== walletAddress)
+      throw httpError("Transaction belongs to another wallet.", 409);
     return {
-      walletAddress, referralCode: byHash.user.referralCode, transactionHash, status: byHash.status,
-      alreadyProcessed: true, sponsorLinked: Boolean(byHash.user.uplineId), queued: false, commissions: [], skipped: [], rankUps: [],
+      walletAddress,
+      referralCode: byHash.user.referralCode,
+      transactionHash,
+      status: byHash.status,
+      alreadyProcessed: true,
+      sponsorLinked: Boolean(byHash.user.uplineId),
+      queued: false,
+      commissions: [],
+      skipped: [],
+      rankUps: [],
     };
   }
-  const user = await tx.user.findUnique({ where: { walletAddress }, include: { _count: { select: { packages: true } } } });
-  if (!user || user._count.packages === 0) throw httpError("Activate the wallet before a top-up.", 409);
+  const user = await tx.user.findUnique({
+    where: { walletAddress },
+    include: { _count: { select: { packages: true } } },
+  });
+  if (!user || user._count.packages === 0)
+    throw httpError("Activate the wallet before a top-up.", 409);
 
-  const pkg = await queuePackage(tx, user.id, amountUsd, transactionHash, false);
+  const pkg = await queuePackage(tx, user.id, amountUsd, transactionHash, false, input.paidAt);
   return {
-    walletAddress, referralCode: user.referralCode, transactionHash, status: pkg.status,
-    alreadyProcessed: false, sponsorLinked: Boolean(user.uplineId), queued: true, commissions: [], skipped: [], rankUps: [],
+    walletAddress,
+    referralCode: user.referralCode,
+    transactionHash,
+    status: pkg.status,
+    alreadyProcessed: false,
+    sponsorLinked: Boolean(user.uplineId),
+    queued: true,
+    commissions: [],
+    skipped: [],
+    rankUps: [],
   };
 }

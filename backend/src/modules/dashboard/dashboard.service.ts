@@ -1,8 +1,23 @@
 import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
-import { isRootWallet } from "../../config/root.js";
+import { isRootWallet, rootWallet } from "../../config/root.js";
 import { isAdminWallet } from "../auth/auth.service.js";
-import { DV_TOKENS_PER_PACKAGE, DV_TOKEN_LAUNCH, DV_TOKEN_LAUNCH_DATE, FAST_START, FAST_START_DIRECTS, LEVELS, RANKS, fromCents, isLevelUnlocked, matchedVolume, rankForLegs, summarizeLegs, toCents, unlockedLevels } from "../plan/plan.js";
+import {
+  DV_TOKENS_PER_PACKAGE,
+  DV_TOKEN_LAUNCH,
+  DV_TOKEN_LAUNCH_DATE,
+  FAST_START,
+  FAST_START_DIRECTS,
+  LEVELS,
+  RANKS,
+  fromCents,
+  isLevelUnlocked,
+  matchedVolume,
+  rankForLegs,
+  summarizeLegs,
+  toCents,
+  unlockedLevels,
+} from "../plan/plan.js";
 import { balanceOf } from "../withdrawals/withdrawals.service.js";
 import { dashboardRepository } from "./dashboard.repository.js";
 
@@ -19,14 +34,25 @@ type Sides = { left: number; right: number };
 function powerSides(official: Sides, records: PowerRecord[]) {
   const daoCents = toCents(env.ACTIVATION_AMOUNT_USDT);
   const daoOf = (cents: number) => Math.floor(cents / daoCents);
-  let totalCents = 0, leftCents = 0, rightCents = 0;
+  let totalCents = 0,
+    leftCents = 0,
+    rightCents = 0;
   for (const entry of records) {
     const cents = toCents(entry.amountUsd.toString());
     totalCents += cents;
-    if (entry.side === "RIGHT") rightCents += cents; else leftCents += cents;
+    if (entry.side === "RIGHT") rightCents += cents;
+    else leftCents += cents;
   }
-  const sides = { left: official.left + daoOf(leftCents), right: official.right + daoOf(rightCents) };
-  return { totalCents, dao: daoOf(totalCents), sides, summary: summarizeLegs([sides.left, sides.right]) };
+  const sides = {
+    left: official.left + daoOf(leftCents),
+    right: official.right + daoOf(rightCents),
+  };
+  return {
+    totalCents,
+    dao: daoOf(totalCents),
+    sides,
+    summary: summarizeLegs([sides.left, sides.right]),
+  };
 }
 
 export class DashboardService {
@@ -38,7 +64,18 @@ export class DashboardService {
       throw error;
     }
 
-    const [byType, byLevel, recent, perLevel, perSide, balance, directsAt, fastStartEarned] = await Promise.all([
+    const root = rootWallet();
+    const [
+      byType,
+      byLevel,
+      recent,
+      perLevel,
+      perSide,
+      balance,
+      directsAt,
+      fastStartEarned,
+      company,
+    ] = await Promise.all([
       dashboardRepository.earningsByType(user.id),
       dashboardRepository.earningsByLevel(user.id),
       dashboardRepository.recentEarnings(user.id),
@@ -46,17 +83,24 @@ export class DashboardService {
       dashboardRepository.membersPerSide(user.id),
       balanceOf(prisma, user.id),
       dashboardRepository.directActivations(user.id),
-      prisma.earning.findFirst({ where: { recipientId: user.id, type: "FAST_START_BONUS" }, select: { level: true } }),
+      prisma.earning.findFirst({
+        where: { recipientId: user.id, type: "FAST_START_BONUS" },
+        select: { level: true },
+      }),
+      root
+        ? prisma.user.findUnique({ where: { walletAddress: root }, select: { referralCode: true } })
+        : null,
     ]);
 
     // money: DECIMAL from Postgres -> exact integer cents -> dollars (never a float sum)
-    const sumOf = (type: string) => fromCents(toCents(String(byType.find((t) => t.type === type)?._sum.amountUsd ?? 0)));
+    const sumOf = (type: string) =>
+      fromCents(toCents(String(byType.find((t) => t.type === type)?._sum.amountUsd ?? 0)));
     const levelIncomeUsd = sumOf("LEVEL_COMMISSION");
     const rankRewardsUsd = sumOf("RANK_REWARD");
     const bonusUsd = sumOf("FAST_START_BONUS");
     // fast-start bonus (owner, 2026-10-18): always sent, so the dashboard shows both bonuses from the
     // first visit; the clock (deadlines + direct counts) starts at the member's own activation
-    const joinedAt = user.packages[0]?.createdAt ?? null;
+    const joinedAt = user.packages[0] ? (user.packages[0].paidAt ?? user.packages[0].createdAt) : null;
     const fastStart = {
       // the company root earns nothing itself
       eligible: !isRootWallet(user.walletAddress),
@@ -67,7 +111,9 @@ export class DashboardService {
       tiers: FAST_START.map((t) => {
         const deadline = joinedAt ? joinedAt.getTime() + t.days * 86_400_000 : null;
         return {
-          name: t.name, days: t.days, rewardUsd: t.rewardUsd,
+          name: t.name,
+          days: t.days,
+          rewardUsd: t.rewardUsd,
           deadline: deadline ? new Date(deadline).toISOString() : null,
           directs: deadline ? directsAt.filter((at) => at <= deadline).length : 0,
         };
@@ -81,20 +127,29 @@ export class DashboardService {
     const virtualRank = Math.max(user.currentRank, rankForLegs(pb.summary));
     const nextVirtual = RANKS[virtualRank];
     // the package earning now: the oldest still ACTIVE (top-ups wait in line), else the latest
-    const currentPackage = user.packages.find((p) => p.status === "ACTIVE") ?? user.packages[user.packages.length - 1] ?? null;
+    const currentPackage =
+      user.packages.find((p) => p.status === "ACTIVE") ??
+      user.packages[user.packages.length - 1] ??
+      null;
     const isRoot = isRootWallet(user.walletAddress);
     const next = RANKS[user.currentRank];
+    // 25x cap (owner, 2026-10-18): every package adds its own $7,500 and the caps add up; all income
+    // fills them oldest first. Totals over every package the member holds.
+    const capTotalCents = user.packages.reduce((s, p) => s + toCents(p.maxCapLimit.toString()), 0);
+    const capEarnedCents = user.packages.reduce((s, p) => s + toCents(p.totalEarned.toString()), 0);
 
     return {
       walletAddress: user.walletAddress,
       referralCode: user.referralCode,
       sponsorCode: user.upline?.referralCode ?? null,
+      // the company root's invite code: a member who arrives without a referral joins under it (owner, 2026-10-18)
+      companyCode: company?.referralCode ?? null,
       // company root (treasury): activated without paying, sponsors anyone, earns nothing itself
       isRoot,
       // admin (ADMIN_WALLETS; the company wallet): its dashboard also shows the company overview
       isAdmin: isAdminWallet(user.walletAddress),
       // the invite code the member joined with (users.joinTeam); before payment only
-      pendingSponsorCode: user.packages.length ? null : user.pendingSponsorCode ?? null,
+      pendingSponsorCode: user.packages.length ? null : (user.pendingSponsorCode ?? null),
       // binary placement (owner, 2026-10-17): where the member sits; null = has not joined a team yet
       placement: user.placementSide
         ? { side: user.placementSide, underCode: user.placement?.referralCode ?? null }
@@ -117,13 +172,13 @@ export class DashboardService {
       },
       nextRank: next
         ? {
-          rank: next.rank,
-          name: next.name,
-          volume: next.volume,
-          rewardUsd: next.rewardUsd,
-          // matched DAO so far: the smaller of the Left and Right sides
-          countedVolume: matchedVolume(legSummary),
-        }
+            rank: next.rank,
+            name: next.name,
+            volume: next.volume,
+            rewardUsd: next.rewardUsd,
+            // matched DAO so far: the smaller of the Left and Right sides
+            countedVolume: matchedVolume(legSummary),
+          }
         : null,
       totalEarned: fromCents(toCents(levelIncomeUsd) + toCents(rankRewardsUsd) + toCents(bonusUsd)),
       levelIncomeUsd,
@@ -140,7 +195,9 @@ export class DashboardService {
         legs: { left: pb.sides.left, right: pb.sides.right, matched: matchedVolume(pb.summary) },
         rank: virtualRank,
         rankName: RANKS[virtualRank - 1]?.name ?? null,
-        nextRank: nextVirtual ? { rank: nextVirtual.rank, name: nextVirtual.name, volume: nextVirtual.volume } : null,
+        nextRank: nextVirtual
+          ? { rank: nextVirtual.rank, name: nextVirtual.name, volume: nextVirtual.volume }
+          : null,
       },
       availableUsd: fromCents(balance.availableCents),
       pendingWithdrawalUsd: fromCents(balance.pendingCents),
@@ -148,6 +205,9 @@ export class DashboardService {
       packages: user.packages, // oldest first: [0] is the activation
       currentPackage,
       packageCount: user.packages.length,
+      // the member's whole cap: $7,500 per package, added up, and what all packages have earned so far
+      capTotalUsd: fromCents(capTotalCents),
+      capEarnedUsd: fromCents(capEarnedCents),
       // DV token allocation (owner, 2026-10-15): 1,500 DV per package; the company root holds none
       dvToken: {
         perPackage: DV_TOKENS_PER_PACKAGE,
@@ -156,8 +216,8 @@ export class DashboardService {
         launchDate: DV_TOKEN_LAUNCH_DATE,
         network: "BNB Smart Chain",
       },
-      // re-entry (owner, 2026-10-10): a new $300 package once every package has reached its cap
-      canTopUp: !isRoot && user.packages.length > 0 && user.packages.every((p) => p.status !== "ACTIVE"),
+      // another $300 package at any time (owner, 2026-10-18): each one adds $7,500 to the cap
+      canTopUp: !isRoot && user.packages.length > 0,
       levels: LEVELS.map((l) => {
         const earned = byLevel.find((b) => b.level === l.level);
         return {
@@ -181,14 +241,22 @@ export class DashboardService {
 
   /** Who joined at one level of the member's downline (dashboard level modal), 50 per page. */
   async getLevelMembers(walletAddress: string, level: number, page: number) {
-    const user = await prisma.user.findUnique({ where: { walletAddress: walletAddress.toLowerCase() }, select: { id: true } });
+    const user = await prisma.user.findUnique({
+      where: { walletAddress: walletAddress.toLowerCase() },
+      select: { id: true },
+    });
     if (!user) {
       const error = new Error("User not found") as Error & { statusCode?: number };
       error.statusCode = 404;
       throw error;
     }
     const pageSize = 50;
-    const { total, rows } = await dashboardRepository.membersAtLevel(user.id, level, pageSize, (page - 1) * pageSize);
+    const { total, rows } = await dashboardRepository.membersAtLevel(
+      user.id,
+      level,
+      pageSize,
+      (page - 1) * pageSize,
+    );
     // rank shown for each member = the same rank their own dashboard shows: the official one, or the
     // higher one reached with their Power Business (owner, 2026-10-15). Only the few members that hold
     // Power Business need their legs read.

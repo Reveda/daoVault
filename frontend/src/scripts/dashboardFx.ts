@@ -53,7 +53,12 @@ type RollEl = HTMLElement & { _rollRaf?: number; _rollShown?: number };
  * Rolls an element's number from the value currently shown to `to`
  * (cubic ease-out). A newer value arriving mid-roll takes over.
  */
-export function rollNumber(el: HTMLElement | null, to: number, format: (n: number) => string, ms?: number): void {
+export function rollNumber(
+  el: HTMLElement | null,
+  to: number,
+  format: (n: number) => string,
+  ms?: number,
+): void {
   if (!el) return;
   const node = el as RollEl;
   const from = node._rollShown ?? 0;
@@ -84,18 +89,23 @@ export function rollNumber(el: HTMLElement | null, to: number, format: (n: numbe
 export function initCardSpotlight(): void {
   if (!matchMedia('(hover: hover) and (pointer: fine)').matches) return;
   let lastCard: HTMLElement | null = null;
-  document.addEventListener('pointermove', (e) => {
-    const card = (e.target as Element | null)?.closest<HTMLElement>('.glass, .border-beam-card') ?? null;
-    if (lastCard && lastCard !== card) {
-      lastCard.style.setProperty('--mouse-x', '-999px');
-      lastCard.style.setProperty('--mouse-y', '-999px');
-    }
-    lastCard = card;
-    if (!card) return;
-    const r = card.getBoundingClientRect();
-    card.style.setProperty('--mouse-x', `${e.clientX - r.left}px`);
-    card.style.setProperty('--mouse-y', `${e.clientY - r.top}px`);
-  }, { passive: true });
+  document.addEventListener(
+    'pointermove',
+    (e) => {
+      const card =
+        (e.target as Element | null)?.closest<HTMLElement>('.glass, .border-beam-card') ?? null;
+      if (lastCard && lastCard !== card) {
+        lastCard.style.setProperty('--mouse-x', '-999px');
+        lastCard.style.setProperty('--mouse-y', '-999px');
+      }
+      lastCard = card;
+      if (!card) return;
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--mouse-x', `${e.clientX - r.left}px`);
+      card.style.setProperty('--mouse-y', `${e.clientY - r.top}px`);
+    },
+    { passive: true },
+  );
 }
 
 /* ------------------------------------------------------------------ 3D metric icons */
@@ -103,7 +113,13 @@ export function initCardSpotlight(): void {
 type IconKind = 'network' | 'coin' | 'infinity' | 'trophy';
 
 function goldMaterial(emissive = 0x3a2a05, intensity = 0.45): THREE.MeshStandardMaterial {
-  return new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.85, roughness: 0.22, emissive, emissiveIntensity: intensity });
+  return new THREE.MeshStandardMaterial({
+    color: 0xd4af37,
+    metalness: 0.85,
+    roughness: 0.22,
+    emissive,
+    emissiveIntensity: intensity,
+  });
 }
 
 function buildIcon(kind: IconKind, root: THREE.Group): (t: number, speed: number) => void {
@@ -113,10 +129,22 @@ function buildIcon(kind: IconKind, root: THREE.Group): (t: number, speed: number
     const a = new THREE.Mesh(geo, goldMaterial());
     a.position.set(-0.36, 0.12, 0);
     a.rotation.set(0.2, 0.3, Math.PI * 0.25);
-    const b = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xfff1c1, metalness: 0.7, roughness: 0.2, emissive: 0x5a4512, emissiveIntensity: 0.4 }));
+    const b = new THREE.Mesh(
+      geo,
+      new THREE.MeshStandardMaterial({
+        color: 0xfff1c1,
+        metalness: 0.7,
+        roughness: 0.2,
+        emissive: 0x5a4512,
+        emissiveIntensity: 0.4,
+      }),
+    );
     b.position.set(0.36, -0.12, 0);
     b.rotation.set(Math.PI * 0.5 + 0.2, 0.3, Math.PI * 0.25);
-    const spark = new THREE.Mesh(new THREE.SphereGeometry(0.11, 10, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    const spark = new THREE.Mesh(
+      new THREE.SphereGeometry(0.11, 10, 10),
+      new THREE.MeshBasicMaterial({ color: 0xffffff }),
+    );
     root.add(a, b, spark);
     root.rotation.x = 0.35;
     return (t, speed) => {
@@ -130,10 +158,19 @@ function buildIcon(kind: IconKind, root: THREE.Group): (t: number, speed: number
   if (kind === 'coin') {
     // a minted gold coin that flips and glints
     const coin = new THREE.Group();
-    const face = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 0.24, 48), goldMaterial(0x4a3306, 0.5));
+    const face = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.15, 1.15, 0.24, 48),
+      goldMaterial(0x4a3306, 0.5),
+    );
     face.rotation.x = Math.PI / 2;
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.09, 10, 48), goldMaterial(0x6b4c0a, 0.7));
-    const inner = new THREE.Mesh(new THREE.TorusGeometry(0.72, 0.06, 8, 40), new THREE.MeshBasicMaterial({ color: 0xfff4c8 }));
+    const rim = new THREE.Mesh(
+      new THREE.TorusGeometry(1.15, 0.09, 10, 48),
+      goldMaterial(0x6b4c0a, 0.7),
+    );
+    const inner = new THREE.Mesh(
+      new THREE.TorusGeometry(0.72, 0.06, 8, 40),
+      new THREE.MeshBasicMaterial({ color: 0xfff4c8 }),
+    );
     inner.position.z = 0.13;
     const inner2 = inner.clone();
     inner2.position.z = -0.13;
@@ -147,12 +184,16 @@ function buildIcon(kind: IconKind, root: THREE.Group): (t: number, speed: number
 
   if (kind === 'infinity') {
     // the 25x cap: an endless knot that reads as "infinity"
-    const knot = new THREE.Mesh(new THREE.TorusKnotGeometry(0.72, 0.2, 96, 12, 2, 3), goldMaterial(0x4a3306, 0.55));
+    const knot = new THREE.Mesh(
+      new THREE.TorusKnotGeometry(0.72, 0.2, 96, 12, 2, 3),
+      goldMaterial(0x4a3306, 0.55),
+    );
     root.add(knot);
     return (t, speed) => {
       knot.rotation.y += 0.02 * speed;
       knot.rotation.x = Math.sin(t * 1.3) * 0.3;
-      (knot.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.45 + Math.sin(t * 3) * 0.2;
+      (knot.material as THREE.MeshStandardMaterial).emissiveIntensity =
+        0.45 + Math.sin(t * 3) * 0.2;
     };
   }
 
@@ -160,7 +201,10 @@ function buildIcon(kind: IconKind, root: THREE.Group): (t: number, speed: number
   const mat = goldMaterial(0xd97706, 0.5);
   const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.45, 1.1, 20), mat);
   cup.position.y = 0.35;
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.86, 0.05, 10, 24), new THREE.MeshBasicMaterial({ color: 0xfff9c4 }));
+  const rim = new THREE.Mesh(
+    new THREE.TorusGeometry(0.86, 0.05, 10, 24),
+    new THREE.MeshBasicMaterial({ color: 0xfff9c4 }),
+  );
   rim.rotation.x = Math.PI / 2;
   rim.position.y = 0.9;
   const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.24, 0.5, 12), mat);
@@ -174,7 +218,10 @@ function buildIcon(kind: IconKind, root: THREE.Group): (t: number, speed: number
   const handleR = new THREE.Mesh(handleGeo, mat);
   handleR.position.set(0.75, 0.35, 0);
   handleR.rotation.z = -Math.PI / 2;
-  const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.28, 0), new THREE.MeshBasicMaterial({ color: 0xfffbeb }));
+  const gem = new THREE.Mesh(
+    new THREE.OctahedronGeometry(0.28, 0),
+    new THREE.MeshBasicMaterial({ color: 0xfffbeb }),
+  );
   gem.position.y = 1.22;
   root.add(cup, rim, stem, base, handleL, handleR, gem);
   root.rotation.x = 0.2;
@@ -207,7 +254,12 @@ export function initMetricIcons3D(): void {
 
     let renderer: THREE.WebGLRenderer;
     try {
-      renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
+      renderer = new THREE.WebGLRenderer({
+        canvas,
+        alpha: true,
+        antialias: true,
+        powerPreference: 'low-power',
+      });
     } catch {
       canvas.remove();
       slot.classList.remove('has-3d');
@@ -234,8 +286,13 @@ export function initMetricIcons3D(): void {
     let hovered = false;
     let visible = true;
     // mouse only: a finger dragging over the card (while scrolling) twisted the icon
-    card.addEventListener('pointerenter', (e) => { if (e.pointerType !== 'touch') hovered = true; });
-    card.addEventListener('pointerleave', () => { hovered = false; scene.rotation.set(0, 0, 0); });
+    card.addEventListener('pointerenter', (e) => {
+      if (e.pointerType !== 'touch') hovered = true;
+    });
+    card.addEventListener('pointerleave', () => {
+      hovered = false;
+      scene.rotation.set(0, 0, 0);
+    });
     card.addEventListener('pointermove', (e) => {
       if (e.pointerType === 'touch') return;
       const r = card.getBoundingClientRect();
@@ -243,7 +300,9 @@ export function initMetricIcons3D(): void {
       scene.rotation.x = -((e.clientY - r.top) / r.height - 0.5) * 0.7;
     });
     if ('IntersectionObserver' in window) {
-      new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; }).observe(card);
+      new IntersectionObserver(([entry]) => {
+        visible = entry.isIntersecting;
+      }).observe(card);
     }
 
     let t = Math.random() * 10;
@@ -271,7 +330,10 @@ export function celebrate(from?: HTMLElement | null, count = 110): void {
   canvas.width = window.innerWidth * dpr;
   canvas.height = window.innerHeight * dpr;
   const ctx = canvas.getContext('2d');
-  if (!ctx) { canvas.remove(); return; }
+  if (!ctx) {
+    canvas.remove();
+    return;
+  }
   ctx.scale(dpr, dpr);
 
   const r = from?.getBoundingClientRect();
@@ -282,10 +344,14 @@ export function celebrate(from?: HTMLElement | null, count = 110): void {
     const a = Math.random() * Math.PI * 2;
     const v = 4 + Math.random() * 9;
     return {
-      x: ox, y: oy,
-      vx: Math.cos(a) * v, vy: Math.sin(a) * v - 6,
-      w: 4 + Math.random() * 6, h: 6 + Math.random() * 8,
-      rot: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.4,
+      x: ox,
+      y: oy,
+      vx: Math.cos(a) * v,
+      vy: Math.sin(a) * v - 6,
+      w: 4 + Math.random() * 6,
+      h: 6 + Math.random() * 8,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.4,
       c: colors[Math.floor(Math.random() * colors.length)],
     };
   });

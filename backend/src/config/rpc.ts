@@ -6,7 +6,11 @@ import { env } from "./env.js";
  * keeps the API/indexer on the same chain while switching providers automatically.
  * Values are never trusted for money without the existing contract/event checks and confirmations.
  */
-const split = (value: string) => value.split(",").map((v) => v.trim()).filter(Boolean);
+const split = (value: string) =>
+  value
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
 const unique = (urls: string[]) => [...new Set(urls)];
 
 const make = (urls: string[]): AbstractProvider => {
@@ -29,11 +33,12 @@ export const chainProvider = (): AbstractProvider => {
 };
 
 export const indexerProvider = (): AbstractProvider => {
-  if (!indexer) indexer = make([
-    ...(env.INDEXER_RPC_URL ? [env.INDEXER_RPC_URL] : []),
-    ...split(env.INDEXER_RPC_URLS),
-    env.BSC_RPC_URL,
-    ...split(env.BSC_RPC_URLS),
-  ]);
+  if (!indexer)
+    indexer = make([
+      ...(env.INDEXER_RPC_URL ? [env.INDEXER_RPC_URL] : []),
+      ...split(env.INDEXER_RPC_URLS),
+      env.BSC_RPC_URL,
+      ...split(env.BSC_RPC_URLS),
+    ]);
   return indexer;
 };

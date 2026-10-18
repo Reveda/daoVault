@@ -1,0 +1,17 @@
+node_modules
+**/node_modules
+dist
+**/dist
+build
+**/build
+.git
+package-lock.json
+**/package-lock.json
+backups
+**/backups
+backend/prisma/migrations
+contracts/artifacts
+contracts/cache
+*.log
+scratch
+

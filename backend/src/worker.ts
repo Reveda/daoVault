@@ -22,6 +22,10 @@ import { runWatch } from "./jobs/watch.js";
 import { alert } from "./config/alerts.js";
 import { startPlanQueueTimer, stopPlanQueueTimer } from "./modules/activation/planQueue.js";
 import { withdrawalsService } from "./modules/withdrawals/withdrawals.service.js";
+import { captureConsole } from "./config/logger.js";
+
+// every console line of the worker becomes one JSON log line (config/logger.ts)
+captureConsole();
 
 if (!env.REDIS_URL) {
   console.error("[worker] REDIS_URL is not set: the background worker needs Redis.");
@@ -56,9 +60,17 @@ const queue = new Queue(QUEUE, {
 });
 
 // repeating schedules: upsert = safe to run on every start (no duplicates)
-await queue.upsertJobScheduler("chain-indexer", { every: env.INDEXER_INTERVAL_SECONDS * 1000 }, { name: "chain-indexer" });
+await queue.upsertJobScheduler(
+  "chain-indexer",
+  { every: env.INDEXER_INTERVAL_SECONDS * 1000 },
+  { name: "chain-indexer" },
+);
 await queue.upsertJobScheduler("voucher-settle", { every: 60_000 }, { name: "voucher-settle" });
-await queue.upsertJobScheduler("auth-cleanup", { pattern: "0 3 * * *", tz: "UTC" }, { name: "auth-cleanup" });
+await queue.upsertJobScheduler(
+  "auth-cleanup",
+  { pattern: "0 3 * * *", tz: "UTC" },
+  { name: "auth-cleanup" },
+);
 await queue.upsertJobScheduler("watch", { every: 120_000 }, { name: "watch" });
 
 const handlers: Record<string, () => Promise<unknown>> = {
@@ -69,31 +81,51 @@ const handlers: Record<string, () => Promise<unknown>> = {
 };
 
 // concurrency 1: jobs never overlap (the indexer must finish one block range before the next)
-const worker = new Worker(QUEUE, async (job: Job) => {
-  const run = handlers[job.name];
-  if (!run) throw new Error(`Unknown job ${job.name}`);
-  return run();
-}, { connection, concurrency: 1 });
+const worker = new Worker(
+  QUEUE,
+  async (job: Job) => {
+    const run = handlers[job.name];
+    if (!run) throw new Error(`Unknown job ${job.name}`);
+    return run();
+  },
+  { connection, concurrency: 1 },
+);
 
 worker.on("completed", (job, result) => {
   if (job.name === "chain-indexer") {
     const r = result as Awaited<ReturnType<typeof indexPaymentEvents>>;
-    if (r.events) console.log(`[worker] chain-indexer blocks ${r.from}-${r.to}: ${r.events} events, ${r.skipped} skipped`);
+    if (r.events)
+      console.log(
+        `[worker] chain-indexer blocks ${r.from}-${r.to}: ${r.events} events, ${r.skipped} skipped`,
+      );
   } else if (job.name === "auth-cleanup") {
     console.log("[worker] auth-cleanup", result);
   }
 });
 worker.on("failed", (job, error) => {
-  console.error(`[worker] ${job?.name ?? "job"} failed (BullMQ retry/backoff applies):`, error.message);
-  alert("warning", `job-${job?.name ?? "job"}`, `Background job ${job?.name ?? "job"} failed: ${error.message.slice(0, 200)} (BullMQ retry/backoff applies).`);
+  console.error(
+    `[worker] ${job?.name ?? "job"} failed (BullMQ retry/backoff applies):`,
+    error.message,
+  );
+  alert(
+    "warning",
+    `job-${job?.name ?? "job"}`,
+    `Background job ${job?.name ?? "job"} failed: ${error.message.slice(0, 200)} (BullMQ retry/backoff applies).`,
+  );
 });
 worker.on("error", (error) => {
   console.error("[worker]", error.message);
-  alert("critical", "worker-redis", `Worker lost Redis: ${error.message.slice(0, 160)}. Indexer and settlements pause until it is back.`);
+  alert(
+    "critical",
+    "worker-redis",
+    `Worker lost Redis: ${error.message.slice(0, 160)}. Indexer and settlements pause until it is back.`,
+  );
 });
 startPlanQueueTimer();
 
-console.log(`[worker] running: chain-indexer every ${env.INDEXER_INTERVAL_SECONDS}s, voucher-settle every 60s, watch every 2 min, auth-cleanup daily, plan queue sweep`);
+console.log(
+  `[worker] running: chain-indexer every ${env.INDEXER_INTERVAL_SECONDS}s, voucher-settle every 60s, watch every 2 min, auth-cleanup daily, plan queue sweep`,
+);
 
 let shuttingDown = false;
 const shutdown = async (signal: string, exitCode = 0) => {
@@ -111,7 +143,11 @@ const shutdown = async (signal: string, exitCode = 0) => {
     console.error("[worker] shutdown cleanup failed:", error);
     exitCode = 1;
   }
-  try { unlinkSync(HEARTBEAT_FILE); } catch { /* container is exiting or file is already gone */ }
+  try {
+    unlinkSync(HEARTBEAT_FILE);
+  } catch {
+    /* container is exiting or file is already gone */
+  }
   process.exit(exitCode);
 };
 
@@ -121,14 +157,22 @@ const shutdown = async (signal: string, exitCode = 0) => {
 process.on("unhandledRejection", (reason) => {
   const message = String((reason as Error)?.message ?? reason).slice(0, 300);
   console.error("[worker] unhandled rejection:", reason);
-  alert("critical", "worker-unhandled-rejection", `Worker unhandled rejection: ${message}. Restarting the worker.`);
+  alert(
+    "critical",
+    "worker-unhandled-rejection",
+    `Worker unhandled rejection: ${message}. Restarting the worker.`,
+  );
   void shutdown("unhandledRejection", 1);
 });
 
 process.on("uncaughtException", (error) => {
   const message = error.message.slice(0, 300);
   console.error("[worker] uncaught exception:", error);
-  alert("critical", "worker-uncaught-exception", `Worker uncaught exception: ${message}. Restarting the worker.`);
+  alert(
+    "critical",
+    "worker-uncaught-exception",
+    `Worker uncaught exception: ${message}. Restarting the worker.`,
+  );
   void shutdown("uncaughtException", 1);
 });
 

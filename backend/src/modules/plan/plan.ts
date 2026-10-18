@@ -71,7 +71,8 @@ export const unlockedLevels = (activeDirects: number): number =>
  * Refuses amounts beyond Number's exact integer range (about $90 trillion) instead of losing cents.
  */
 export function toCents(usd: number | string): number {
-  const text = typeof usd === "number" ? (Number.isFinite(usd) ? usd.toFixed(6) : "NaN") : usd.trim();
+  const text =
+    typeof usd === "number" ? (Number.isFinite(usd) ? usd.toFixed(6) : "NaN") : usd.trim();
   const m = /^(-)?(\d+)(?:\.(\d*))?$/.exec(text);
   if (!m) throw new Error(`Not a money amount: ${String(usd).slice(0, 40)}`);
   const frac = (m[3] ?? "").padEnd(3, "0");

@@ -63,12 +63,17 @@ export function initScrollAnimations(): void {
         beamLine,
         { strokeDashoffset: 470 },
         { strokeDashoffset: 0, duration: 0.9, ease: 'power2.inOut' },
-        '-=0.3'
+        '-=0.3',
       );
     }
 
     if (beamDot) {
-      headTl.fromTo(beamDot, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4 }, '-=0.3');
+      headTl.fromTo(
+        beamDot,
+        { scale: 0, opacity: 0 },
+        { scale: 1, opacity: 1, duration: 0.4 },
+        '-=0.3',
+      );
     }
 
     if (titleSpan.length) {
@@ -76,7 +81,7 @@ export function initScrollAnimations(): void {
         titleSpan,
         { y: '110%', opacity: 0 },
         { y: '0%', opacity: 1, duration: 0.7, stagger: 0.08, clearProps: ANIMATED_PROPS },
-        '-=0.5'
+        '-=0.5',
       );
     }
 
@@ -105,10 +110,12 @@ export function initScrollAnimations(): void {
           [
             heroLeft,
             heroRight,
-            ...heroLeft.querySelectorAll<HTMLElement>('.wm-line span, .kicker, .hero-lead, .hero-actions, .countdown-box'),
+            ...heroLeft.querySelectorAll<HTMLElement>(
+              '.wm-line span, .kicker, .hero-lead, .hero-actions, .countdown-box',
+            ),
             ...heroRight.querySelectorAll<HTMLElement>('.crypto-exchange-card'),
           ],
-          { clearProps: ANIMATED_PROPS }
+          { clearProps: ANIMATED_PROPS },
         );
       },
     });
@@ -116,28 +123,28 @@ export function initScrollAnimations(): void {
     heroTl.fromTo(
       heroLeft.querySelectorAll('.kicker, .section-path-beam'),
       { y: 30, opacity: 0 },
-      { y: 0, opacity: 1, duration: 0.65, stagger: 0.1 }
+      { y: 0, opacity: 1, duration: 0.65, stagger: 0.1 },
     );
 
     heroTl.fromTo(
       heroLeft.querySelectorAll('.wm-line span'),
       { y: 50, opacity: 0 },
       { y: 0, opacity: 1, duration: 0.7, stagger: 0.08 },
-      '-=0.35'
+      '-=0.35',
     );
 
     heroTl.fromTo(
       heroLeft.querySelectorAll('.hero-lead, .hero-actions, .countdown-box'),
       { y: 30, opacity: 0 },
       { y: 0, opacity: 1, duration: 0.6, stagger: 0.1 },
-      '-=0.4'
+      '-=0.4',
     );
 
     heroTl.fromTo(
       heroRight,
       { x: 50, opacity: 0 },
       { x: 0, opacity: 1, duration: 0.85, ease: 'power3.out' },
-      '-=0.7'
+      '-=0.7',
     );
     // (the signal cards moved out of the hero into #heroMetrics; they animate there)
   }
@@ -154,14 +161,18 @@ export function initScrollAnimations(): void {
         tabBtns,
         { x: -35, opacity: 0 },
         {
-          scrollTrigger: { trigger: '#rankTabs', start: isMobile ? 'top 75%' : 'top 88%', once: true },
+          scrollTrigger: {
+            trigger: '#rankTabs',
+            start: isMobile ? 'top 75%' : 'top 88%',
+            once: true,
+          },
           x: 0,
           opacity: 1,
           duration: 0.45,
           stagger: 0.05,
           ease: 'power2.out',
           clearProps: ANIMATED_PROPS,
-        }
+        },
       );
     }
 
@@ -172,14 +183,18 @@ export function initScrollAnimations(): void {
         rankDisplayCard,
         { y: 50, opacity: 0, scale: 0.96 },
         {
-          scrollTrigger: { trigger: rankDisplayCard, start: isMobile ? 'top 65%' : 'top 85%', once: true },
+          scrollTrigger: {
+            trigger: rankDisplayCard,
+            start: isMobile ? 'top 65%' : 'top 85%',
+            once: true,
+          },
           y: 0,
           opacity: 1,
           scale: 1,
           duration: 0.75,
           ease: 'power3.out',
           clearProps: ANIMATED_PROPS,
-        }
+        },
       );
 
       // Animate 50:50 leg meter bars filling up when they actually enter the viewport
@@ -192,8 +207,16 @@ export function initScrollAnimations(): void {
           start: isMobile ? 'top 82%' : 'top 88%',
           once: true,
           onEnter: () => {
-            gsap.fromTo(legPower, { width: '0%' }, { width: '50%', duration: 1.2, ease: 'power2.out' });
-            gsap.fromTo(legOther, { width: '0%' }, { width: '50%', duration: 1.2, ease: 'power2.out' });
+            gsap.fromTo(
+              legPower,
+              { width: '0%' },
+              { width: '50%', duration: 1.2, ease: 'power2.out' },
+            );
+            gsap.fromTo(
+              legOther,
+              { width: '0%' },
+              { width: '50%', duration: 1.2, ease: 'power2.out' },
+            );
           },
         });
       }
@@ -218,7 +241,7 @@ export function initScrollAnimations(): void {
           duration: 2.5,
           ease: 'power1.inOut',
           repeat: -1,
-        }
+        },
       );
     }
 
@@ -238,9 +261,7 @@ export function initScrollAnimations(): void {
       // below the deck overlaps the cards (the issue visible in the screenshot).
       const cardHeight = stackCards[0]?.offsetHeight ?? 0;
       if (cardHeight > 0) {
-        const requiredSpace = Math.ceil(
-          cardHeight * transitionCount * (spreadDistance / 100) + 48,
-        );
+        const requiredSpace = Math.ceil(cardHeight * transitionCount * (spreadDistance / 100) + 48);
         deck.style.paddingBottom = `${requiredSpace}px`;
       }
 
@@ -248,7 +269,9 @@ export function initScrollAnimations(): void {
       // Like a real deck, the cards underneath show only their edges: their
       // content stays hidden until each card slides out (no text bleeding
       // through or peeking above the front card).
-      const cardBodies = stackCards.map((card) => card.querySelector<HTMLElement>('.cypheir-card-body'));
+      const cardBodies = stackCards.map((card) =>
+        card.querySelector<HTMLElement>('.cypheir-card-body'),
+      );
       stackCards.forEach((card, i) => {
         gsap.set(card, {
           y: i * stepY,
@@ -307,7 +330,8 @@ export function initScrollAnimations(): void {
           stepPosition,
         );
         const body = cardBodies[i];
-        if (body) deckTl.to(body, { opacity: 1, ease: 'power1.in', duration: 0.55 }, stepPosition + 0.45);
+        if (body)
+          deckTl.to(body, { opacity: 1, ease: 'power1.in', duration: 0.55 }, stepPosition + 0.45);
       }
     }
 
@@ -323,23 +347,42 @@ export function initScrollAnimations(): void {
       // the same sequence backwards when it leaves so the section feels alive
       // in both scroll directions.
       calcReveal
-        .fromTo(calcBox, { y: -70, opacity: 0, scale: 0.96 }, {
-          y: 0,
-          opacity: 1,
-          scale: 1,
-          duration: 0.72,
-          ease: 'power3.out',
-        })
-        .fromTo(calcHeader, { y: -22, opacity: 0 }, { y: 0, opacity: 1, duration: 0.42, ease: 'power2.out' }, '-=0.42')
-        .fromTo(calcPills, { y: -16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.38, ease: 'power2.out' }, '-=0.22')
-        .fromTo(calcStats, { y: -20, opacity: 0, scale: 0.94 }, {
-          y: 0,
-          opacity: 1,
-          scale: 1,
-          duration: 0.46,
-          stagger: 0.1,
-          ease: 'back.out(1.2)',
-        }, '-=0.16');
+        .fromTo(
+          calcBox,
+          { y: -70, opacity: 0, scale: 0.96 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            duration: 0.72,
+            ease: 'power3.out',
+          },
+        )
+        .fromTo(
+          calcHeader,
+          { y: -22, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.42, ease: 'power2.out' },
+          '-=0.42',
+        )
+        .fromTo(
+          calcPills,
+          { y: -16, opacity: 0 },
+          { y: 0, opacity: 1, duration: 0.38, ease: 'power2.out' },
+          '-=0.22',
+        )
+        .fromTo(
+          calcStats,
+          { y: -20, opacity: 0, scale: 0.94 },
+          {
+            y: 0,
+            opacity: 1,
+            scale: 1,
+            duration: 0.46,
+            stagger: 0.1,
+            ease: 'back.out(1.2)',
+          },
+          '-=0.16',
+        );
 
       ScrollTrigger.create({
         trigger: calcBox,
@@ -369,27 +412,23 @@ export function initScrollAnimations(): void {
           duration: 0.75,
           ease: 'power3.out',
           clearProps: ANIMATED_PROPS,
-        }
+        },
       );
 
       const tableRows = tableWrap.querySelectorAll('tbody tr');
       if (tableRows.length) {
         // phones show the rows as a list of cards: they rise in rather than slide sideways
         const rowsAsCards = window.matchMedia('(max-width: 600px)').matches;
-        gsap.fromTo(
-          tableRows,
-          rowsAsCards ? { y: 26, opacity: 0 } : { x: -30, opacity: 0 },
-          {
-            scrollTrigger: { trigger: tableWrap, start: 'top 80%', once: true },
-            x: 0,
-            y: 0,
-            opacity: 1,
-            duration: 0.5,
-            stagger: 0.08,
-            ease: 'power2.out',
-            clearProps: ANIMATED_PROPS,
-          }
-        );
+        gsap.fromTo(tableRows, rowsAsCards ? { y: 26, opacity: 0 } : { x: -30, opacity: 0 }, {
+          scrollTrigger: { trigger: tableWrap, start: 'top 80%', once: true },
+          x: 0,
+          y: 0,
+          opacity: 1,
+          duration: 0.5,
+          stagger: 0.08,
+          ease: 'power2.out',
+          clearProps: ANIMATED_PROPS,
+        });
       }
     }
   }
@@ -414,21 +453,21 @@ export function initScrollAnimations(): void {
       ctaTl.fromTo(
         joinSection.querySelectorAll('.section-path-beam, .section-tag'),
         { y: 30, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.5, stagger: 0.1 }
+        { y: 0, opacity: 1, duration: 0.5, stagger: 0.1 },
       );
 
       ctaTl.fromTo(
         joinSection.querySelectorAll('h2, .section-sub'),
         { scale: 0.92, opacity: 0, y: 30 },
         { scale: 1, opacity: 1, y: 0, duration: 0.7, stagger: 0.1 },
-        '-=0.3'
+        '-=0.3',
       );
 
       ctaTl.fromTo(
         joinSection.querySelectorAll('.btn'),
         { scale: 0.8, opacity: 0 },
         { scale: 1, opacity: 1, duration: 0.5, stagger: 0.12, ease: 'back.out(1.8)' },
-        '-=0.3'
+        '-=0.3',
       );
     }
   }
@@ -437,5 +476,4 @@ export function initScrollAnimations(): void {
   setTimeout(() => {
     ScrollTrigger.refresh();
   }, 350);
-
 }

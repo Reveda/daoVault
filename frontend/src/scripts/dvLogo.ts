@@ -14,10 +14,11 @@
 import '../styles/dvlogo.css';
 import { LITE } from './perf.ts';
 
-const W = 460;                 // design width of the original animation
-const H_FULL = 470;            // emblem + wordmark
-const H_MARK = 340;            // emblem only
-const D = 'M30 30H190C270 30 310 90 310 150C310 210 270 260 190 260H60L30 230ZM70 70H185C235 70 265 105 265 150C265 195 235 220 185 220H70Z';
+const W = 460; // design width of the original animation
+const H_FULL = 470; // emblem + wordmark
+const H_MARK = 340; // emblem only
+const D =
+  'M30 30H190C270 30 310 90 310 150C310 210 270 260 190 260H60L30 230ZM70 70H185C235 70 265 105 265 150C265 195 235 220 185 220H70Z';
 const V = '262,120 306,120 340,205 385,95 430,95 352,290 322,290';
 
 let uid = 0;
@@ -32,7 +33,11 @@ function emblemLayers(id: string, depth: number): string {
     const t = i / depth;
     html += layer(-i * step, `rgb(${Math.round(150 - 60 * t)},${Math.round(100 - 50 * t)},6)`);
   }
-  html += layer(1, `url(#dvl-fg-${id})`, `<defs><linearGradient id="dvl-fg-${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset=".5" stop-color="#e8a820"/><stop offset="1" stop-color="#b97d08"/></linearGradient></defs>`);
+  html += layer(
+    1,
+    `url(#dvl-fg-${id})`,
+    `<defs><linearGradient id="dvl-fg-${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe27a"/><stop offset=".5" stop-color="#e8a820"/><stop offset="1" stop-color="#b97d08"/></linearGradient></defs>`,
+  );
   return html;
 }
 
@@ -85,7 +90,9 @@ export function mountDvLogo(host: HTMLElement, opts: { word?: boolean } = {}): v
 
   // off-screen logos stop animating (battery, smooth scrolling)
   if ('IntersectionObserver' in window) {
-    new IntersectionObserver(([entry]) => host.classList.toggle('dvl-paused', !entry.isIntersecting)).observe(host);
+    new IntersectionObserver(([entry]) =>
+      host.classList.toggle('dvl-paused', !entry.isIntersecting),
+    ).observe(host);
   }
 }
 

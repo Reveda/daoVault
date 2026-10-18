@@ -18,6 +18,10 @@ import { readFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { timingSafeEqual } from "node:crypto";
 import { Wallet, getAddress, isAddress, isHexString, parseUnits, formatUnits } from "ethers";
+import { captureConsole } from "../config/logger.js";
+
+// every console line of the signer becomes one JSON log line (config/logger.ts reads no app settings)
+captureConsole();
 
 const CLAIM_TYPES = {
   Claim: [
@@ -30,8 +34,11 @@ const CLAIM_TYPES = {
 
 function setting(name: string, fallback?: string): string {
   const fileName = process.env[`${name}_FILE`];
-  const value = fileName ? readFileSync(fileName, "utf8").trim() : process.env[name]?.trim() || fallback;
-  if (value === undefined || value === "") throw new Error(`signer: ${name} (or ${name}_FILE) is not set`);
+  const value = fileName
+    ? readFileSync(fileName, "utf8").trim()
+    : process.env[name]?.trim() || fallback;
+  if (value === undefined || value === "")
+    throw new Error(`signer: ${name} (or ${name}_FILE) is not set`);
   return value;
 }
 
@@ -44,13 +51,20 @@ const MAX_DEADLINE_S = Number(setting("SIGNER_MAX_DEADLINE_MINUTES", "60")) * 60
 const TOKEN = Buffer.from(setting("PAYOUT_SIGNER_TOKEN"));
 const PORT = Number(setting("SIGNER_PORT", "7000"));
 const MAX_REQUESTS_PER_MINUTE = Number(setting("SIGNER_MAX_REQUESTS_PER_MINUTE", "120"));
-if (![56, 97].includes(CHAIN_ID)) throw new Error("signer: SIGNER_CHAIN_ID must be 56 (BSC) or 97 (BSC Testnet)");
-if (TOKEN.length < 32) throw new Error("signer: PAYOUT_SIGNER_TOKEN must be at least 32 characters");
+if (![56, 97].includes(CHAIN_ID))
+  throw new Error("signer: SIGNER_CHAIN_ID must be 56 (BSC) or 97 (BSC Testnet)");
+if (TOKEN.length < 32)
+  throw new Error("signer: PAYOUT_SIGNER_TOKEN must be at least 32 characters");
 
 const keystore = setting("SIGNER_KEYSTORE");
 const password = setting("SIGNER_KEYSTORE_PASSWORD");
 const wallet = await Wallet.fromEncryptedJson(keystore, password);
-const domain = { name: "DAOvaultPayout", version: "1", chainId: CHAIN_ID, verifyingContract: CONTRACT };
+const domain = {
+  name: "DAOvaultPayout",
+  version: "1",
+  chainId: CHAIN_ID,
+  verifyingContract: CONTRACT,
+};
 
 // in-memory caps (reset on restart; the contract's own dailyLimit still applies)
 let day = -1;
@@ -94,25 +108,41 @@ async function sign(body: Record<string, unknown>) {
   const { member, amount, id, deadline } = body;
   if (typeof member !== "string" || !isAddress(member)) return { status: 400, error: "bad member" };
   if (typeof id !== "string" || !isHexString(id, 32)) return { status: 400, error: "bad id" };
-  if (typeof amount !== "string" || !/^[1-9]\d{0,40}$/.test(amount)) return { status: 400, error: "bad amount" };
-  if (typeof deadline !== "number" || !Number.isInteger(deadline)) return { status: 400, error: "bad deadline" };
+  if (typeof amount !== "string" || !/^[1-9]\d{0,40}$/.test(amount))
+    return { status: 400, error: "bad amount" };
+  if (typeof deadline !== "number" || !Number.isInteger(deadline))
+    return { status: 400, error: "bad deadline" };
   const value = BigInt(amount);
   const now = Math.floor(Date.now() / 1000);
-  if (deadline <= now || deadline > now + MAX_DEADLINE_S) return { status: 400, error: "deadline out of range" };
+  if (deadline <= now || deadline > now + MAX_DEADLINE_S)
+    return { status: 400, error: "deadline out of range" };
   if (value > MAX_PER_CLAIM) return { status: 403, error: "above the signer's per-claim cap" };
 
   const today = Math.floor(Date.now() / 86_400_000);
-  if (today !== day) { day = today; signedToday = 0n; signedIds.clear(); }
+  if (today !== day) {
+    day = today;
+    signedToday = 0n;
+    signedIds.clear();
+  }
   const key = `${getAddress(member)}|${value}|${deadline}`;
   const before = signedIds.get(id);
-  if (before !== undefined && before !== key) return { status: 409, error: "voucher id already signed with other values" };
+  if (before !== undefined && before !== key)
+    return { status: 409, error: "voucher id already signed with other values" };
   if (before === undefined) {
-    if (signedToday + value > MAX_PER_DAY) return { status: 403, error: "signer daily cap reached" };
+    if (signedToday + value > MAX_PER_DAY)
+      return { status: 403, error: "signer daily cap reached" };
     signedToday += value;
     signedIds.set(id, key);
   }
-  const signature = await wallet.signTypedData(domain, CLAIM_TYPES, { member: getAddress(member), amount: value, id, deadline });
-  console.log(`[signer] signed ${id.slice(0, 10)}… ${formatUnits(value, DECIMALS)} USDT for ${member.slice(0, 8)}… (today ${formatUnits(signedToday, DECIMALS)})`);
+  const signature = await wallet.signTypedData(domain, CLAIM_TYPES, {
+    member: getAddress(member),
+    amount: value,
+    id,
+    deadline,
+  });
+  console.log(
+    `[signer] signed ${id.slice(0, 10)}… ${formatUnits(value, DECIMALS)} USDT for ${member.slice(0, 8)}… (today ${formatUnits(signedToday, DECIMALS)})`,
+  );
   return { status: 200, signature };
 }
 
@@ -121,7 +151,8 @@ createServer(async (req, res) => {
     if (req.method === "GET" && req.url === "/health") return send(res, 200, { ok: true });
     if (!authorised(req)) return send(res, 401, { error: "unauthorised" });
     if (!requestAllowed(req)) return send(res, 429, { error: "signer rate limit exceeded" });
-    if (req.method === "GET" && req.url === "/address") return send(res, 200, { address: wallet.address });
+    if (req.method === "GET" && req.url === "/address")
+      return send(res, 200, { address: wallet.address });
     if (req.method === "POST" && req.url === "/sign") {
       const { status, ...out } = await sign(await readJson(req));
       return send(res, status, out);
@@ -132,6 +163,10 @@ createServer(async (req, res) => {
     return send(res, 400, { error: "bad request" });
   }
 }).listen(PORT, "0.0.0.0", () => {
-  console.log(`[signer] ${wallet.address} signing for chain ${CHAIN_ID}, contract ${CONTRACT}, port ${PORT}`);
-  console.log(`[signer] caps: ${formatUnits(MAX_PER_CLAIM, DECIMALS)} per claim, ${formatUnits(MAX_PER_DAY, DECIMALS)} per day`);
+  console.log(
+    `[signer] ${wallet.address} signing for chain ${CHAIN_ID}, contract ${CONTRACT}, port ${PORT}`,
+  );
+  console.log(
+    `[signer] caps: ${formatUnits(MAX_PER_CLAIM, DECIMALS)} per claim, ${formatUnits(MAX_PER_DAY, DECIMALS)} per day`,
+  );
 });

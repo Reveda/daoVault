@@ -63,17 +63,47 @@ function buildOverlay(): HTMLElement {
  * ribbon with a bow, a gold-rimmed DAOvault seal on all four sides and a gold lid trim.
  */
 export function makeBox(logo: THREE.Texture | null) {
-  const red = new THREE.MeshPhysicalMaterial({ color: 0xe8101c, metalness: 0.05, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.1, sheen: 0.4, sheenColor: 0xff5a5a, emissive: 0x7a0008, emissiveIntensity: 0.35 }); // bright gift-wrap red
-  const ribbon = new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.05, roughness: 0.32, emissive: 0xffffff, emissiveIntensity: 0.14 });
-  const gold = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.9, roughness: 0.22, emissive: 0x5a3f06, emissiveIntensity: 0.25 });
+  const red = new THREE.MeshPhysicalMaterial({
+    color: 0xe8101c,
+    metalness: 0.05,
+    roughness: 0.3,
+    clearcoat: 1,
+    clearcoatRoughness: 0.1,
+    sheen: 0.4,
+    sheenColor: 0xff5a5a,
+    emissive: 0x7a0008,
+    emissiveIntensity: 0.35,
+  }); // bright gift-wrap red
+  const ribbon = new THREE.MeshStandardMaterial({
+    color: 0xffffff,
+    metalness: 0.05,
+    roughness: 0.32,
+    emissive: 0xffffff,
+    emissiveIntensity: 0.14,
+  });
+  const gold = new THREE.MeshStandardMaterial({
+    color: 0xd4af37,
+    metalness: 0.9,
+    roughness: 0.22,
+    emissive: 0x5a3f06,
+    emissiveIntensity: 0.25,
+  });
   const box = new THREE.Group();
 
   // parts the packing intro animates one by one (owner, 2026-10-11)
-  const parts = { bodyRibbons: [] as THREE.Object3D[], seals: [] as THREE.Object3D[], lidRibbons: [] as THREE.Object3D[], bow: [] as THREE.Object3D[] };
+  const parts = {
+    bodyRibbons: [] as THREE.Object3D[],
+    seals: [] as THREE.Object3D[],
+    lidRibbons: [] as THREE.Object3D[],
+    bow: [] as THREE.Object3D[],
+  };
 
   const body = new THREE.Group();
   body.add(new THREE.Mesh(new RoundedBoxGeometry(2, 1.6, 2, 4, 0.07), red));
-  for (const geo of [new THREE.BoxGeometry(2.03, 1.6, 0.34), new THREE.BoxGeometry(0.34, 1.6, 2.03)]) {
+  for (const geo of [
+    new THREE.BoxGeometry(2.03, 1.6, 0.34),
+    new THREE.BoxGeometry(0.34, 1.6, 2.03),
+  ]) {
     const band = new THREE.Mesh(geo, ribbon);
     body.add(band);
     parts.bodyRibbons.push(band);
@@ -102,7 +132,10 @@ export function makeBox(logo: THREE.Texture | null) {
   const trim = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.05, 2.2), gold);
   trim.position.y = -0.17;
   lid.add(trim);
-  for (const geo of [new THREE.BoxGeometry(2.21, 0.43, 0.36), new THREE.BoxGeometry(0.36, 0.43, 2.21)]) {
+  for (const geo of [
+    new THREE.BoxGeometry(2.21, 0.43, 0.36),
+    new THREE.BoxGeometry(0.36, 0.43, 2.21),
+  ]) {
     const band = new THREE.Mesh(geo, ribbon);
     lid.add(band);
     parts.lidRibbons.push(band);
@@ -144,9 +177,15 @@ export const GIFT_PACK_S = 2.3;
  */
 export function createPortal(scene: THREE.Scene) {
   const FLOOR = GIFT_FLOOR;
-  const additive = (color: number, opacity: number) => new THREE.MeshBasicMaterial({
-    color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
-  });
+  const additive = (color: number, opacity: number) =>
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
   const glowTexture = (() => {
     const c = document.createElement('canvas');
     c.width = c.height = 128;
@@ -163,12 +202,25 @@ export function createPortal(scene: THREE.Scene) {
   // portal: glow pool + three rings + a dashed rune ring, turning in opposite directions
   const portal = new THREE.Group();
   portal.position.y = FLOOR;
-  const pool = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), new THREE.MeshBasicMaterial({
-    map: glowTexture, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false,
-  }));
+  const pool = new THREE.Mesh(
+    new THREE.PlaneGeometry(4, 4),
+    new THREE.MeshBasicMaterial({
+      map: glowTexture,
+      transparent: true,
+      opacity: 0.55,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
+  );
   pool.rotation.x = -Math.PI / 2;
   portal.add(pool);
-  const portalRings = ([[1.22, 1.3, 0.85], [1.52, 1.56, 0.5], [1.84, 1.86, 0.32]] as const).map(([r1, r2, o]) => {
+  const portalRings = (
+    [
+      [1.22, 1.3, 0.85],
+      [1.52, 1.56, 0.5],
+      [1.84, 1.86, 0.32],
+    ] as const
+  ).map(([r1, r2, o]) => {
     const ring = new THREE.Mesh(new THREE.RingGeometry(r1, r2, 96), additive(0xffc94a, o));
     ring.rotation.x = -Math.PI / 2;
     portal.add(ring);
@@ -176,7 +228,10 @@ export function createPortal(scene: THREE.Scene) {
   });
   const runes = new THREE.Group();
   for (let i = 0; i < 12; i++) {
-    const arc = new THREE.Mesh(new THREE.RingGeometry(2.02, 2.1, 8, 1, (i / 12) * Math.PI * 2, 0.32), additive(0xffe08a, 0.45));
+    const arc = new THREE.Mesh(
+      new THREE.RingGeometry(2.02, 2.1, 8, 1, (i / 12) * Math.PI * 2, 0.32),
+      additive(0xffe08a, 0.45),
+    );
     arc.rotation.x = -Math.PI / 2;
     runes.add(arc);
   }
@@ -186,27 +241,41 @@ export function createPortal(scene: THREE.Scene) {
   // gold dust drifting up around the box
   const dustCount = 70;
   const dustPos = new Float32Array(dustCount * 3);
-  const dustSeed = Array.from({ length: dustCount }, () => ({ a: Math.random() * Math.PI * 2, r: 1.1 + Math.random() * 1.6, y: Math.random() * 4, v: 0.25 + Math.random() * 0.45 }));
+  const dustSeed = Array.from({ length: dustCount }, () => ({
+    a: Math.random() * Math.PI * 2,
+    r: 1.1 + Math.random() * 1.6,
+    y: Math.random() * 4,
+    v: 0.25 + Math.random() * 0.45,
+  }));
   const dustGeo = new THREE.BufferGeometry();
   dustGeo.setAttribute('position', new THREE.BufferAttribute(dustPos, 3));
-  const dustMat = new THREE.PointsMaterial({ color: 0xffd76a, size: 0.05, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false });
+  const dustMat = new THREE.PointsMaterial({
+    color: 0xffd76a,
+    size: 0.05,
+    transparent: true,
+    opacity: 0.7,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
   scene.add(new THREE.Points(dustGeo, dustMat));
 
   const update = (now: number, dt: number, charge: number) => {
     const spin = 0.25 + charge * 2.2;
     portalRings.forEach((ring, i) => {
       ring.rotation.z += dt * spin * (i % 2 ? -1 : 1) * (1 + i * 0.3);
-      (ring.material as THREE.MeshBasicMaterial).opacity = (0.32 + i * -0.06 + 0.25 * Math.sin(now / 420 + i)) * (1 + charge * 1.4);
+      (ring.material as THREE.MeshBasicMaterial).opacity =
+        (0.32 + i * -0.06 + 0.25 * Math.sin(now / 420 + i)) * (1 + charge * 1.4);
     });
     runes.rotation.y -= dt * (0.15 + charge * 1.6);
-    (pool.material as THREE.MeshBasicMaterial).opacity = 0.45 + charge * 0.5 + 0.08 * Math.sin(now / 300);
+    (pool.material as THREE.MeshBasicMaterial).opacity =
+      0.45 + charge * 0.5 + 0.08 * Math.sin(now / 300);
     pool.scale.setScalar(1 + charge * 0.25);
 
     for (let i = 0; i < dustCount; i++) {
       const d = dustSeed[i];
       d.y += dt * d.v * (1 + charge * 3);
       if (d.y > 4.2) d.y = 0;
-      const ang = d.a + now / 4000 * d.v;
+      const ang = d.a + (now / 4000) * d.v;
       dustPos[i * 3] = Math.cos(ang) * d.r;
       dustPos[i * 3 + 1] = FLOOR + d.y;
       dustPos[i * 3 + 2] = Math.sin(ang) * d.r;
@@ -228,7 +297,8 @@ export function makePacker({ box, body, lid, parts, glow }: ReturnType<typeof ma
   const span = (t: number, from: number, to: number) => clamp01((t - from) / (to - from));
   const easeOutCubic = (v: number) => 1 - Math.pow(1 - v, 3);
   const easeOutBounce = (v: number) => {
-    const n = 7.5625, d = 2.75;
+    const n = 7.5625,
+      d = 2.75;
     if (v < 1 / d) return n * v * v;
     if (v < 2 / d) return n * (v -= 1.5 / d) * v + 0.75;
     if (v < 2.5 / d) return n * (v -= 2.25 / d) * v + 0.9375;
@@ -246,15 +316,27 @@ export function makePacker({ box, body, lid, parts, glow }: ReturnType<typeof ma
     body.position.y = BODY_Y - 0.8 * (1 - sy);
     // 2. the ribbon wraps it, top to bottom
     const wrap = easeOutCubic(span(t, 0.5, 1.0));
-    parts.bodyRibbons.forEach((r, i) => { r.scale.y = Math.max(tiny, clamp01(wrap * 1.15 - i * 0.15)); r.position.y = 0.8 * (1 - r.scale.y); });
+    parts.bodyRibbons.forEach((r, i) => {
+      r.scale.y = Math.max(tiny, clamp01(wrap * 1.15 - i * 0.15));
+      r.position.y = 0.8 * (1 - r.scale.y);
+    });
     // 3. the lid lands with a bounce, its ribbon already on
     const land = span(t, 0.95, 1.55);
     lid.visible = t >= 0.95;
     lid.position.y = LID_Y + 2.6 * (1 - easeOutBounce(land));
     lid.rotation.y = (1 - land) * 0.6;
-    parts.lidRibbons.forEach((r) => { r.scale.x = r.scale.z = Math.max(tiny, easeOutCubic(span(t, 0.95, 1.35))); });
+    parts.lidRibbons.forEach((r) => {
+      r.scale.x = r.scale.z = Math.max(tiny, easeOutCubic(span(t, 0.95, 1.35)));
+    });
     // 4. the seals press on one by one, then the bow pops
-    parts.seals.forEach((s, i) => s.scale.setScalar(Math.max(tiny, easeOutBack(span(t, 1.3 + Math.floor(i / 2) * 0.1, 1.6 + Math.floor(i / 2) * 0.1)))));
+    parts.seals.forEach((s, i) =>
+      s.scale.setScalar(
+        Math.max(
+          tiny,
+          easeOutBack(span(t, 1.3 + Math.floor(i / 2) * 0.1, 1.6 + Math.floor(i / 2) * 0.1)),
+        ),
+      ),
+    );
     const pop = easeOutBack(span(t, 1.65, 2.05));
     parts.bow.forEach((p, i) => p.scale.copy(bowScale[i]).multiplyScalar(Math.max(tiny, pop)));
     // the box turns to the camera while it is wrapped; a gold glint when it is done
@@ -279,7 +361,8 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   const note = el.querySelector<HTMLElement>('.gift-note');
   const actions = el.querySelector<HTMLElement>('.gift-actions');
   const flash = el.querySelector<HTMLElement>('.gift-flash');
-  if (!canvas || !kicker || !title || !reveal || !label || !amount || !note || !actions || !flash) return;
+  if (!canvas || !kicker || !title || !reveal || !label || !amount || !note || !actions || !flash)
+    return;
 
   kicker.textContent = opts.mode === 'locked' ? 'SEALED REWARD BOX' : 'RANK REWARD BOX';
   title.textContent = opts.rank;
@@ -299,12 +382,16 @@ export function openGiftBox(opts: GiftBoxOptions): void {
     el.classList.remove('show', 'is-burst', 'is-locked-shake');
     document.body.classList.remove('gift-open');
   };
-  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+  const onKey = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') close();
+  };
   document.addEventListener('keydown', onKey);
   cleanups.push(() => document.removeEventListener('keydown', onKey));
   const closeBtn = el.querySelector<HTMLButtonElement>('.gift-close');
   if (closeBtn) closeBtn.onclick = close;
-  el.onclick = (e) => { if (e.target === el || (e.target as HTMLElement).classList.contains('gift-scroll')) close(); };
+  el.onclick = (e) => {
+    if (e.target === el || (e.target as HTMLElement).classList.contains('gift-scroll')) close();
+  };
 
   const button = (text: string, cls: string, onClick: () => void) => {
     const b = document.createElement('button');
@@ -318,7 +405,9 @@ export function openGiftBox(opts: GiftBoxOptions): void {
 
   const showReveal = (preview: boolean) => {
     reveal.hidden = false;
-    label.textContent = preview ? `PREVIEW · ${opts.rank.toUpperCase()} REWARD` : `${opts.rank.toUpperCase()} REWARD`;
+    label.textContent = preview
+      ? `PREVIEW · ${opts.rank.toUpperCase()} REWARD`
+      : `${opts.rank.toUpperCase()} REWARD`;
     note.textContent = preview
       ? `Unlocks at ${opts.requirement}. This was a preview: the box opens for real once you reach the rank.`
       : 'Reward unlocked. It is credited to your balance after on-chain rank verification.';
@@ -361,7 +450,8 @@ export function openGiftBox(opts: GiftBoxOptions): void {
     return;
   }
   const size = () => {
-    const w = canvas.clientWidth || 360, h = canvas.clientHeight || 300;
+    const w = canvas.clientWidth || 360,
+      h = canvas.clientHeight || 300;
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
@@ -377,7 +467,10 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   camera.lookAt(0, 0.2, 0);
   size();
   window.addEventListener('resize', size);
-  cleanups.push(() => { window.removeEventListener('resize', size); renderer.dispose(); });
+  cleanups.push(() => {
+    window.removeEventListener('resize', size);
+    renderer.dispose();
+  });
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.7));
   scene.add(new THREE.HemisphereLight(0xffffff, 0x5a0a0a, 0.8));
@@ -406,16 +499,36 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   const sparkVel = new Float32Array(sparkCount * 3);
   const sparkGeo = new THREE.BufferGeometry();
   sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
-  const sparks = new THREE.Points(sparkGeo, new THREE.PointsMaterial({ color: 0xffe08a, size: 0.07, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false }));
+  const sparks = new THREE.Points(
+    sparkGeo,
+    new THREE.PointsMaterial({
+      color: 0xffe08a,
+      size: 0.07,
+      transparent: true,
+      opacity: 1,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    }),
+  );
   sparks.visible = false;
   scene.add(sparks);
 
   const coinGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.05, 28);
-  const coinMat = new THREE.MeshStandardMaterial({ color: 0xffcf4a, metalness: 0.95, roughness: 0.18, emissive: 0x6b4c0a, emissiveIntensity: 0.4 });
+  const coinMat = new THREE.MeshStandardMaterial({
+    color: 0xffcf4a,
+    metalness: 0.95,
+    roughness: 0.18,
+    emissive: 0x6b4c0a,
+    emissiveIntensity: 0.4,
+  });
   const coins = Array.from({ length: 9 }, (_, i) => {
     const c = new THREE.Mesh(coinGeo, coinMat);
     c.visible = false;
-    c.userData = { a: (i / 9) * Math.PI * 2, speed: 0.7 + Math.random() * 0.6, lift: 1.4 + Math.random() * 1.2 };
+    c.userData = {
+      a: (i / 9) * Math.PI * 2,
+      speed: 0.7 + Math.random() * 0.6,
+      lift: 1.4 + Math.random() * 1.2,
+    };
     scene.add(c);
     return c;
   });
@@ -424,7 +537,14 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   for (let i = 0; i < 7; i++) {
     const beam = new THREE.Mesh(
       new THREE.ConeGeometry(0.35, 5, 16, 1, true),
-      new THREE.MeshBasicMaterial({ color: 0xfff1c1, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }),
+      new THREE.MeshBasicMaterial({
+        color: 0xfff1c1,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
     );
     beam.position.y = 2.6;
     beam.rotation.z = (i - 3) * 0.24;
@@ -438,28 +558,46 @@ export function openGiftBox(opts: GiftBoxOptions): void {
      gold dust in the air, energy pouring in from four sides with lightning while it charges,
      and a shockwave when the lid blows off */
   const FLOOR = GIFT_FLOOR;
-  const additive = (color: number, opacity: number) => new THREE.MeshBasicMaterial({
-    color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
-  });
+  const additive = (color: number, opacity: number) =>
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    });
   const portalFx = createPortal(scene); // portal rings + gold dust
   cleanups.push(portalFx.dispose);
 
   // energy from four sides: particles stream along curves into the box while it charges
   const EMITTERS = [
-    new THREE.Vector3(-4.6, 2.2, 0.6), new THREE.Vector3(4.6, 2.2, 0.6),
-    new THREE.Vector3(-4.2, -1.6, 1.4), new THREE.Vector3(4.2, -1.6, 1.4),
+    new THREE.Vector3(-4.6, 2.2, 0.6),
+    new THREE.Vector3(4.6, 2.2, 0.6),
+    new THREE.Vector3(-4.2, -1.6, 1.4),
+    new THREE.Vector3(4.2, -1.6, 1.4),
   ];
   const CORE = new THREE.Vector3(0, 0.35, 0);
   const PER_STREAM = 60;
   const streamCount = EMITTERS.length * PER_STREAM;
   const streamPos = new Float32Array(streamCount * 3);
   const streamSeed = Array.from({ length: streamCount }, (_, i) => ({
-    side: Math.floor(i / PER_STREAM), t: Math.random(), v: 0.55 + Math.random() * 0.6,
-    swirl: (Math.random() - 0.5) * 2.4, lift: (Math.random() - 0.5) * 1.6,
+    side: Math.floor(i / PER_STREAM),
+    t: Math.random(),
+    v: 0.55 + Math.random() * 0.6,
+    swirl: (Math.random() - 0.5) * 2.4,
+    lift: (Math.random() - 0.5) * 1.6,
   }));
   const streamGeo = new THREE.BufferGeometry();
   streamGeo.setAttribute('position', new THREE.BufferAttribute(streamPos, 3));
-  const streamMat = new THREE.PointsMaterial({ color: 0xffe9a8, size: 0.09, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false });
+  const streamMat = new THREE.PointsMaterial({
+    color: 0xffe9a8,
+    size: 0.09,
+    transparent: true,
+    opacity: 0,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
   const streams = new THREE.Points(streamGeo, streamMat);
   scene.add(streams);
   const bez = new THREE.Vector3();
@@ -470,7 +608,16 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   const bolts = EMITTERS.map(() => {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(BOLT_POINTS * 3), 3));
-    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xfff3c4, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const line = new THREE.Line(
+      geo,
+      new THREE.LineBasicMaterial({
+        color: 0xfff3c4,
+        transparent: true,
+        opacity: 0,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
     scene.add(line);
     return line;
   });
@@ -478,7 +625,8 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   const rebuildBolts = () => {
     bolts.forEach((line, s) => {
       const from = EMITTERS[s];
-      const arr = (line.geometry.attributes.position as THREE.BufferAttribute).array as Float32Array;
+      const arr = (line.geometry.attributes.position as THREE.BufferAttribute)
+        .array as Float32Array;
       for (let i = 0; i < BOLT_POINTS; i++) {
         const k = i / (BOLT_POINTS - 1);
         const jitter = i === 0 || i === BOLT_POINTS - 1 ? 0 : 0.35 * Math.sin(k * Math.PI);
@@ -503,16 +651,26 @@ export function openGiftBox(opts: GiftBoxOptions): void {
     portalFx.update(now, dt, charge);
 
     const streaming = charge > 0 && sinceBurst < 0;
-    streamMat.opacity = streaming ? Math.min(1, charge * 2.2) : Math.max(0, streamMat.opacity - dt * 3);
+    streamMat.opacity = streaming
+      ? Math.min(1, charge * 2.2)
+      : Math.max(0, streamMat.opacity - dt * 3);
     if (streamMat.opacity > 0) {
       for (let i = 0; i < streamCount; i++) {
         const p = streamSeed[i];
         p.t += dt * p.v * (0.6 + charge * 1.6);
         if (p.t >= 1) p.t -= 1;
         const from = EMITTERS[p.side];
-        ctrl.set((from.x + CORE.x) / 2 + p.swirl * 0.4, (from.y + CORE.y) / 2 + 1.2 + p.lift, (from.z + CORE.z) / 2 + p.swirl);
+        ctrl.set(
+          (from.x + CORE.x) / 2 + p.swirl * 0.4,
+          (from.y + CORE.y) / 2 + 1.2 + p.lift,
+          (from.z + CORE.z) / 2 + p.swirl,
+        );
         const e = p.t * p.t; // accelerates into the box
-        bez.copy(from).multiplyScalar((1 - e) * (1 - e)).addScaledVector(ctrl, 2 * (1 - e) * e).addScaledVector(CORE, e * e);
+        bez
+          .copy(from)
+          .multiplyScalar((1 - e) * (1 - e))
+          .addScaledVector(ctrl, 2 * (1 - e) * e)
+          .addScaledVector(CORE, e * e);
         streamPos[i * 3] = bez.x;
         streamPos[i * 3 + 1] = bez.y;
         streamPos[i * 3 + 2] = bez.z;
@@ -521,9 +679,13 @@ export function openGiftBox(opts: GiftBoxOptions): void {
     }
 
     const boltLevel = streaming && charge > 0.35 ? (charge - 0.35) / 0.65 : 0;
-    if (boltLevel > 0 && now - boltAt > 70) { rebuildBolts(); boltAt = now; }
+    if (boltLevel > 0 && now - boltAt > 70) {
+      rebuildBolts();
+      boltAt = now;
+    }
     bolts.forEach((line, s) => {
-      (line.material as THREE.LineBasicMaterial).opacity = boltLevel > 0 && Math.random() < 0.55 + boltLevel * 0.4 ? 0.4 + boltLevel * 0.6 : 0;
+      (line.material as THREE.LineBasicMaterial).opacity =
+        boltLevel > 0 && Math.random() < 0.55 + boltLevel * 0.4 ? 0.4 + boltLevel * 0.6 : 0;
       line.visible = boltLevel > 0 || s < 0;
     });
 
@@ -551,7 +713,10 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   const packFrame = makePacker(built);
   packFrame(0);
   let phaseStart = performance.now();
-  const setPhase = (p: Phase) => { phase = p; phaseStart = performance.now(); };
+  const setPhase = (p: Phase) => {
+    phase = p;
+    phaseStart = performance.now();
+  };
   let lidVel = new THREE.Vector3();
   let lidSpin = 0;
 
@@ -572,35 +737,56 @@ export function openGiftBox(opts: GiftBoxOptions): void {
       sparkPos[i * 3] = (Math.random() - 0.5) * 1.2;
       sparkPos[i * 3 + 1] = 0.6;
       sparkPos[i * 3 + 2] = (Math.random() - 0.5) * 1.2;
-      const a = Math.random() * Math.PI * 2, up = 3 + Math.random() * 5, out = 1 + Math.random() * 3;
+      const a = Math.random() * Math.PI * 2,
+        up = 3 + Math.random() * 5,
+        out = 1 + Math.random() * 3;
       sparkVel[i * 3] = Math.cos(a) * out;
       sparkVel[i * 3 + 1] = up;
       sparkVel[i * 3 + 2] = Math.sin(a) * out;
     }
-    coins.forEach((c) => { c.visible = true; c.position.set(0, 0.4, 0); });
+    coins.forEach((c) => {
+      c.visible = true;
+      c.position.set(0, 0.4, 0);
+    });
     const preview = !!(box.userData as { preview?: boolean }).preview;
-    window.setTimeout(() => { if (alive) showReveal(preview); }, 650);
+    window.setTimeout(() => {
+      if (alive) showReveal(preview);
+    }, 650);
     if (!preview) opts.onOpened?.();
   };
 
   // what the visitor can do before opening
   if (opts.mode === 'locked') {
-    window.setTimeout(() => {
-      if (!alive) return;
-      setPhase('rattle');
-      el.classList.add('is-locked-shake');
-      reveal.hidden = false;
-      label.textContent = 'SEALED';
-      amount.textContent = money(opts.reward);
-      note.textContent = `Unlocks at ${opts.requirement}.`;
-      button('Preview the opening', 'btn-line', () => { reveal.hidden = true; el.classList.remove('is-locked-shake'); startOpening(true); });
-      button('Got it', 'btn-grad', close);
-    }, PACK_S * 1000 + 250);
+    window.setTimeout(
+      () => {
+        if (!alive) return;
+        setPhase('rattle');
+        el.classList.add('is-locked-shake');
+        reveal.hidden = false;
+        label.textContent = 'SEALED';
+        amount.textContent = money(opts.reward);
+        note.textContent = `Unlocks at ${opts.requirement}.`;
+        button('Preview the opening', 'btn-line', () => {
+          reveal.hidden = true;
+          el.classList.remove('is-locked-shake');
+          startOpening(true);
+        });
+        button('Got it', 'btn-grad', close);
+      },
+      PACK_S * 1000 + 250,
+    );
   } else if (opts.mode === 'opened') {
-    window.setTimeout(() => { if (alive) startOpening(false); }, PACK_S * 1000 + 300);
+    window.setTimeout(
+      () => {
+        if (alive) startOpening(false);
+      },
+      PACK_S * 1000 + 300,
+    );
   } else {
     // the button appears once the box is packed
-    window.setTimeout(() => { if (alive) button('Open box', 'btn-grad', () => startOpening(false)); }, PACK_S * 1000);
+    window.setTimeout(() => {
+      if (alive) button('Open box', 'btn-grad', () => startOpening(false));
+    }, PACK_S * 1000);
   }
 
   let last = performance.now();
@@ -615,7 +801,10 @@ export function openGiftBox(opts: GiftBoxOptions): void {
 
     if (phase === 'pack') {
       packFrame(t);
-      if (t >= PACK_S) { packFrame(PACK_S); setPhase('idle'); }
+      if (t >= PACK_S) {
+        packFrame(PACK_S);
+        setPhase('idle');
+      }
     } else if (phase === 'idle' || phase === 'rattle') {
       box.position.y = Math.sin(now / 600) * 0.06;
       box.rotation.y += dt * 0.35;
@@ -658,14 +847,20 @@ export function openGiftBox(opts: GiftBoxOptions): void {
         const { a, speed, lift } = c.userData as { a: number; speed: number; lift: number };
         const k = Math.min(1, t / 1.2);
         const ang = a + t * speed;
-        c.position.set(Math.cos(ang) * 1.3 * k, 0.4 + lift * easeOutBack(k), Math.sin(ang) * 1.3 * k);
+        c.position.set(
+          Math.cos(ang) * 1.3 * k,
+          0.4 + lift * easeOutBack(k),
+          Math.sin(ang) * 1.3 * k,
+        );
         c.rotation.x = t * 3 * speed;
         c.rotation.z = Math.PI / 2;
       });
       // light beams flare then settle
       beams.children.forEach((b, i) => {
         const m = (b as THREE.Mesh).material as THREE.MeshBasicMaterial;
-        m.opacity = Math.max(0.08, Math.min(0.55, t * 2) * (1 - Math.min(1, t / 3)) + 0.08) * (0.7 + 0.3 * Math.sin(now / 200 + i));
+        m.opacity =
+          Math.max(0.08, Math.min(0.55, t * 2) * (1 - Math.min(1, t / 3)) + 0.08) *
+          (0.7 + 0.3 * Math.sin(now / 200 + i));
       });
       beams.rotation.y += dt * 0.4;
       inner.intensity = 4 + Math.sin(now / 150) * 1.5;

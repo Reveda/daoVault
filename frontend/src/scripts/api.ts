@@ -4,6 +4,8 @@ export type DashboardData = {
   walletAddress: string;
   referralCode: string;
   sponsorCode: string | null;
+  /** the company root's invite code: a member without a referral joins under it */
+  companyCode?: string | null;
   /** before payment: the invite code the member joined with (null once activated) */
   pendingSponsorCode: string | null;
   /** binary placement (owner, 2026-10-17): where the member sits; null = has not joined a team yet */
@@ -22,7 +24,13 @@ export type DashboardData = {
   teamVolume: number;
   /** Left / Right business (DAO) of the placement tree; members = everyone placed on that side, paid or not */
   legs: { left: number; right: number; total: number; leftMembers?: number; rightMembers?: number };
-  nextRank: { rank: number; name: string; volume: number; rewardUsd: number; countedVolume: number } | null;
+  nextRank: {
+    rank: number;
+    name: string;
+    volume: number;
+    rewardUsd: number;
+    countedVolume: number;
+  } | null;
   totalEarned: number | string;
   levelIncomeUsd: number;
   rankRewardsUsd: number;
@@ -42,7 +50,13 @@ export type DashboardData = {
     /** 3 = Rocket Start, 7 = Fast Start, null = not earned */
     earnedDays: number | null;
     /** deadline null until activation */
-    tiers: Array<{ name: string; days: number; rewardUsd: number; deadline: string | null; directs: number }>;
+    tiers: Array<{
+      name: string;
+      days: number;
+      rewardUsd: number;
+      deadline: string | null;
+      directs: number;
+    }>;
   } | null;
   /** virtual Power Business (display only: no income, reward, withdrawal or DV token) */
   powerBusiness?: {
@@ -70,11 +84,33 @@ export type DashboardData = {
   currentPackage: DashboardData['packages'][number] | null;
   packageCount: number;
   /** DV token allocation: 1,500 DV per package, credited at the planned DV launch */
-  dvToken?: { perPackage: number; allocated: number; launch: string; launchDate?: string; network: string };
+  dvToken?: {
+    perPackage: number;
+    allocated: number;
+    launch: string;
+    launchDate?: string;
+    network: string;
+  };
   /** every package reached its cap: offer a $300 top-up (re-entry) */
   canTopUp: boolean;
-  levels: Array<{ level: number; pct: number; reqDirects: number; unlocked: boolean; members: number; earnedUsd: number }>;
-  recentEarnings: Array<{ type: 'LEVEL_COMMISSION' | 'RANK_REWARD' | 'FAST_START_BONUS'; level: number | null; amountUsd: number; from: string; at: string }>;
+  /** the whole 25x cap: $7,500 per package added up, and what all packages have earned */
+  capTotalUsd?: number;
+  capEarnedUsd?: number;
+  levels: Array<{
+    level: number;
+    pct: number;
+    reqDirects: number;
+    unlocked: boolean;
+    members: number;
+    earnedUsd: number;
+  }>;
+  recentEarnings: Array<{
+    type: 'LEVEL_COMMISSION' | 'RANK_REWARD' | 'FAST_START_BONUS';
+    level: number | null;
+    amountUsd: number;
+    from: string;
+    at: string;
+  }>;
 };
 
 export type Withdrawal = {
@@ -87,7 +123,13 @@ export type Withdrawal = {
   /** paid by the payout contract (voucher) rather than by an admin */
   instant?: boolean;
   /** open instant voucher the member's wallet can claim (until it expires) */
-  voucher?: { contract: string; id: string; amount: string; deadline: number; signature: string } | null;
+  voucher?: {
+    contract: string;
+    id: string;
+    amount: string;
+    deadline: number;
+    signature: string;
+  } | null;
   payoutTxHash: string | null;
   rejectReason: string | null;
   createdAt: string;
@@ -119,7 +161,10 @@ const API_BASE_URL = resolveApiBase();
 
 /** Error that keeps the HTTP status, so callers can tell "not found" from "server down". */
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
     super(message);
   }
 }
@@ -138,9 +183,16 @@ async function request<T>(path: string, init: RequestInit & { token?: string } =
     // Never 'include': a cross-origin API would then need Allow-Credentials.
     credentials: 'same-origin',
   });
-  const payload = (await response.json().catch(() => null)) as { success: boolean; data: T; error?: string } | null;
+  const payload = (await response.json().catch(() => null)) as {
+    success: boolean;
+    data: T;
+    error?: string;
+  } | null;
   if (!response.ok || !payload?.success) {
-    throw new ApiError(payload?.error || `API request failed (${response.status})`, response.status);
+    throw new ApiError(
+      payload?.error || `API request failed (${response.status})`,
+      response.status,
+    );
   }
   return payload.data;
 }
@@ -160,19 +212,35 @@ export type LevelMembers = {
   pageSize: number;
   /** rank = the rank the member's own dashboard shows (0 = none yet) */
   members: Array<{
-    referralCode: string; wallet: string; sponsorCode: string | null; joinedAt: string | null; rank: number; rankName: string | null;
+    referralCode: string;
+    wallet: string;
+    sponsorCode: string | null;
+    joinedAt: string | null;
+    rank: number;
+    rankName: string | null;
     /** where the member sits in the placement tree (null = has not joined a side yet) */
     placement: { side: Side; underCode: string | null } | null;
   }>;
 };
 
 /** Who joined at one level of the wallet's downline (dashboard level modal), 50 per page. */
-export function getLevelMembers(walletAddress: string, level: number, page: number, token: string): Promise<LevelMembers> {
-  return request<LevelMembers>(`/dashboard/${encodeURIComponent(walletAddress)}/levels/${level}?page=${page}`, { token });
+export function getLevelMembers(
+  walletAddress: string,
+  level: number,
+  page: number,
+  token: string,
+): Promise<LevelMembers> {
+  return request<LevelMembers>(
+    `/dashboard/${encodeURIComponent(walletAddress)}/levels/${level}?page=${page}`,
+    { token },
+  );
 }
 
 /** First dashboard visit: reserves the wallet's permanent referral code (no payment needed; idempotent). */
-export function registerWallet(walletAddress: string, token: string): Promise<{ walletAddress: string; referralCode: string; activated: boolean }> {
+export function registerWallet(
+  walletAddress: string,
+  token: string,
+): Promise<{ walletAddress: string; referralCode: string; activated: boolean }> {
   return post('/users/register', { walletAddress }, token);
 }
 
@@ -180,12 +248,19 @@ export function registerWallet(walletAddress: string, token: string): Promise<{ 
  * Joins a team once (owner, 2026-10-17): the invite code becomes the sponsor and the member takes
  * the bottom spot of the chosen side. The spot never changes afterwards.
  */
-export function joinTeam(walletAddress: string, sponsorCode: string, side: Side, token: string): Promise<{ sponsorCode: string; placement: { side: Side; underCode: string } }> {
+export function joinTeam(
+  walletAddress: string,
+  sponsorCode: string,
+  side: Side,
+  token: string,
+): Promise<{ sponsorCode: string; placement: { side: Side; underCode: string } }> {
   return post('/users/join', { walletAddress, sponsorCode, side }, token);
 }
 
 /** Invite code -> sponsor wallet (404 when the code is unknown). Any registered wallet can sponsor (owner, 2026-10-13). */
-export function getSponsorByCode(code: string): Promise<{ walletAddress: string; referralCode: string; activated?: boolean }> {
+export function getSponsorByCode(
+  code: string,
+): Promise<{ walletAddress: string; referralCode: string; activated?: boolean }> {
   return request(`/users/referral/${encodeURIComponent(code.trim().toUpperCase())}`);
 }
 
@@ -199,7 +274,10 @@ export type ActivationVerification = {
 };
 
 /** Re-entry: the backend checks the ToppedUp on-chain, then adds the new $300 package. */
-export function verifyTopUp(payload: { walletAddress: string; transactionHash: string }): Promise<ActivationVerification> {
+export function verifyTopUp(payload: {
+  walletAddress: string;
+  transactionHash: string;
+}): Promise<ActivationVerification> {
   return post('/activation/topup/verify', payload);
 }
 
@@ -215,18 +293,27 @@ export function verifyActivation(payload: {
 export const getAuthChallenge = (walletAddress: string) =>
   post<{ message: string; expiresAt: string }>('/auth/challenge', { walletAddress });
 export const verifyAuthSignature = (walletAddress: string, signature: string) =>
-  post<{ token: string; role: 'member' | 'admin'; walletAddress: string; expiresAt: string }>('/auth/verify', { walletAddress, signature });
+  post<{ token: string; role: 'member' | 'admin'; walletAddress: string; expiresAt: string }>(
+    '/auth/verify',
+    { walletAddress, signature },
+  );
 /** "Log out all devices": every token of this wallet stops working. */
 /** New access token from the httpOnly refresh cookie (the cookie is rotated). */
 export const refreshAuthSession = () =>
-  post<{ token: string; role: 'member' | 'admin'; walletAddress: string; expiresAt: string }>('/auth/refresh', {});
+  post<{ token: string; role: 'member' | 'admin'; walletAddress: string; expiresAt: string }>(
+    '/auth/refresh',
+    {},
+  );
 /** Log out this device: the server deletes the refresh token and clears the cookie. */
 export const logoutAuthSession = () => post<{ loggedOut: boolean }>('/auth/logout', {});
 
 // ── withdrawals ──
-export const getWithdrawals = (token: string) => request<WithdrawalSummary>('/withdrawals', { token });
-export const requestWithdrawal = (token: string, amountUsd: number) => post<Withdrawal>('/withdrawals', { amountUsd }, token);
-export const confirmWithdrawal = (token: string, id: string, txHash: string) => post<Withdrawal>(`/withdrawals/${id}/confirm`, { txHash }, token);
+export const getWithdrawals = (token: string) =>
+  request<WithdrawalSummary>('/withdrawals', { token });
+export const requestWithdrawal = (token: string, amountUsd: number) =>
+  post<Withdrawal>('/withdrawals', { amountUsd }, token);
+export const confirmWithdrawal = (token: string, id: string, txHash: string) =>
+  post<Withdrawal>(`/withdrawals/${id}/confirm`, { txHash }, token);
 
 // ── admin ──
 export type AdminStats = {
@@ -247,7 +334,14 @@ export type AdminStats = {
   memberBalancesUsd: number;
   companyNetUsd: number;
   withdrawals: Partial<Record<Withdrawal['status'], { count: number; netUsd: number }>>;
-  payout: { contract: string; paused?: boolean; maxPerClaimUsd?: number; dailyLimitUsd?: number; floatUsd?: number; error?: string } | null;
+  payout: {
+    contract: string;
+    paused?: boolean;
+    maxPerClaimUsd?: number;
+    dailyLimitUsd?: number;
+    floatUsd?: number;
+    error?: string;
+  } | null;
 };
 export const getAdminStats = (token: string) => request<AdminStats>('/admin/stats', { token });
 /** Charts of the admin dashboard: 30-day series and splits (GET /admin/analytics). */
@@ -255,28 +349,67 @@ export type AdminAnalytics = {
   days: number;
   /** treasury on the first day of the window (deposits − payouts before it) */
   openingTreasuryUsd: number;
-  series: Array<{ day: string; activations: number; topups: number; moneyInUsd: number; levelUsd: number; rankUsd: number; paidOutUsd: number; newWallets: number }>;
+  series: Array<{
+    day: string;
+    activations: number;
+    topups: number;
+    moneyInUsd: number;
+    levelUsd: number;
+    rankUsd: number;
+    paidOutUsd: number;
+    newWallets: number;
+  }>;
   commissionsByLevel: Array<{ level: number; usd: number; count: number }>;
   membersByRank: Array<{ rank: number; name: string; members: number }>;
   treeByDepth: Array<{ depth: number; members: number }>;
-  topEarners: Array<{ code: string; earnedUsd: number; rank: number; directs: number; team: number }>;
+  topEarners: Array<{
+    code: string;
+    earnedUsd: number;
+    rank: number;
+    directs: number;
+    team: number;
+  }>;
 };
-export const getAdminAnalytics = (token: string) => request<AdminAnalytics>('/admin/analytics', { token });
+export const getAdminAnalytics = (token: string) =>
+  request<AdminAnalytics>('/admin/analytics', { token });
 /** Treasury ledger grouped by day (30), week (12) or month (12), oldest first (GET /admin/ledger). */
 export type LedgerGroup = 'day' | 'week' | 'month';
 export type AdminLedger = {
   group: LedgerGroup;
   openingTreasuryUsd: number;
-  periods: Array<{ start: string; activations: number; topups: number; depositsUsd: number; levelUsd: number; rewardsUsd: number; paidOutUsd: number; treasuryUsd: number }>;
+  periods: Array<{
+    start: string;
+    activations: number;
+    topups: number;
+    depositsUsd: number;
+    levelUsd: number;
+    rewardsUsd: number;
+    paidOutUsd: number;
+    treasuryUsd: number;
+  }>;
 };
-export const getAdminLedger = (token: string, group: LedgerGroup) => request<AdminLedger>(`/admin/ledger?group=${group}`, { token });
+export const getAdminLedger = (token: string, group: LedgerGroup) =>
+  request<AdminLedger>(`/admin/ledger?group=${group}`, { token });
 /** admin withdrawal queue, 20 per page; period = requested in the last 7 / 30 days, or all */
 export type WithdrawalPeriod = 'all' | 'week' | 'month';
-export const getAdminWithdrawals = (token: string, status: Withdrawal['status'], page = 1, period: WithdrawalPeriod = 'all') =>
-  request<{ total: number; page: number; pageSize: number; grossUsd: number; netUsd: number; items: Withdrawal[] }>(
-    `/admin/withdrawals?status=${status}&page=${page}&period=${period}`, { token });
-export const approveWithdrawal = (token: string, id: string) => post<Withdrawal>(`/admin/withdrawals/${id}/approve`, {}, token);
-export const rejectWithdrawal = (token: string, id: string, reason: string) => post<Withdrawal>(`/admin/withdrawals/${id}/reject`, { reason }, token);
+export const getAdminWithdrawals = (
+  token: string,
+  status: Withdrawal['status'],
+  page = 1,
+  period: WithdrawalPeriod = 'all',
+) =>
+  request<{
+    total: number;
+    page: number;
+    pageSize: number;
+    grossUsd: number;
+    netUsd: number;
+    items: Withdrawal[];
+  }>(`/admin/withdrawals?status=${status}&page=${page}&period=${period}`, { token });
+export const approveWithdrawal = (token: string, id: string) =>
+  post<Withdrawal>(`/admin/withdrawals/${id}/approve`, {}, token);
+export const rejectWithdrawal = (token: string, id: string, reason: string) =>
+  post<Withdrawal>(`/admin/withdrawals/${id}/reject`, { reason }, token);
 export const completeWithdrawal = (token: string, id: string, payoutTxHash: string) =>
   post<Withdrawal>(`/admin/withdrawals/${id}/complete`, { payoutTxHash }, token);
 
@@ -296,9 +429,18 @@ export function wakeBackend(): void {
 }
 
 // ── landing live pulse (real events only) ──
-export type ActivityItem = { type: 'activation' | 'topup' | 'rank' | 'withdrawal'; wallet: string; detail: string; amountUsd: number; at: string; txHash: string | null };
+export type ActivityItem = {
+  type: 'activation' | 'topup' | 'rank' | 'withdrawal';
+  wallet: string;
+  detail: string;
+  amountUsd: number;
+  at: string;
+  txHash: string | null;
+};
 /** latest real events + whether the business is live (payments open): then the landing shows no samples */
 export async function getRecentActivity(): Promise<{ items: ActivityItem[]; live: boolean }> {
-  const data = await request<ActivityItem[] | { items: ActivityItem[]; live: boolean }>('/activity/recent?v=2');
+  const data = await request<ActivityItem[] | { items: ActivityItem[]; live: boolean }>(
+    '/activity/recent?v=2',
+  );
   return Array.isArray(data) ? { items: data, live: false } : data;
 }

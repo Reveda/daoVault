@@ -9,14 +9,20 @@ export const usersRouter = Router();
 // referral code -> sponsor wallet (registered before /:walletAddress)
 usersRouter.get(
   "/referral/:code",
-  validateRequest({ params: z.object({ code: z.string().regex(/^DV[A-Fa-f0-9]{6,14}$/, "Invalid referral code") }) }),
+  validateRequest({
+    params: z.object({ code: z.string().regex(/^DV[A-Fa-f0-9]{6,14}$/, "Invalid referral code") }),
+  }),
   getSponsorByCode,
 );
 
 // first dashboard visit: reserve the wallet's permanent referral code (no payment needed)
 usersRouter.post(
   "/register",
-  validateRequest({ body: z.object({ walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address") }) }),
+  validateRequest({
+    body: z.object({
+      walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address"),
+    }),
+  }),
   requireSelfOrAdmin("body"),
   registerWallet,
 );
@@ -24,18 +30,24 @@ usersRouter.post(
 // join a team once (owner, 2026-10-17): the invite code = sponsor, the chosen side = placement spot
 usersRouter.post(
   "/join",
-  validateRequest({ body: z.object({
-    walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address"),
-    sponsorCode: z.string().regex(/^DV[A-Fa-f0-9]{6,14}$/, "Invalid referral code"),
-    side: z.enum(["LEFT", "RIGHT"]),
-  }) }),
+  validateRequest({
+    body: z.object({
+      walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address"),
+      sponsorCode: z.string().regex(/^DV[A-Fa-f0-9]{6,14}$/, "Invalid referral code"),
+      side: z.enum(["LEFT", "RIGHT"]),
+    }),
+  }),
   requireSelfOrAdmin("body"),
   joinTeam,
 );
 
 usersRouter.get(
   "/:walletAddress",
-  validateRequest({ params: z.object({ walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address") }) }),
+  validateRequest({
+    params: z.object({
+      walletAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/, "Invalid wallet address"),
+    }),
+  }),
   requireSelfOrAdmin(),
   getUserProfile,
 );

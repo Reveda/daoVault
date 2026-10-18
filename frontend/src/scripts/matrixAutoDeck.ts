@@ -17,10 +17,10 @@ let currentActiveTier = 0;
  */
 // potentialMultiplier = theoretical members at those levels if every member brings 10 directs
 const MATRIX_TIERS = [
-  { commission: 0.10, potentialMultiplier: 1 },
-  { commission: 0.05, potentialMultiplier: 100 },          // L2: 10 x 10 members
-  { commission: 0.03, potentialMultiplier: 11_000 },       // L3 + L4: 1,000 + 10,000
-  { commission: 0.02, potentialMultiplier: 11_100_000 },   // L5-L7: 10^5 + 10^6 + 10^7
+  { commission: 0.1, potentialMultiplier: 1 },
+  { commission: 0.05, potentialMultiplier: 100 }, // L2: 10 x 10 members
+  { commission: 0.03, potentialMultiplier: 11_000 }, // L3 + L4: 1,000 + 10,000
+  { commission: 0.02, potentialMultiplier: 11_100_000 }, // L5-L7: 10^5 + 10^6 + 10^7
   { commission: 0.01, potentialMultiplier: 13 },
 ] as const;
 
@@ -46,9 +46,10 @@ function syncMatrixMoney(deck: HTMLElement): void {
     if (metaValue && index > 0 && index < cards.length - 1) {
       const potential = commissionValue * tier.potentialMultiplier;
       // millions in short form so the card stays one line: $66.6M USDT
-      metaValue.textContent = potential >= 1_000_000
-        ? `$${(potential / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 2 })}M USDT`
-        : `${money(potential)} USDT`;
+      metaValue.textContent =
+        potential >= 1_000_000
+          ? `$${(potential / 1_000_000).toLocaleString('en-US', { maximumFractionDigits: 2 })}M USDT`
+          : `${money(potential)} USDT`;
     }
 
     card.style.setProperty('--matrix-package-price', String(packagePrice));
@@ -61,7 +62,8 @@ function syncMatrixMoney(deck: HTMLElement): void {
  * end of main.css); the % and the USDT amount count up. The class is removed afterwards so the
  * cards' own looping animations come back. Replays on every change, both scroll directions.
  */
-const REDUCED_MOTION = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const REDUCED_MOTION =
+  typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const REVEAL_MS = 2400;
 let deckSeen = false;
 let revealedTier = -1;
@@ -75,7 +77,10 @@ function countUpText(el: HTMLElement, duration = 700): void {
   if (!match) return;
   const target = Number(match[0].replace(/,/g, ''));
   const decimals = match[1] ? match[1].length - 1 : 0;
-  const [before, after] = [finalText.slice(0, match.index), finalText.slice((match.index ?? 0) + match[0].length)];
+  const [before, after] = [
+    finalText.slice(0, match.index),
+    finalText.slice((match.index ?? 0) + match[0].length),
+  ];
   const start = performance.now();
   const step = (now: number) => {
     const t = Math.min(1, (now - start) / duration);
@@ -103,7 +108,10 @@ function revealCard(card: HTMLElement): void {
   const amount = card.querySelector<HTMLElement>('.cypheir-pill strong');
   if (pct) countUpText(pct, 650);
   if (amount) countUpText(amount, 900);
-  revealTimers.set(card, window.setTimeout(() => card.classList.remove('mx-reveal'), REVEAL_MS));
+  revealTimers.set(
+    card,
+    window.setTimeout(() => card.classList.remove('mx-reveal'), REVEAL_MS),
+  );
 }
 
 function revealActive(cards: NodeListOf<HTMLElement>): void {
@@ -150,7 +158,8 @@ export function setActiveTier(index: number, smoothScroll = false): void {
   if (smoothScroll) {
     const st = ScrollTrigger.getById('matrixDeckST');
     if (st) {
-      const targetScroll = st.start + (currentActiveTier / Math.max(cards.length - 1, 1)) * (st.end - st.start);
+      const targetScroll =
+        st.start + (currentActiveTier / Math.max(cards.length - 1, 1)) * (st.end - st.start);
       window.scrollTo({ top: targetScroll, behavior: 'smooth' });
     }
   }
@@ -174,14 +183,17 @@ export function initMatrixAutoDeck(): void {
   // the first card plays its arrival animation when the deck comes on screen (not at page load)
   if ('IntersectionObserver' in window) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
-    const seen = new IntersectionObserver((entries) => {
-      if (!entries.some((e) => e.isIntersecting)) return;
-      seen.disconnect();
-      deckSeen = true;
-      revealActive(document.querySelectorAll<HTMLElement>('.matrix-stack-card'));
-      // the deck is very tall (spread cards + reserved space): watch its top reaching 70% of
-      // the screen, where the scroll deck starts (scrollAnimations 'top 72%'), not a share of it
-    }, { threshold: 0, rootMargin: isMobile ? '0px 0px -40% 0px' : '0px 0px -30% 0px' });
+    const seen = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        seen.disconnect();
+        deckSeen = true;
+        revealActive(document.querySelectorAll<HTMLElement>('.matrix-stack-card'));
+        // the deck is very tall (spread cards + reserved space): watch its top reaching 70% of
+        // the screen, where the scroll deck starts (scrollAnimations 'top 72%'), not a share of it
+      },
+      { threshold: 0, rootMargin: isMobile ? '0px 0px -40% 0px' : '0px 0px -30% 0px' },
+    );
     seen.observe(deck);
   }
 

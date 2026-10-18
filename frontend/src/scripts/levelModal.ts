@@ -10,12 +10,26 @@ import { signIn } from './session.ts';
 let overlay: HTMLElement | null = null;
 let lastFocus: HTMLElement | null = null;
 
-const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-const date = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) : '—');
-const MEMBER_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c.5-4.1 3.3-6 8-6s7.5 1.9 8 6"/></svg>';
+const esc = (s: string) =>
+  s.replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
+  );
+const date = (iso: string | null) =>
+  iso
+    ? new Date(iso).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
+    : '—';
+const MEMBER_ICON =
+  '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c.5-4.1 3.3-6 8-6s7.5 1.9 8 6"/></svg>';
 
 function memberRows(members: LevelMembers['members'], startIndex: number): string {
-  return members.map((m, i) => `
+  return members
+    .map(
+      (m, i) => `
     <li class="lv-member" style="--i:${Math.min(startIndex + i, 12)}">
       <span class="lv-avatar" aria-hidden="true">${MEMBER_ICON}</span>
       <span class="lv-who">
@@ -29,7 +43,9 @@ function memberRows(members: LevelMembers['members'], startIndex: number): strin
         <div><dt>Placed</dt><dd class="mono">${m.placement ? `${m.placement.side === 'LEFT' ? 'Left' : 'Right'} · ${esc(m.placement.underCode ?? '—')}` : 'Not joined'}</dd></div>
         <div><dt>Status</dt><dd class="lv-state ${m.joinedAt ? 'is-active' : 'is-pending'}"><i aria-hidden="true"></i>${m.joinedAt ? `Active since ${date(m.joinedAt)}` : 'Not activated'}</dd></div>
       </dl>
-    </li>`).join('');
+    </li>`,
+    )
+    .join('');
 }
 
 function close(): void {
@@ -71,7 +87,9 @@ export function openLevelModal(wallet: string, level: number): void {
   // the page behind must not scroll while a (possibly long) list scrolls inside the modal
   document.documentElement.classList.add('lv-lock');
   requestAnimationFrame(() => overlay?.classList.add('is-open'));
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) close();
+  });
   overlay.querySelector('.lv-close')?.addEventListener('click', close);
   document.addEventListener('keydown', onKey);
   overlay.querySelector<HTMLButtonElement>('.lv-close')?.focus({ preventScroll: true });
@@ -100,7 +118,9 @@ export function openLevelModal(wallet: string, level: number): void {
       page += 1;
     } catch {
       if (overlay !== mine) return;
-      if (page === 1) list.innerHTML = '<li class="lv-empty"><b>Could not load this level.</b><small>Check your connection and try again.</small></li>';
+      if (page === 1)
+        list.innerHTML =
+          '<li class="lv-empty"><b>Could not load this level.</b><small>Check your connection and try again.</small></li>';
       count.textContent = '—';
     } finally {
       more.disabled = false;

@@ -13,10 +13,17 @@ export const healthRouter = Router();
  */
 const NEWEST_TABLES = ["plan_events", "chain_cursors", "power_businesses"] as const;
 
-async function readiness(_req: Parameters<Parameters<typeof healthRouter.get>[1]>[0], res: Parameters<Parameters<typeof healthRouter.get>[1]>[1]) {
+async function readiness(
+  _req: Parameters<Parameters<typeof healthRouter.get>[1]>[0],
+  res: Parameters<Parameters<typeof healthRouter.get>[1]>[1],
+) {
   let database: "up" | "down" = "up";
   let schema: "ok" | "outdated" | "unknown" = "unknown";
-  const redisStatus: "up" | "down" | "disabled" = !redis ? "disabled" : redis.isReady ? "up" : "down";
+  const redisStatus: "up" | "down" | "disabled" = !redis
+    ? "disabled"
+    : redis.isReady
+      ? "up"
+      : "down";
   try {
     const [row] = await prisma.$queryRaw<Array<{ missing: number }>>`
       SELECT COUNT(*) FILTER (WHERE to_regclass('public.' || t) IS NULL)::int AS missing
@@ -38,7 +45,11 @@ async function readiness(_req: Parameters<Parameters<typeof healthRouter.get>[1]
 }
 
 // Liveness never touches dependencies: a process that is alive can be restarted gracefully.
-healthRouter.get("/live", (_req, res) => res.status(200).json({ success: true, service: "daovault-backend", timestamp: new Date().toISOString() }));
+healthRouter.get("/live", (_req, res) =>
+  res
+    .status(200)
+    .json({ success: true, service: "daovault-backend", timestamp: new Date().toISOString() }),
+);
 // Readiness is dependency-aware and is used by Docker/load balancers before sending traffic.
 healthRouter.get("/ready", readiness);
 // Backwards-compatible endpoint used by Render/UptimeRobot.

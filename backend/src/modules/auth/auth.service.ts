@@ -10,15 +10,23 @@ const NONCE_TTL_MS = 5 * 60_000;
 const REUSE_GRACE_MS = 30_000;
 
 export type AuthClaims = { sub: string; role: "member" | "admin" };
-export type AccessSession = { token: string; role: AuthClaims["role"]; walletAddress: string; expiresAt: Date };
+export type AccessSession = {
+  token: string;
+  role: AuthClaims["role"];
+  walletAddress: string;
+  expiresAt: Date;
+};
 export type RefreshCookie = { value: string; expiresAt: Date };
 
-const httpError = (message: string, statusCode: number) => Object.assign(new Error(message), { statusCode });
+const httpError = (message: string, statusCode: number) =>
+  Object.assign(new Error(message), { statusCode });
 const sha256 = (value: string) => createHash("sha256").update(value).digest("hex");
 
 export const isAdminWallet = (wallet: string) => env.ADMIN_WALLETS.includes(wallet.toLowerCase());
 
-const FRONTEND_ORIGINS = env.FRONTEND_URL.split(",").map((o) => o.trim()).filter(Boolean);
+const FRONTEND_ORIGINS = env.FRONTEND_URL.split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
 const isLocalOrigin = (o: string) => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(o);
 
 /**
@@ -27,7 +35,11 @@ const isLocalOrigin = (o: string) => /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$
  * so a phishing site can never get our server to issue a message naming its own domain.
  */
 function signInOrigin(requestOrigin?: string): string {
-  if (requestOrigin && (FRONTEND_ORIGINS.includes(requestOrigin) || (env.NODE_ENV === "development" && isLocalOrigin(requestOrigin)))) {
+  if (
+    requestOrigin &&
+    (FRONTEND_ORIGINS.includes(requestOrigin) ||
+      (env.NODE_ENV === "development" && isLocalOrigin(requestOrigin)))
+  ) {
     return requestOrigin;
   }
   return FRONTEND_ORIGINS[0] ?? "http://localhost:3000";
@@ -73,7 +85,10 @@ export class AuthService {
   }
 
   /** Checks the signature against the stored challenge (single use): access token + refresh cookie. */
-  async verifySignature(walletInput: string, signature: string): Promise<{ access: AccessSession; refresh: RefreshCookie }> {
+  async verifySignature(
+    walletInput: string,
+    signature: string,
+  ): Promise<{ access: AccessSession; refresh: RefreshCookie }> {
     const walletAddress = getAddress(walletInput).toLowerCase();
     // delete first so a challenge can never be used twice, even by parallel requests
     const challenge = await prisma.authNonce.delete({ where: { walletAddress } }).catch(() => null);
@@ -88,8 +103,16 @@ export class AuthService {
     }
     if (signer !== walletAddress) throw httpError("Signature does not match this wallet.", 401);
     // security: the owner hears about every admin sign-in (a stranger signing in as admin = act at once)
-    if (isAdminWallet(walletAddress)) alert("info", `admin-signin-${walletAddress}`, `Admin wallet ${shortWallet(walletAddress)} signed in.`);
-    return { access: await this.issueAccess(walletAddress), refresh: await this.issueRefresh(walletAddress, randomUUID()) };
+    if (isAdminWallet(walletAddress))
+      alert(
+        "info",
+        `admin-signin-${walletAddress}`,
+        `Admin wallet ${shortWallet(walletAddress)} signed in.`,
+      );
+    return {
+      access: await this.issueAccess(walletAddress),
+      refresh: await this.issueRefresh(walletAddress, randomUUID()),
+    };
   }
 
   /** Short-lived access token (the browser keeps it in memory only). Role is re-read each time. */
@@ -97,7 +120,9 @@ export class AuthService {
     const role: AuthClaims["role"] = isAdminWallet(walletAddress) ? "admin" : "member";
     const expiresInSec = env.ACCESS_TOKEN_MINUTES * 60;
     const token = jwt.sign({ role, ver: await sessionVersion(walletAddress) }, env.JWT_SECRET, {
-      subject: walletAddress, expiresIn: expiresInSec, algorithm: "HS256",
+      subject: walletAddress,
+      expiresIn: expiresInSec,
+      algorithm: "HS256",
     });
     return { token, role, walletAddress, expiresAt: new Date(Date.now() + expiresInSec * 1000) };
   }
@@ -108,7 +133,9 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_DAYS * 86_400_000);
     await prisma.$transaction([
       prisma.refreshToken.deleteMany({ where: { walletAddress, expiresAt: { lt: new Date() } } }),
-      prisma.refreshToken.create({ data: { walletAddress, tokenHash: sha256(value), familyId, expiresAt } }),
+      prisma.refreshToken.create({
+        data: { walletAddress, tokenHash: sha256(value), familyId, expiresAt },
+      }),
     ]);
     return { value, expiresAt };
   }
@@ -119,23 +146,39 @@ export class AuthService {
    * tabs) only gets an access token. A used token after that was copied: every session of the
    * wallet ends (refresh tokens deleted, access tokens voided by the version bump).
    */
-  async refresh(cookieValue: string | undefined): Promise<{ access: AccessSession; refresh: RefreshCookie | null }> {
+  async refresh(
+    cookieValue: string | undefined,
+  ): Promise<{ access: AccessSession; refresh: RefreshCookie | null }> {
     if (!cookieValue) throw httpError("Not signed in.", 401);
     const row = await prisma.refreshToken.findUnique({ where: { tokenHash: sha256(cookieValue) } });
-    if (!row || row.expiresAt.getTime() < Date.now()) throw httpError("Session expired. Sign in again.", 401);
+    if (!row || row.expiresAt.getTime() < Date.now())
+      throw httpError("Session expired. Sign in again.", 401);
 
     // claim the token: only one request can turn usedAt from null to now
-    const claimed = row.usedAt ? 0 : (await prisma.refreshToken.updateMany({ where: { id: row.id, usedAt: null }, data: { usedAt: new Date() } })).count;
+    const claimed = row.usedAt
+      ? 0
+      : (
+          await prisma.refreshToken.updateMany({
+            where: { id: row.id, usedAt: null },
+            data: { usedAt: new Date() },
+          })
+        ).count;
     if (claimed === 1) {
-      return { access: await this.issueAccess(row.walletAddress), refresh: await this.issueRefresh(row.walletAddress, row.familyId) };
+      return {
+        access: await this.issueAccess(row.walletAddress),
+        refresh: await this.issueRefresh(row.walletAddress, row.familyId),
+      };
     }
     const fresh = await prisma.refreshToken.findUnique({ where: { id: row.id } });
     if (fresh?.usedAt && Date.now() - fresh.usedAt.getTime() < REUSE_GRACE_MS) {
       return { access: await this.issueAccess(row.walletAddress), refresh: null };
     }
     await this.revokeAllSessions(row.walletAddress);
-    alert(isAdminWallet(row.walletAddress) ? "critical" : "warning", `session-theft-${row.walletAddress}`,
-      `A copied sign-in token was used for ${shortWallet(row.walletAddress)}${isAdminWallet(row.walletAddress) ? " (ADMIN)" : ""}: every session of that wallet was ended.`);
+    alert(
+      isAdminWallet(row.walletAddress) ? "critical" : "warning",
+      `session-theft-${row.walletAddress}`,
+      `A copied sign-in token was used for ${shortWallet(row.walletAddress)}${isAdminWallet(row.walletAddress) ? " (ADMIN)" : ""}: every session of that wallet was ended.`,
+    );
     throw httpError("Session ended for safety. Sign in again.", 401);
   }
 
@@ -149,10 +192,15 @@ export class AuthService {
   /** Valid signature + not expired + not voided by a stolen-token alarm. */
   async verifyToken(token: string): Promise<AuthClaims> {
     const decoded = jwt.verify(token, env.JWT_SECRET, { algorithms: ["HS256"] }) as jwt.JwtPayload;
-    if (typeof decoded.sub !== "string" || (decoded.role !== "member" && decoded.role !== "admin")) {
+    if (
+      typeof decoded.sub !== "string" ||
+      (decoded.role !== "member" && decoded.role !== "admin")
+    ) {
       throw httpError("Invalid session.", 401);
     }
-    if ((typeof decoded.ver === "number" ? decoded.ver : 0) !== (await sessionVersion(decoded.sub))) {
+    if (
+      (typeof decoded.ver === "number" ? decoded.ver : 0) !== (await sessionVersion(decoded.sub))
+    ) {
       throw httpError("Session ended. Sign in again.", 401);
     }
     return { sub: decoded.sub, role: decoded.role };
@@ -168,20 +216,30 @@ export class AuthService {
   async issueAdminGate(walletAddress: string): Promise<RefreshCookie | null> {
     if (!isAdminWallet(walletAddress)) return null;
     const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_DAYS * 86_400_000);
-    const value = jwt.sign({ typ: "admin-gate", ver: await sessionVersion(walletAddress) }, env.JWT_SECRET, {
-      subject: walletAddress, expiresIn: env.REFRESH_TOKEN_DAYS * 86_400, algorithm: "HS256",
-    });
+    const value = jwt.sign(
+      { typ: "admin-gate", ver: await sessionVersion(walletAddress) },
+      env.JWT_SECRET,
+      {
+        subject: walletAddress,
+        expiresIn: env.REFRESH_TOKEN_DAYS * 86_400,
+        algorithm: "HS256",
+      },
+    );
     return { value, expiresAt };
   }
 
   async checkAdminGate(value: string | undefined): Promise<boolean> {
     if (!value) return false;
     try {
-      const decoded = jwt.verify(value, env.JWT_SECRET, { algorithms: ["HS256"] }) as jwt.JwtPayload;
-      return decoded.typ === "admin-gate"
-        && typeof decoded.sub === "string"
-        && isAdminWallet(decoded.sub)
-        && (typeof decoded.ver === "number" ? decoded.ver : 0) === (await sessionVersion(decoded.sub));
+      const decoded = jwt.verify(value, env.JWT_SECRET, {
+        algorithms: ["HS256"],
+      }) as jwt.JwtPayload;
+      return (
+        decoded.typ === "admin-gate" &&
+        typeof decoded.sub === "string" &&
+        isAdminWallet(decoded.sub) &&
+        (typeof decoded.ver === "number" ? decoded.ver : 0) === (await sessionVersion(decoded.sub))
+      );
     } catch {
       return false;
     }

@@ -1,237 +1,394 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <!-- dark from the very first frame: before main.css / Google Fonts arrive the browser would
+  <head>
+    <meta charset="UTF-8" />
+    <!-- dark from the very first frame: before main.css / Google Fonts arrive the browser would
        paint its default white for a moment (owner saw it behind the splash on slow loads) -->
-  <meta name="color-scheme" content="dark" />
-  <style>html,body{background:#050505;color:#fff}</style>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Page not found | DAOVAULT</title>
-  <meta name="theme-color" content="#050505" />
-  <!-- lite mode (phones / low-power devices): lighter effects, set before first paint -->
-  <script src="/boot.js"></script>
-  <meta name="robots" content="noindex, nofollow" />
-  <link rel="icon" type="image/png" href="/favicon.png" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/src/styles/main.css" />
-  <link rel="stylesheet" href="/src/styles/dashboard.css" />
-  <link rel="stylesheet" href="/src/styles/admin.css" />
-</head>
-<body class="dash-page admin-page">
-  <!-- Everyone who is not signed in as an admin wallet gets this (admin.ts decides; on the VPS
+    <meta name="color-scheme" content="dark" />
+    <style>
+      html,
+      body {
+        background: #050505;
+        color: #fff;
+      }
+    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page not found | DAOVAULT</title>
+    <meta name="theme-color" content="#050505" />
+    <!-- lite mode (phones / low-power devices): lighter effects, set before first paint -->
+    <script src="/boot.js"></script>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/src/styles/main.css" />
+    <link rel="stylesheet" href="/src/styles/dashboard.css" />
+    <link rel="stylesheet" href="/src/styles/admin.css" />
+  </head>
+  <body class="dash-page admin-page">
+    <!-- Everyone who is not signed in as an admin wallet gets this (admin.ts decides; on the VPS
        Nginx already answers 404 before this file is sent). Same text as public/404.html. -->
-  <main class="nf-page" id="notFound" hidden>
-    <p class="nf-code mono">404</p>
-    <h1>Page not found</h1>
-    <p>The page you are looking for does not exist or has moved.</p>
-    <a class="btn btn-grad" href="/">Go to home</a>
-  </main>
+    <main class="nf-page" id="notFound" hidden>
+      <p class="nf-code mono">404</p>
+      <h1>Page not found</h1>
+      <p>The page you are looking for does not exist or has moved.</p>
+      <a class="btn btn-grad" href="/">Go to home</a>
+    </main>
 
-  <div id="adminRoot" hidden>
-  <!-- gold particle cloud + lightning, the same scene as the landing page (particleScene.ts) -->
-  <canvas class="scene-canvas" id="sceneCanvas" aria-hidden="true"></canvas>
+    <div id="adminRoot" hidden>
+      <!-- gold particle cloud + lightning, the same scene as the landing page (particleScene.ts) -->
+      <canvas class="scene-canvas" id="sceneCanvas" aria-hidden="true"></canvas>
 
-  <header class="top-header scrolled">
-    <div class="wrap top-bar">
-      <a href="index.html" class="brand">
-        <div class="brand-icon brand-icon--logo" data-dv-logo="mark"><img src="/favicon.png" alt="" width="40" height="40" /></div>
-        <span><span class="grad-text">DAO</span>vault <small class="admin-tag mono">ADMIN</small></span>
-      </a>
-      <div class="dash-head-actions">
-        <a class="btn btn-line admin-to-dash" id="adminToDash" href="dashboard.html?view=member" hidden>My dashboard</a>
-        <span class="dash-user-badge mono" id="adminWallet" hidden></span>
-      </div>
-    </div>
-  </header>
-
-  <main class="dash-shell">
-    <div class="wrap">
-      <!-- hero -->
-      <section class="ad-hero">
-        <div class="fx-particles" aria-hidden="true"></div>
-        <div class="mono dash-member-tag" id="adminState">&bull; Admin</div>
-        <h1 class="ad-title">Admin <span class="grad-text">Console</span></h1>
-        <p class="ad-sub">A complete view of members, deposits, member earnings and withdrawals. Figures are live from the platform database; payments are verified on BNB Smart Chain.</p>
-        <div class="ad-hero-actions" id="adminHeroActions" hidden>
-          <span class="ad-chip mono"><i class="ad-live"></i> Live data · Last 30 days</span>
-          <button class="btn btn-line ad-refresh" id="adminRefresh" type="button"><svg class="ad-refresh-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.34 5.66"/><path d="M20 4v7h-7"/></svg><span>Refresh data</span></button>
+      <header class="top-header scrolled">
+        <div class="wrap top-bar">
+          <a href="index.html" class="brand">
+            <div class="brand-icon brand-icon--logo" data-dv-logo="mark">
+              <img src="/favicon.png" alt="" width="40" height="40" />
+            </div>
+            <span
+              ><span class="grad-text">DAO</span>vault
+              <small class="admin-tag mono">ADMIN</small></span
+            >
+          </a>
+          <div class="dash-head-actions">
+            <a
+              class="btn btn-line admin-to-dash"
+              id="adminToDash"
+              href="dashboard.html?view=member"
+              hidden
+              >My dashboard</a
+            >
+            <span class="dash-user-badge mono" id="adminWallet" hidden></span>
+          </div>
         </div>
-      </section>
+      </header>
 
-      <div id="adminApp" hidden>
-        <!-- KPIs: the company overview (companyOverview.ts, same as the company dashboard) -->
-        <section class="ad-section">
-          <div class="fx-particles" aria-hidden="true"></div>
-          <div class="ad-section-head">
-            <span class="mono rewards-tag">OVERVIEW</span>
-            <h2>Key <span class="grad-text">metrics</span></h2>
-          </div>
-          <div class="metrics-grid co-grid admin-stats" id="adminStats"></div>
-        </section>
-
-        <!-- live tracking: four panel charts, last 14 days (adminCharts.ts renderTracking) -->
-        <section class="ad-section">
-          <div class="fx-particles" aria-hidden="true"></div>
-          <div class="ad-section-head">
-            <span class="mono rewards-tag">LIVE TRACKING</span>
-            <h2>Daily <span class="grad-text">cash flow</span></h2>
-          </div>
-          <div class="pc-grid">
-            <article class="pc-card glass">
-              <div class="pc-panel is-gold"><canvas id="panelDeposits"></canvas><p class="chart-empty mono">No activity yet</p></div>
-              <h3>Deposits</h3>
-              <p class="pc-sub">Every $300 activation and top-up, per day</p>
-              <p class="pc-trend mono"></p>
-              <footer class="mono"><span class="pc-total"></span><span class="pc-updated">updated —</span></footer>
-            </article>
-            <article class="pc-card glass">
-              <div class="pc-panel is-amber"><canvas id="panelEarnings"></canvas><p class="chart-empty mono">No activity yet</p></div>
-              <h3>Member earnings</h3>
-              <p class="pc-sub">Level income + rank rewards credited, per day</p>
-              <p class="pc-trend mono"></p>
-              <footer class="mono"><span class="pc-total"></span><span class="pc-updated">updated —</span></footer>
-            </article>
-            <article class="pc-card glass">
-              <div class="pc-panel is-green"><canvas id="panelPaid"></canvas><p class="chart-empty mono">No activity yet</p></div>
-              <h3>Withdrawals paid</h3>
-              <p class="pc-sub">USDT sent to members, per day</p>
-              <p class="pc-trend mono"></p>
-              <footer class="mono"><span class="pc-total"></span><span class="pc-updated">updated —</span></footer>
-            </article>
-            <article class="pc-card glass">
-              <div class="pc-panel is-violet"><canvas id="panelTreasury"></canvas><p class="chart-empty mono">No activity yet</p></div>
-              <h3>Treasury balance</h3>
-              <p class="pc-sub">Deposits minus payouts, running total</p>
-              <p class="pc-trend mono"></p>
-              <footer class="mono"><span class="pc-total"></span><span class="pc-updated">updated —</span></footer>
-            </article>
-          </div>
-        </section>
-
-        <!-- charts -->
-        <section class="ad-section">
-          <div class="fx-particles" aria-hidden="true"></div>
-          <div class="ad-section-head">
-            <span class="mono rewards-tag">ANALYTICS</span>
-            <h2>Growth <span class="grad-text">and revenue</span></h2>
-          </div>
-          <div class="ad-charts">
-            <article class="chart-card glass ad-wide">
-              <header><h3>Cash flow</h3><span class="mono">Deposits, member credits and withdrawals per day</span></header>
-              <div class="chart-box tall"><canvas id="chartMoney"></canvas></div>
-              <p class="chart-empty mono">No payments yet: the curve starts with the first $300.</p>
-            </article>
-            <article class="chart-card glass">
-              <header><h3>Daily activations</h3><span class="mono">New members and top-ups</span></header>
-              <div class="chart-box"><canvas id="chartJoins"></canvas></div>
-              <p class="chart-empty mono">No activations in the last 30 days.</p>
-            </article>
-            <article class="chart-card glass">
-              <header><h3>Revenue allocation</h3><span class="mono">Share of every dollar received</span></header>
-              <div class="chart-box"><canvas id="chartSplit"></canvas></div>
-              <p class="chart-empty mono">Nothing received yet.</p>
-            </article>
-            <article class="chart-card glass">
-              <header><h3>Commissions by level</h3><span class="mono">L1 10% … L8–L20 1%</span></header>
-              <div class="chart-box"><canvas id="chartLevels"></canvas></div>
-              <p class="chart-empty mono">No level income paid yet.</p>
-            </article>
-            <article class="chart-card glass">
-              <header><h3>Members by rank</h3><span class="mono">DAO matched on the Left and Right sides</span></header>
-              <div class="chart-box"><canvas id="chartRanks"></canvas></div>
-              <p class="chart-empty mono">No ranked members yet.</p>
-            </article>
-            <article class="chart-card glass">
-              <header><h3>Network depth</h3><span class="mono">Members per level below the company account</span></header>
-              <div class="chart-box"><canvas id="chartTree"></canvas></div>
-              <p class="chart-empty mono">Nobody has joined under the company link yet.</p>
-            </article>
-            <article class="chart-card glass">
-              <header><h3>Packages and withdrawals</h3><span class="mono">Inner ring: packages · Outer ring: withdrawals</span></header>
-              <div class="chart-box"><canvas id="chartPackages"></canvas></div>
-              <p class="chart-empty mono">No packages or withdrawals yet.</p>
-            </article>
-            <article class="chart-card glass ad-top">
-              <header><h3>Top earners</h3><span class="mono">Level income and rewards</span></header>
-              <ol class="te-list" id="topEarners"></ol>
-              <nav class="pager" id="topPager" aria-label="Top earners pages" hidden></nav>
-            </article>
-          </div>
-        </section>
-
-        <!-- treasury ledger: where every dollar came from and went, day by day -->
-        <section class="ad-section">
-          <div class="fx-particles" aria-hidden="true"></div>
-          <div class="ad-section-head">
-            <span class="mono rewards-tag">LEDGER</span>
-            <h2>Treasury <span class="grad-text">ledger</span></h2>
-            <p class="ad-sub" id="ledgerSub">Daily record of deposits, member credits and withdrawals for the last 30 days (days with activity only).</p>
-          </div>
-          <div class="ad-seg mono" id="ledgerGroup" role="group" aria-label="Group the ledger by">
-            <button type="button" data-group="day" class="is-active" aria-pressed="true">Daily</button>
-            <button type="button" data-group="week" aria-pressed="false">Weekly</button>
-            <button type="button" data-group="month" aria-pressed="false">Monthly</button>
-          </div>
-          <div class="lg-wrap glass">
-            <div class="lg-scroll">
-              <table class="lg-table">
-                <thead><tr><th id="ledgerDateHead">Date</th><th>Deposits</th><th>Member credits</th><th>Withdrawals</th><th>Treasury</th></tr></thead>
-                <tbody id="ledgerBody"></tbody>
-              </table>
+      <main class="dash-shell">
+        <div class="wrap">
+          <!-- hero -->
+          <section class="ad-hero">
+            <div class="fx-particles" aria-hidden="true"></div>
+            <div class="mono dash-member-tag" id="adminState">&bull; Admin</div>
+            <h1 class="ad-title">Admin <span class="grad-text">Console</span></h1>
+            <p class="ad-sub">
+              A complete view of members, deposits, member earnings and withdrawals. Figures are
+              live from the platform database; payments are verified on BNB Smart Chain.
+            </p>
+            <div class="ad-hero-actions" id="adminHeroActions" hidden>
+              <span class="ad-chip mono"><i class="ad-live"></i> Live data · Last 30 days</span>
+              <button class="btn btn-line ad-refresh" id="adminRefresh" type="button">
+                <svg class="ad-refresh-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 11a8 8 0 1 0-2.34 5.66" />
+                  <path d="M20 4v7h-7" /></svg
+                ><span>Refresh data</span>
+              </button>
             </div>
-          </div>
-          <nav class="pager" id="ledgerPager" aria-label="Ledger pages" hidden></nav>
-        </section>
+          </section>
 
-        <!-- how the system works, with live numbers -->
-        <section class="ad-section">
-          <div class="fx-particles" aria-hidden="true"></div>
-          <div class="ad-section-head">
-            <span class="mono rewards-tag">PLAN RULES</span>
-            <h2>Compensation <span class="grad-text">rules</span></h2>
-            <p class="ad-sub">The rules currently in effect, with live figures.</p>
-          </div>
-          <ol class="ad-flow">
-            <li class="glass"><b>01</b><h4>$300 activation</h4><p>Each member activates with $300 USDT on BNB Smart Chain. The contract allocates it immediately: $135 (45%) to the payout contract that funds withdrawals and $165 (55%) to the company treasury.</p><span class="mono"><em data-flow="members">0</em> members · <em data-flow="moneyIn">$0</em> in</span></li>
-            <li class="glass"><b>02</b><h4>Level income: 40% over 20 levels</h4><p>Each $300 package credits $120 up the sponsor chain: L1 10%, L2 5%, L3–4 3%, L5–7 2%, L8–20 1%. Levels unlock with activated directs; 15 directs unlock all 20.</p><span class="mono"><em data-flow="level">$0</em> credited</span></li>
-            <li class="glass"><b>03</b><h4>Rank rewards</h4><p>Eleven ranks with one-time rewards from $150 to $200,000, reached when the DAO target is matched on both the Left and the Right side of the placement tree.</p><span class="mono"><em data-flow="rank">$0</em> in rank rewards</span></li>
-            <li class="glass"><b>04</b><h4>25× earnings cap and top-up</h4><p>Each package earns at most $7,500 in total, including level income, rank rewards and bonuses. A $300 top-up then starts a new package under the same ID and team.</p><span class="mono"><em data-flow="capped">0</em> capped · <em data-flow="topups">0</em> top-ups</span></li>
-            <li class="glass"><b>05</b><h4>Withdrawals</h4><p>Members withdraw USDT directly to their own wallet from the payout contract, with a 5% fee.</p><span class="mono"><em data-flow="paid">$0</em> paid · <em data-flow="fees">$0</em> fees</span></li>
-            <li class="glass ad-flow-net"><b>06</b><h4>Company net</h4><p>Total deposits, less all member credits, plus withdrawal fees.</p><span class="mono"><em data-flow="net">$0</em></span></li>
-          </ol>
-        </section>
+          <div id="adminApp" hidden>
+            <!-- KPIs: the company overview (companyOverview.ts, same as the company dashboard) -->
+            <section class="ad-section">
+              <div class="fx-particles" aria-hidden="true"></div>
+              <div class="ad-section-head">
+                <span class="mono rewards-tag">OVERVIEW</span>
+                <h2>Key <span class="grad-text">metrics</span></h2>
+              </div>
+              <div class="metrics-grid co-grid admin-stats" id="adminStats"></div>
+            </section>
 
-        <!-- withdrawal queue -->
-        <section class="glass admin-queue ad-section-card">
-          <div class="fx-particles" aria-hidden="true"></div>
-          <div class="admin-queue-head">
-            <h3>Withdrawals</h3>
-            <div class="admin-tabs mono" role="tablist">
-              <button type="button" data-status="PENDING" class="is-active">Pending</button>
-              <button type="button" data-status="PROCESSING">Approved</button>
-              <button type="button" data-status="COMPLETED">Paid</button>
-              <button type="button" data-status="REJECTED">Rejected</button>
-            </div>
+            <!-- live tracking: four panel charts, last 14 days (adminCharts.ts renderTracking) -->
+            <section class="ad-section">
+              <div class="fx-particles" aria-hidden="true"></div>
+              <div class="ad-section-head">
+                <span class="mono rewards-tag">LIVE TRACKING</span>
+                <h2>Daily <span class="grad-text">cash flow</span></h2>
+              </div>
+              <div class="pc-grid">
+                <article class="pc-card glass">
+                  <div class="pc-panel is-gold">
+                    <canvas id="panelDeposits"></canvas>
+                    <p class="chart-empty mono">No activity yet</p>
+                  </div>
+                  <h3>Deposits</h3>
+                  <p class="pc-sub">Every $300 activation and top-up, per day</p>
+                  <p class="pc-trend mono"></p>
+                  <footer class="mono">
+                    <span class="pc-total"></span><span class="pc-updated">updated —</span>
+                  </footer>
+                </article>
+                <article class="pc-card glass">
+                  <div class="pc-panel is-amber">
+                    <canvas id="panelEarnings"></canvas>
+                    <p class="chart-empty mono">No activity yet</p>
+                  </div>
+                  <h3>Member earnings</h3>
+                  <p class="pc-sub">Level income + rank rewards credited, per day</p>
+                  <p class="pc-trend mono"></p>
+                  <footer class="mono">
+                    <span class="pc-total"></span><span class="pc-updated">updated —</span>
+                  </footer>
+                </article>
+                <article class="pc-card glass">
+                  <div class="pc-panel is-green">
+                    <canvas id="panelPaid"></canvas>
+                    <p class="chart-empty mono">No activity yet</p>
+                  </div>
+                  <h3>Withdrawals paid</h3>
+                  <p class="pc-sub">USDT sent to members, per day</p>
+                  <p class="pc-trend mono"></p>
+                  <footer class="mono">
+                    <span class="pc-total"></span><span class="pc-updated">updated —</span>
+                  </footer>
+                </article>
+                <article class="pc-card glass">
+                  <div class="pc-panel is-violet">
+                    <canvas id="panelTreasury"></canvas>
+                    <p class="chart-empty mono">No activity yet</p>
+                  </div>
+                  <h3>Treasury balance</h3>
+                  <p class="pc-sub">Deposits minus payouts, running total</p>
+                  <p class="pc-trend mono"></p>
+                  <footer class="mono">
+                    <span class="pc-total"></span><span class="pc-updated">updated —</span>
+                  </footer>
+                </article>
+              </div>
+            </section>
+
+            <!-- charts -->
+            <section class="ad-section">
+              <div class="fx-particles" aria-hidden="true"></div>
+              <div class="ad-section-head">
+                <span class="mono rewards-tag">ANALYTICS</span>
+                <h2>Growth <span class="grad-text">and revenue</span></h2>
+              </div>
+              <div class="ad-charts">
+                <article class="chart-card glass ad-wide">
+                  <header>
+                    <h3>Cash flow</h3>
+                    <span class="mono">Deposits, member credits and withdrawals per day</span>
+                  </header>
+                  <div class="chart-box tall"><canvas id="chartMoney"></canvas></div>
+                  <p class="chart-empty mono">
+                    No payments yet: the curve starts with the first $300.
+                  </p>
+                </article>
+                <article class="chart-card glass">
+                  <header>
+                    <h3>Daily activations</h3>
+                    <span class="mono">New members and top-ups</span>
+                  </header>
+                  <div class="chart-box"><canvas id="chartJoins"></canvas></div>
+                  <p class="chart-empty mono">No activations in the last 30 days.</p>
+                </article>
+                <article class="chart-card glass">
+                  <header>
+                    <h3>Revenue allocation</h3>
+                    <span class="mono">Share of every dollar received</span>
+                  </header>
+                  <div class="chart-box"><canvas id="chartSplit"></canvas></div>
+                  <p class="chart-empty mono">Nothing received yet.</p>
+                </article>
+                <article class="chart-card glass">
+                  <header>
+                    <h3>Commissions by level</h3>
+                    <span class="mono">L1 10% … L8–L20 1%</span>
+                  </header>
+                  <div class="chart-box"><canvas id="chartLevels"></canvas></div>
+                  <p class="chart-empty mono">No level income paid yet.</p>
+                </article>
+                <article class="chart-card glass">
+                  <header>
+                    <h3>Members by rank</h3>
+                    <span class="mono">DAO matched on the Left and Right sides</span>
+                  </header>
+                  <div class="chart-box"><canvas id="chartRanks"></canvas></div>
+                  <p class="chart-empty mono">No ranked members yet.</p>
+                </article>
+                <article class="chart-card glass">
+                  <header>
+                    <h3>Network depth</h3>
+                    <span class="mono">Members per level below the company account</span>
+                  </header>
+                  <div class="chart-box"><canvas id="chartTree"></canvas></div>
+                  <p class="chart-empty mono">Nobody has joined under the company link yet.</p>
+                </article>
+                <article class="chart-card glass">
+                  <header>
+                    <h3>Packages and withdrawals</h3>
+                    <span class="mono">Inner ring: packages · Outer ring: withdrawals</span>
+                  </header>
+                  <div class="chart-box"><canvas id="chartPackages"></canvas></div>
+                  <p class="chart-empty mono">No packages or withdrawals yet.</p>
+                </article>
+                <article class="chart-card glass ad-top">
+                  <header>
+                    <h3>Top earners</h3>
+                    <span class="mono">Level income and rewards</span>
+                  </header>
+                  <ol class="te-list" id="topEarners"></ol>
+                  <nav class="pager" id="topPager" aria-label="Top earners pages" hidden></nav>
+                </article>
+              </div>
+            </section>
+
+            <!-- treasury ledger: where every dollar came from and went, day by day -->
+            <section class="ad-section">
+              <div class="fx-particles" aria-hidden="true"></div>
+              <div class="ad-section-head">
+                <span class="mono rewards-tag">LEDGER</span>
+                <h2>Treasury <span class="grad-text">ledger</span></h2>
+                <p class="ad-sub" id="ledgerSub">
+                  Daily record of deposits, member credits and withdrawals for the last 30 days
+                  (days with activity only).
+                </p>
+              </div>
+              <div
+                class="ad-seg mono"
+                id="ledgerGroup"
+                role="group"
+                aria-label="Group the ledger by"
+              >
+                <button type="button" data-group="day" class="is-active" aria-pressed="true">
+                  Daily
+                </button>
+                <button type="button" data-group="week" aria-pressed="false">Weekly</button>
+                <button type="button" data-group="month" aria-pressed="false">Monthly</button>
+              </div>
+              <div class="lg-wrap glass">
+                <div class="lg-scroll">
+                  <table class="lg-table">
+                    <thead>
+                      <tr>
+                        <th id="ledgerDateHead">Date</th>
+                        <th>Deposits</th>
+                        <th>Member credits</th>
+                        <th>Withdrawals</th>
+                        <th>Treasury</th>
+                      </tr>
+                    </thead>
+                    <tbody id="ledgerBody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <nav class="pager" id="ledgerPager" aria-label="Ledger pages" hidden></nav>
+            </section>
+
+            <!-- how the system works, with live numbers -->
+            <section class="ad-section">
+              <div class="fx-particles" aria-hidden="true"></div>
+              <div class="ad-section-head">
+                <span class="mono rewards-tag">PLAN RULES</span>
+                <h2>Compensation <span class="grad-text">rules</span></h2>
+                <p class="ad-sub">The rules currently in effect, with live figures.</p>
+              </div>
+              <ol class="ad-flow">
+                <li class="glass">
+                  <b>01</b>
+                  <h4>$300 activation</h4>
+                  <p>
+                    Each member activates with $300 USDT on BNB Smart Chain. The contract allocates
+                    it immediately: $135 (45%) to the payout contract that funds withdrawals and
+                    $165 (55%) to the company treasury.
+                  </p>
+                  <span class="mono"
+                    ><em data-flow="members">0</em> members ·
+                    <em data-flow="moneyIn">$0</em> in</span
+                  >
+                </li>
+                <li class="glass">
+                  <b>02</b>
+                  <h4>Level income: 40% over 20 levels</h4>
+                  <p>
+                    Each $300 package credits $120 up the sponsor chain: L1 10%, L2 5%, L3–4 3%,
+                    L5–7 2%, L8–20 1%. Levels unlock with activated directs; 15 directs unlock all
+                    20.
+                  </p>
+                  <span class="mono"><em data-flow="level">$0</em> credited</span>
+                </li>
+                <li class="glass">
+                  <b>03</b>
+                  <h4>Rank rewards</h4>
+                  <p>
+                    Eleven ranks with one-time rewards from $150 to $200,000, reached when the DAO
+                    target is matched on both the Left and the Right side of the placement tree.
+                  </p>
+                  <span class="mono"><em data-flow="rank">$0</em> in rank rewards</span>
+                </li>
+                <li class="glass">
+                  <b>04</b>
+                  <h4>25× earnings cap and top-up</h4>
+                  <p>
+                    Each $300 package adds $7,500 to the member's earnings cap, and the caps add up.
+                    Level income, rank rewards and bonuses all count toward it. Members can add a
+                    package at any time under the same ID and team.
+                  </p>
+                  <span class="mono"
+                    ><em data-flow="capped">0</em> capped ·
+                    <em data-flow="topups">0</em> top-ups</span
+                  >
+                </li>
+                <li class="glass">
+                  <b>05</b>
+                  <h4>Withdrawals</h4>
+                  <p>
+                    Members withdraw USDT directly to their own wallet from the payout contract,
+                    with a 5% fee.
+                  </p>
+                  <span class="mono"
+                    ><em data-flow="paid">$0</em> paid · <em data-flow="fees">$0</em> fees</span
+                  >
+                </li>
+                <li class="glass ad-flow-net">
+                  <b>06</b>
+                  <h4>Company net</h4>
+                  <p>Total deposits, less all member credits, plus withdrawal fees.</p>
+                  <span class="mono"><em data-flow="net">$0</em></span>
+                </li>
+              </ol>
+            </section>
+
+            <!-- withdrawal queue -->
+            <section class="glass admin-queue ad-section-card">
+              <div class="fx-particles" aria-hidden="true"></div>
+              <div class="admin-queue-head">
+                <h3>Withdrawals</h3>
+                <div class="admin-tabs mono" role="tablist">
+                  <button type="button" data-status="PENDING" class="is-active">Pending</button>
+                  <button type="button" data-status="PROCESSING">Approved</button>
+                  <button type="button" data-status="COMPLETED">Paid</button>
+                  <button type="button" data-status="REJECTED">Rejected</button>
+                </div>
+              </div>
+              <div class="admin-filter-row">
+                <div
+                  class="ad-seg mono"
+                  id="wdPeriod"
+                  role="group"
+                  aria-label="Show withdrawals requested in"
+                >
+                  <button type="button" data-period="all" class="is-active" aria-pressed="true">
+                    All time
+                  </button>
+                  <button type="button" data-period="week" aria-pressed="false">Last 7 days</button>
+                  <button type="button" data-period="month" aria-pressed="false">
+                    Last 30 days
+                  </button>
+                </div>
+                <p class="admin-sum mono" id="wdSummary"></p>
+              </div>
+              <p class="admin-help mono" id="adminHelp"></p>
+              <div class="admin-list" id="adminList"></div>
+              <nav class="pager" id="adminPager" aria-label="Withdrawal pages" hidden></nav>
+            </section>
           </div>
-          <div class="admin-filter-row">
-            <div class="ad-seg mono" id="wdPeriod" role="group" aria-label="Show withdrawals requested in">
-              <button type="button" data-period="all" class="is-active" aria-pressed="true">All time</button>
-              <button type="button" data-period="week" aria-pressed="false">Last 7 days</button>
-              <button type="button" data-period="month" aria-pressed="false">Last 30 days</button>
-            </div>
-            <p class="admin-sum mono" id="wdSummary"></p>
-          </div>
-          <p class="admin-help mono" id="adminHelp"></p>
-          <div class="admin-list" id="adminList"></div>
-          <nav class="pager" id="adminPager" aria-label="Withdrawal pages" hidden></nav>
-        </section>
-      </div>
+        </div>
+      </main>
     </div>
-  </main>
-  </div>
-  <script type="module" src="/src/scripts/admin.ts"></script>
-</body>
+    <script type="module" src="/src/scripts/admin.ts"></script>
+  </body>
 </html>
