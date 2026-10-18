@@ -259,6 +259,44 @@
           </div>
         </div>
 
+        <!-- Fast-start bonus (owner 2026-10-18): 10 directs in 3 days $100 / 7 days $50 (dashboard.ts renderFastStart).
+             Sits above the DV token card (owner 2026-10-18); rises in once when it scrolls into view (riseIn). -->
+        <div class="glass ref-box-card fast-start-card" id="fastStartCard" hidden>
+          <span class="fs-sheen" aria-hidden="true"></span>
+          <div class="fast-start-top">
+            <span class="fs-badge" aria-hidden="true"
+              ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z" />
+                <path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z" />
+                <path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0" />
+                <path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5" /></svg
+            ></span>
+            <div class="fast-start-head">
+              <span class="mono fast-start-kicker">Fast-start bonus</span>
+              <h3 id="fastStartTitle">Earn up to $100 extra</h3>
+              <p id="fastStartText">Bring 10 activated directs soon after you activate.</p>
+            </div>
+            <!-- directs ring: conic fill from --fs-fill -->
+            <div class="fs-ring" id="fastStartRing" role="img" aria-label="0 of 10 directs activated">
+              <b class="mono fast-start-count" id="fastStartCount">0</b>
+              <small class="mono" id="fastStartOf">of 10</small>
+            </div>
+          </div>
+          <div class="fast-start-tiers" id="fastStartTiers">
+            <div class="fs-tier">
+              <span class="fs-tier-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg></span
+              ><span class="fs-tier-name">Rocket Start Bonus</span
+              ><span class="fs-tier-rule">10 directs within 3 days</span><b class="mono fs-tier-amt">$100</b>
+            </div>
+            <div class="fs-tier">
+              <span class="fs-tier-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg></span
+              ><span class="fs-tier-name">Fast Start Bonus</span
+              ><span class="fs-tier-rule">10 directs within 7 days</span><b class="mono fs-tier-amt">$50</b>
+            </div>
+          </div>
+          <div class="fast-start-track"><i></i></div>
+        </div>
+
         <!-- DV token allocation (owner, 2026-10-15): 1,500 DV per $300 package, planned launch March 2028 (dashboard.ts initDvToken) -->
         <section class="glass dv-token-card" id="dvTokenCard" hidden>
           <div class="dv-coin" aria-hidden="true">
@@ -279,6 +317,55 @@
               id="dvTokenCalc"
               aria-label="How your DV allocation is counted"
             ></div>
+            <!-- DV token pot (owner 2026-10-18): a red clay pot that erupts DV coins and reveals the allocation
+                 (dashboard.ts initDvBox; display only, nothing is minted or sent; sealed in production until
+                 VITE_DV_BOX_OPEN=true) -->
+            <button type="button" class="dv-box is-locked" id="dvBoxBtn">
+              <span class="dv-pot" aria-hidden="true"
+                ><span class="dv-pot-coin"><img src="/favicon.png" alt="" /></span
+                ><svg class="dv-pot-art" viewBox="0 0 48 48">
+                  <defs>
+                    <radialGradient id="dvPotGlaze" cx="35%" cy="38%" r="70%">
+                      <stop offset="0" stop-color="#fff3c4" />
+                      <stop offset="0.45" stop-color="#e0b04a" />
+                      <stop offset="1" stop-color="#5a3a06" />
+                    </radialGradient>
+                    <linearGradient id="dvPotCloth" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0" stop-color="#ff4a4a" />
+                      <stop offset="1" stop-color="#b0060f" />
+                    </linearGradient>
+                    <linearGradient id="dvPotGold" x1="0" x2="1">
+                      <stop offset="0" stop-color="#8a6510" />
+                      <stop offset="0.5" stop-color="#ffe58a" />
+                      <stop offset="1" stop-color="#b8860b" />
+                    </linearGradient>
+                  </defs>
+                  <clipPath id="dvPotClip">
+                    <path d="M17.5 15h13l-.6 3.4C36 20.3 40 25 40 31c0 7.6-7.2 13-16 13S8 38.6 8 31c0-6 4-10.7 10.1-12.6z" />
+                  </clipPath>
+                  <path d="M17.5 15h13l-.6 3.4C36 20.3 40 25 40 31c0 7.6-7.2 13-16 13S8 38.6 8 31c0-6 4-10.7 10.1-12.6z" fill="url(#dvPotGlaze)" />
+                  <!-- red cloth round the belly, gold hems -->
+                  <g clip-path="url(#dvPotClip)">
+                    <rect x="4" y="24" width="40" height="15" fill="url(#dvPotCloth)" />
+                    <rect x="4" y="23.4" width="40" height="1.3" fill="url(#dvPotGold)" />
+                    <rect x="4" y="38.4" width="40" height="1.3" fill="url(#dvPotGold)" />
+                  </g>
+                  <!-- the red cloth over the mouth, tied with a gold cord -->
+                  <path d="M14 15.5c0-4 4.5-6.5 10-6.5s10 2.5 10 6.5l-2.6 1.6 3 4.2-2.6-.8-1.6 1.4-1.8-1.2-2 1.3-2-1.3-2 1.3-1.8-1.2-1.6 1.4-2.6.8 3-4.2z" fill="url(#dvPotCloth)" />
+                  <path d="M16.4 17.2h15.2" stroke="url(#dvPotGold)" stroke-width="1.6" stroke-linecap="round" />
+                  <circle cx="24" cy="17.3" r="1.4" fill="#ffe58a" />
+                  <circle cx="24" cy="31.5" r="5.4" fill="url(#dvPotGold)" />
+                  <circle cx="24" cy="31.5" r="3.9" fill="#2a1a04" />
+                  <text x="24" y="33.4" text-anchor="middle" font-size="5" font-weight="800" fill="#ffe58a" font-family="sans-serif">DV</text>
+                </svg
+                ><span class="rb-lock"></span
+              ></span>
+              <span class="dv-box-text">
+                <span class="dv-box-title">DV Token Pot</span>
+                <span class="mono dv-box-state" id="dvBoxState">Unlocks with your activation</span>
+              </span>
+              <span class="dv-box-go" aria-hidden="true">&rarr;</span>
+            </button>
           </div>
           <div class="dv-token-side">
             <span class="dv-token-badge mono"
@@ -291,29 +378,6 @@
         </section>
 
         <!-- Rank reward vaults: one sealed DAOvault box per rank (giftBox.ts) -->
-        <!-- Fast-start bonus (owner 2026-10-18): 10 directs in 3 days $100 / 7 days $50 (dashboard.ts renderFastStart) -->
-        <div class="glass ref-box-card fast-start-card" id="fastStartCard" hidden>
-          <div class="fast-start-top">
-            <div>
-              <span class="mono fast-start-kicker">Fast-start bonus</span>
-              <h3 id="fastStartTitle">Earn up to $100 extra</h3>
-              <p id="fastStartText">Bring 10 activated directs soon after you activate.</p>
-            </div>
-            <b class="mono fast-start-count" id="fastStartCount">0 / 10</b>
-          </div>
-          <div class="fast-start-tiers" id="fastStartTiers">
-            <div class="fs-tier">
-              <span class="fs-tier-name">Rocket Start Bonus</span
-              ><span class="fs-tier-rule">10 directs within 3 days</span><b class="mono">$100</b>
-            </div>
-            <div class="fs-tier">
-              <span class="fs-tier-name">Fast Start Bonus</span
-              ><span class="fs-tier-rule">10 directs within 7 days</span><b class="mono">$50</b>
-            </div>
-          </div>
-          <div class="fast-start-track"><i></i></div>
-        </div>
-
         <section class="glass rewards-card" id="rewardsSection" data-scene="dashRewards">
           <div class="rewards-head">
             <div>
@@ -587,100 +651,60 @@
             </div>
           </div>
 
-          <!-- Right: 5% Withdrawal Fee Interactive Portal -->
+          <!-- Right: USDT withdrawal (owner 2026-10-18: hidden until payments open, PAYMENTS_OPEN_AT, then
+               shown by itself: dashboard.ts gateLaunch, with #activationCard and #incomeCard) -->
           <div id="withdrawSection">
             <div class="glass withdraw-box">
-              <h3 style="font-size: 1.3rem; margin-bottom: 0.4rem">
-                <span class="grad-text">USDT</span> Withdrawal
-              </h3>
-              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem">
-                Paid in USDT straight to your own connected wallet on BNB Smart Chain.
-              </p>
-
-              <div
-                style="
-                  background: rgba(0, 0, 0, 0.35);
-                  padding: 1.2rem;
-                  border-radius: var(--radius-md);
-                  margin-bottom: 1.5rem;
-                  border: 1px solid var(--border-line);
-                "
-              >
-                <span class="mono" style="font-size: 0.78rem; color: var(--text-muted)"
-                  >AVAILABLE WITHDRAWABLE BALANCE</span
-                >
-                <div
-                  class="mono"
-                  id="withAvailBalance"
-                  style="font-size: 1.8rem; font-weight: 800; color: #ffffff; margin-top: 0.35rem"
-                >
-                  $0.00 USDT
-                </div>
-                <div class="mono with-meta" id="withMeta">
-                  Pending $0.00 &middot; Withdrawn $0.00
-                </div>
+              <div class="wd-head">
+                <span class="mono wd-kicker"><i></i>Withdrawals &middot; USDT (BEP-20)</span>
+                <h3><span class="grad-text">USDT</span> Withdrawal</h3>
+                <p>Withdraw your earnings in USDT to your connected wallet on BNB Smart Chain.</p>
               </div>
 
-              <div style="margin-bottom: 1.5rem">
-                <label
-                  class="mono"
-                  style="
-                    font-size: 0.82rem;
-                    color: var(--text-muted);
-                    display: block;
-                    margin-bottom: 0.5rem;
-                  "
-                >
-                  Withdrawal Amount ($)
-                </label>
-                <input
-                  type="number"
-                  class="ref-input"
-                  id="withAmountInput"
-                  style="width: 100%"
-                  value="0"
-                  min="0"
-                  step="10"
-                />
+              <div class="wd-balance">
+                <span class="mono wd-label">Available balance</span>
+                <div class="mono wd-balance-val" id="withAvailBalance">$0.00 USDT</div>
+                <div class="mono with-meta" id="withMeta">Pending $0.00 &middot; Withdrawn $0.00 &middot; Minimum $100.00</div>
+              </div>
+
+              <div class="wd-field">
+                <label class="mono wd-label" for="withAmountInput">Amount to withdraw (USDT)</label>
+                <div class="wd-input-wrap">
+                  <input
+                    type="number"
+                    class="ref-input wd-input"
+                    id="withAmountInput"
+                    value="0"
+                    min="0"
+                    step="any"
+                    inputmode="decimal"
+                  />
+                  <button type="button" class="mono wd-max" id="withMaxBtn">Max</button>
+                </div>
               </div>
 
               <!-- Calculation Breakdown -->
-              <div style="margin-bottom: 1.8rem" class="mono">
+              <div class="mono wd-breakdown">
                 <div class="calc-row">
-                  <span style="color: var(--text-muted)">Gross Requested:</span>
-                  <span id="withGrossVal" style="color: #ffffff">$0.00</span>
+                  <span>Amount requested</span>
+                  <span id="withGrossVal" class="wd-val">$0.00</span>
                 </div>
                 <div class="calc-row">
-                  <span style="color: var(--red)">Withdrawal charge (5%):</span>
-                  <span id="withFeeVal" style="color: var(--red)">-$0.00</span>
+                  <span id="withFeeLbl">Withdrawal fee (5%)</span>
+                  <span id="withFeeVal" class="wd-fee">-$0.00</span>
                 </div>
                 <div class="calc-row total">
-                  <span>Net Transfer to Wallet:</span>
-                  <span id="withNetVal" style="color: var(--gold)">$0.00 USDT</span>
+                  <span>You receive</span>
+                  <span id="withNetVal">$0.00 USDT</span>
                 </div>
               </div>
 
-              <button
-                class="btn btn-grad"
-                id="withSubmitBtn"
-                type="button"
-                style="width: 100%; padding: 1rem"
-              >
+              <button class="btn btn-grad wd-submit" id="withSubmitBtn" type="button">
                 <span id="withSubmitLabel">Sign in &amp; request withdrawal &rarr;</span>
               </button>
 
-              <p
-                style="
-                  text-align: center;
-                  font-size: 0.75rem;
-                  color: var(--text-dim);
-                  margin-top: 1rem;
-                "
-                class="mono"
-                id="withPayoutNote"
-              >
-                &bull; Signing in only proves wallet ownership: no gas, no transaction. The 5%
-                charge goes to the ecosystem treasury.
+              <p class="mono wd-note" id="withPayoutNote">
+                Signing in only confirms that you own this wallet. It costs no gas and sends no transaction.
               </p>
               <div class="with-history" id="withHistory" hidden>
                 <h4 class="mono">Your withdrawals</h4>

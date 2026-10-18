@@ -13,6 +13,8 @@ export type DashboardData = {
   /** pre-launch marketing (owner, 2026-10-13): Pay & Activate opens at this moment (null = open) */
   paymentsOpenAt?: string | null;
   paymentsOpen?: boolean;
+  /** minimum withdrawal in USD (WITHDRAWAL_MIN_USD) */
+  withdrawalMinUsd?: number;
   /** company root (treasury): active without paying, anyone joins under it, earns nothing itself */
   isRoot?: boolean;
   /** ADMIN_WALLETS (the company wallet): show the company overview */

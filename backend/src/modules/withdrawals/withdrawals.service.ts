@@ -234,6 +234,9 @@ export class WithdrawalsService {
     const grossCents = toCents(amountUsd);
     // the admin / company wallet never withdraws member payouts (owner, 2026-10-15)
     if (isAdminWallet(wallet)) throw httpError("Admin wallets cannot request withdrawals.", 403);
+    // withdrawals open together with payments (owner, 2026-10-18; the dashboard hides the form until then)
+    if (env.PAYMENTS_OPEN_AT.getTime() > Date.now())
+      throw httpError("Withdrawals open together with activations. Please try again then.", 403);
     if (grossCents < toCents(env.WITHDRAWAL_MIN_USD))
       throw httpError(`Minimum withdrawal is $${env.WITHDRAWAL_MIN_USD}.`, 400);
     if (!instantPayoutsEnabled())

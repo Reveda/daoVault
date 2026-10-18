@@ -5,7 +5,7 @@ Node.js + Express + TypeScript + Prisma + PostgreSQL backend foundation for DAOv
 ## Setup
 
 ```powershell
-Copy-Item .env.example .env
+# backend/.env = local development settings (production uses the root .env.prod)
 npm install
 npx prisma generate
 npx prisma migrate dev --name init

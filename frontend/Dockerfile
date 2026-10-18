@@ -24,6 +24,8 @@ ARG VITE_USDT_CONTRACT_ADDRESS
 ARG VITE_PAYMENT_CONTRACT_ADDRESS
 ARG VITE_ACTIVATION_AMOUNT_USDT=300
 ARG VITE_ALLOW_MAINNET_PAYMENTS=false
+# "Preview the opening" on sealed rank reward boxes and the sealed DV token pot only when "true" (production: false)
+ARG VITE_REWARD_PREVIEW=false
 ARG VITE_LAUNCH_DATE
 COPY . .
 RUN npm run build

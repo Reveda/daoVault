@@ -64,6 +64,17 @@ export function initRankCalculator(): void {
     });
   }
 
+  // quick-target pills: the one for the rank the current numbers reach is lit (owner 2026-10-18: typing
+  // 50 / 100 members or using +/- selects its pill too); a rank without a pill lights none
+  const pills = document.querySelectorAll<HTMLButtonElement>('[data-rcalc-set]');
+  const markPill = (rankDao: number | null): void => {
+    pills.forEach((pill) => {
+      const on = rankDao !== null && Number(pill.dataset.rcalcSet) === rankDao;
+      pill.classList.toggle('is-active', on);
+      pill.setAttribute('aria-pressed', String(on));
+    });
+  };
+
   const updateFromVolume = (volume: number, syncCard = true, updateInput = true): void => {
     const safeVol = Math.max(0, volume);
     if (slider) {
@@ -85,6 +96,7 @@ export function initRankCalculator(): void {
         break;
       }
     }
+    markPill(achievedIndex >= 0 ? RANK_DATA[achievedIndex].dao : null);
 
     if (achievedIndex >= 0) {
       const rank = RANK_DATA[achievedIndex];
@@ -166,7 +178,7 @@ export function initRankCalculator(): void {
   }
 
   // Preset quick-jump buttons
-  document.querySelectorAll<HTMLButtonElement>('[data-rcalc-set]').forEach((btn) => {
+  pills.forEach((btn) => {
     btn.addEventListener('click', () => {
       const targetDao = parseInt(btn.dataset.rcalcSet || '25', 10);
       updateFromVolume(targetDao, true, true);

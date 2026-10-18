@@ -3280,6 +3280,7 @@ html.lite .dv-coin-ring {
   grid-template-columns: 1fr;
 }
 #activationCard[hidden],
+#incomeCard[hidden],
 #withdrawSection[hidden] {
   display: none !important;
 }
@@ -3580,20 +3581,99 @@ html.lite .dv-coin-ring {
   }
 }
 
-/* Fast-start bonus card (owner 2026-10-18; dashboard.ts renderFastStart) */
+/* Fast-start bonus card (owner 2026-10-18; dashboard.ts renderFastStart). Above the DV token card.
+   Slight effects only (owner: smooth, no jumps): a soft light sweep across the card every few seconds,
+   rocket badge, directs ring + bar that fill once the card is on screen (--fs-fill, animated through
+   @property), the open bonus breathes a gentle glow, a light runs along the filled bar.
+   html.lite / reduced motion: everything static. */
+@property --fs-fill {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
 .fast-start-card {
-  margin: 0 0 2rem;
+  margin: 1.5rem 0;
   padding: 1.3rem 1.4rem;
   border-color: rgba(212, 175, 55, 0.45);
+  background:
+    radial-gradient(90% 120% at 0% 0%, rgba(212, 175, 55, 0.13), transparent 60%),
+    radial-gradient(70% 90% at 100% 100%, rgba(212, 175, 55, 0.07), transparent 65%),
+    linear-gradient(180deg, rgba(18, 15, 8, 0.94), rgba(9, 8, 6, 0.94));
+  transition:
+    border-color 0.3s ease,
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.35s ease,
+    --fs-fill 1.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .fast-start-card[hidden] {
   display: none;
 }
+.fast-start-card > :not(.fs-sheen) {
+  position: relative;
+  z-index: 1;
+}
+/* the soft light sweep */
+.fs-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 35%,
+    rgba(255, 229, 138, 0.09) 47%,
+    rgba(255, 229, 138, 0.16) 50%,
+    rgba(255, 229, 138, 0.09) 53%,
+    transparent 65%
+  );
+  transform: translateX(-100%);
+  animation: fsSheen 7s ease-in-out 1.2s infinite;
+}
+@keyframes fsSheen {
+  0% {
+    transform: translateX(-100%);
+  }
+  38%,
+  100% {
+    transform: translateX(100%);
+  }
+}
 .fast-start-top {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 1rem;
+}
+.fast-start-head {
+  flex: 1;
+  min-width: 0;
+}
+.fs-badge {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  color: #ffe58a;
+  background: linear-gradient(145deg, rgba(212, 175, 55, 0.28), rgba(212, 175, 55, 0.06));
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  box-shadow:
+    0 0 18px rgba(212, 175, 55, 0.18),
+    inset 0 1px 0 rgba(255, 240, 190, 0.25);
+}
+.fs-badge svg {
+  width: 24px;
+  height: 24px;
+  animation: fsHover 3.2s ease-in-out infinite;
+}
+@keyframes fsHover {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(1.5px, -2px);
+  }
 }
 .fast-start-kicker {
   display: block;
@@ -3613,13 +3693,50 @@ html.lite .dv-coin-ring {
   font-size: 0.82rem;
   line-height: 1.5;
 }
-.fast-start-count {
+/* directs ring */
+.fs-ring {
+  --fs-ring: #d4af37;
   flex: none;
-  font-size: 1.3rem;
-  color: #fff;
+  position: relative;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  background: conic-gradient(var(--fs-ring) var(--fs-fill), rgba(255, 255, 255, 0.09) 0);
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.14);
 }
-.fast-start-count[hidden] {
+.fs-ring::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 35%, #1a160c, #0a0907);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
+}
+.fs-ring > * {
+  position: relative;
+}
+.fs-ring[hidden] {
   display: none;
+}
+/* two lines inside the ring: the number, then "of 10" (fits from 320 px phones up) */
+.fast-start-count {
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #fff;
+  white-space: nowrap;
+}
+.fs-ring small {
+  margin-top: 0.15rem;
+  font-size: 0.6rem;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
 }
 .fast-start-tiers {
   display: grid;
@@ -3627,54 +3744,218 @@ html.lite .dv-coin-ring {
   gap: 0.6rem;
   margin-top: 1rem;
 }
+/* Bonus rows (owner 2026-10-18: "gold bonus effect"): gold gradient frame with a light running round it,
+   rocket / bolt medallion, the reward in a gold coin pill with a sheen, two soft sparkles. */
 .fs-tier {
+  position: relative;
+  overflow: hidden;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.1rem 0.75rem;
   align-items: center;
-  padding: 0.7rem 0.85rem;
-  border-radius: 12px;
-  border: 1px solid rgba(212, 175, 55, 0.22);
-  background: rgba(212, 175, 55, 0.05);
+  padding: 0.8rem 0.85rem;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(212, 175, 55, 0.16), transparent 55%) padding-box,
+    linear-gradient(180deg, rgba(26, 22, 11, 0.96), rgba(12, 10, 6, 0.96)) padding-box,
+    linear-gradient(120deg, #6b5114, #ffe58a, #b8860b, #6b5114, #ffe58a, #6b5114) border-box;
+  background-size:
+    100% 100%,
+    100% 100%,
+    300% 300%;
+  box-shadow:
+    0 8px 22px -14px rgba(0, 0, 0, 0.9),
+    0 0 16px -6px rgba(212, 175, 55, 0.28);
+  animation: fsFrame 6s linear infinite;
+}
+@keyframes fsFrame {
+  from {
+    background-position:
+      0 0,
+      0 0,
+      0% 50%;
+  }
+  to {
+    background-position:
+      0 0,
+      0 0,
+      300% 50%;
+  }
+}
+/* two soft sparkles in the top-right corner */
+.fs-tier::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  right: 9px;
+  width: 26px;
+  height: 18px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 20% 70%, #fff6cf 0 1.2px, transparent 2px),
+    radial-gradient(circle at 85% 20%, #ffe58a 0 1.6px, transparent 2.6px);
+  animation: fsTwinkle 2.8s ease-in-out infinite;
+}
+@keyframes fsTwinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.fs-tier-icon {
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  color: #2a1e04;
+  background: radial-gradient(circle at 35% 30%, #fff3c4, #ffd75e 40%, #b8860b 100%);
+  box-shadow:
+    0 0 14px rgba(212, 175, 55, 0.45),
+    inset 0 -2px 4px rgba(90, 60, 0, 0.45),
+    inset 0 1px 1px rgba(255, 255, 255, 0.7);
+}
+.fs-tier-icon svg {
+  width: 19px;
+  height: 19px;
 }
 .fs-tier-name {
+  grid-column: 2;
   font-weight: 700;
-  color: #f3ecd6;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
+  background: linear-gradient(90deg, #fff3c4, #ffd75e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 .fs-tier-rule {
-  grid-column: 1;
+  grid-column: 2;
   color: var(--text-muted);
   font-size: 0.75rem;
 }
-.fs-tier > b {
-  grid-column: 2;
+/* the reward as a gold coin pill */
+.fs-tier > .fs-tier-amt {
+  grid-column: 3;
   grid-row: 1 / span 2;
-  color: var(--gold);
-  font-size: 1.15rem;
+  position: relative;
+  overflow: hidden;
+  padding: 0.38rem 0.75rem;
+  border-radius: 999px;
+  font-size: 1.05rem;
+  color: #1a1404;
+  background: linear-gradient(135deg, #fff3c4, #ffd75e 35%, #d4af37 65%, #b8860b);
+  box-shadow:
+    0 0 18px rgba(212, 175, 55, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 -2px 3px rgba(120, 80, 0, 0.35);
+}
+.fs-tier-amt::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.75) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: fsCoinShine 3.4s ease-in-out infinite;
+}
+.fs-tier + .fs-tier .fs-tier-amt::after {
+  animation-delay: 1.7s;
+}
+@keyframes fsCoinShine {
+  55%,
+  100% {
+    transform: translateX(120%);
+  }
 }
 .fs-tier-state {
   grid-column: 1 / -1;
-  margin-top: 0.3rem;
+  margin-top: 0.45rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed rgba(212, 175, 55, 0.18);
   color: var(--text-dim);
   font-size: 0.68rem;
 }
 .fs-tier.is-open {
-  border-color: rgba(212, 175, 55, 0.6);
-  box-shadow: 0 0 16px rgba(212, 175, 55, 0.12);
+  animation:
+    fsFrame 6s linear infinite,
+    fsBreathe 3s ease-in-out infinite;
+}
+@keyframes fsBreathe {
+  0%,
+  100% {
+    box-shadow:
+      0 8px 22px -14px rgba(0, 0, 0, 0.9),
+      0 0 12px -4px rgba(212, 175, 55, 0.25);
+  }
+  50% {
+    box-shadow:
+      0 8px 22px -14px rgba(0, 0, 0, 0.9),
+      0 0 26px -2px rgba(212, 175, 55, 0.45);
+  }
 }
 .fs-tier.is-open .fs-tier-state {
   color: var(--gold);
 }
 .fs-tier.is-earned {
-  border-color: rgba(16, 185, 129, 0.55);
-  background: rgba(16, 185, 129, 0.08);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(16, 185, 129, 0.16), transparent 55%) padding-box,
+    linear-gradient(180deg, rgba(10, 24, 18, 0.96), rgba(6, 12, 9, 0.96)) padding-box,
+    linear-gradient(120deg, #065f46, #6ee7b7, #059669, #065f46, #6ee7b7, #065f46) border-box;
+  background-size:
+    100% 100%,
+    100% 100%,
+    300% 300%;
 }
 .fs-tier.is-earned .fs-tier-state {
   color: #34d399;
 }
 .fs-tier.is-closed {
   opacity: 0.55;
+  filter: saturate(0.4);
+  animation: none;
+}
+.fs-tier.is-closed::after,
+.fs-tier.is-closed .fs-tier-amt::after {
+  display: none;
+}
+@media (max-width: 380px) {
+  .fs-tier {
+    gap: 0.1rem 0.55rem;
+    padding: 0.75rem 0.7rem;
+  }
+  .fs-tier-icon {
+    width: 32px;
+    height: 32px;
+  }
+  .fs-tier-icon svg {
+    width: 16px;
+    height: 16px;
+  }
+  .fs-tier > .fs-tier-amt {
+    font-size: 0.92rem;
+    padding: 0.32rem 0.6rem;
+  }
+}
+html.lite .fs-tier,
+html.lite .fs-tier::after,
+html.lite .fs-tier-amt::after {
+  animation: none;
+}
+html.lite .fs-tier-amt::after {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fs-tier,
+  .fs-tier::after {
+    animation: none;
+  }
+  .fs-tier-amt::after {
+    display: none;
+  }
 }
 .fast-start-track {
   height: 8px;
@@ -3684,16 +3965,39 @@ html.lite .dv-coin-ring {
   overflow: hidden;
 }
 .fast-start-track i {
+  position: relative;
   display: block;
   height: 100%;
   width: var(--fs-fill, 0%);
   border-radius: inherit;
   background: linear-gradient(90deg, #b8860b, #ffe58a, #d4af37);
   box-shadow: 0 0 12px rgba(212, 175, 55, 0.6);
-  transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+/* a light running along the filled part */
+.fast-start-track i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: translateX(-100%);
+  animation: fsRun 2.6s ease-in-out 1.8s infinite;
+}
+@keyframes fsRun {
+  0% {
+    transform: translateX(-100%);
+  }
+  60%,
+  100% {
+    transform: translateX(100%);
+  }
 }
 .fast-start-card.is-earned {
   border-color: rgba(16, 185, 129, 0.5);
+}
+.fast-start-card.is-earned .fs-ring {
+  --fs-ring: #34d399;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.22);
 }
 .fast-start-card.is-earned .fast-start-count {
   color: #34d399;
@@ -3702,9 +4006,82 @@ html.lite .dv-coin-ring {
   background: linear-gradient(90deg, #059669, #34d399);
   box-shadow: 0 0 12px rgba(16, 185, 129, 0.6);
 }
+.fast-start-card.is-closed .fs-ring {
+  --fs-ring: rgba(212, 175, 55, 0.5);
+}
+@media (max-width: 600px) {
+  .fast-start-top {
+    align-items: flex-start;
+  }
+  .fs-badge {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+  }
+  .fs-badge svg {
+    width: 20px;
+    height: 20px;
+  }
+  .fs-ring {
+    width: 64px;
+    height: 64px;
+  }
+  .fs-ring::before {
+    inset: 5px;
+  }
+  .fast-start-count {
+    font-size: 1.2rem;
+  }
+  .fs-ring small {
+    font-size: 0.54rem;
+  }
+}
+@media (max-width: 380px) {
+  .fs-badge {
+    display: none;
+  }
+}
+
+/* Cards that appear after the data loads (fast-start, DV token): rise in once on first view
+   (dashboard.ts riseIn). rise-pre waits hidden until the card scrolls into view. */
+.dash-shell .rise-pre {
+  opacity: 0;
+}
+.dash-shell .rise-in {
+  animation: dashRise 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes dashRise {
+  from {
+    opacity: 0;
+    transform: translateY(22px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+html.lite .fs-sheen,
+html.lite .fast-start-track i::after {
+  display: none;
+}
+html.lite .fs-badge svg {
+  animation: none;
+}
 @media (prefers-reduced-motion: reduce) {
-  .fast-start-track i {
+  .fast-start-card {
     transition: none;
+  }
+  .fs-sheen,
+  .fast-start-track i::after {
+    display: none;
+  }
+  .fs-badge svg,
+  .fs-tier.is-open,
+  .dash-shell .rise-in {
+    animation: none;
+  }
+  .dash-shell .rise-pre {
+    opacity: 1;
   }
 }
 
@@ -3768,5 +4145,308 @@ html.lite .dv-coin-ring {
   }
   .top-header .wallet-menu-btn {
     padding: 0.42rem 0.6rem;
+  }
+}
+
+/* USDT withdrawal box (owner 2026-10-18: professional layout, no inline styles). Kicker + title, balance
+   panel, amount field with a Max button, a calm breakdown (fee in muted text, not alarm red), gold total. */
+.wd-head h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.3rem;
+}
+.wd-head p {
+  margin: 0 0 1.4rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.wd-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+.wd-kicker i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.8);
+}
+.wd-label {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.wd-balance {
+  margin-bottom: 1.4rem;
+  padding: 1.1rem 1.2rem;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(212, 175, 55, 0.12), transparent 55%),
+    rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 190, 0.08);
+}
+.wd-balance-val {
+  margin-top: 0.35rem;
+  font-size: clamp(1.4rem, 6vw, 1.8rem);
+  font-weight: 800;
+  color: #fff;
+  overflow-wrap: anywhere;
+}
+.wd-balance .with-meta {
+  margin-top: 0.5rem;
+  line-height: 1.5;
+}
+.wd-field {
+  margin-bottom: 1.2rem;
+}
+.wd-field .wd-label {
+  margin-bottom: 0.5rem;
+}
+.wd-input-wrap {
+  position: relative;
+}
+.wd-input-wrap .wd-input {
+  width: 100%;
+  padding-right: 4.6rem;
+}
+.wd-max {
+  position: absolute;
+  top: 50%;
+  right: 0.45rem;
+  transform: translateY(-50%);
+  padding: 0.38rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  background: rgba(212, 175, 55, 0.12);
+  color: var(--gold);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
+}
+.wd-max:hover,
+.wd-max:focus-visible {
+  background: var(--grad-gold);
+  color: #1a1404;
+  border-color: transparent;
+}
+.wd-breakdown {
+  margin-bottom: 1.5rem;
+}
+.wd-breakdown .calc-row {
+  gap: 0.75rem;
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+.wd-breakdown .calc-row > span:last-child {
+  flex: none;
+  white-space: nowrap;
+  text-align: right;
+}
+.wd-breakdown .wd-val {
+  color: #fff;
+}
+.wd-breakdown .wd-fee {
+  color: #e8b4a0;
+}
+.wd-breakdown .calc-row.total {
+  font-size: 1.05rem;
+  color: var(--gold);
+}
+.wd-breakdown .calc-row.total > span:last-child {
+  font-size: 1.15rem;
+}
+.wd-submit {
+  width: 100%;
+  padding: 1rem;
+}
+.wd-note {
+  margin: 0.9rem 0 0;
+  text-align: center;
+  font-size: 0.72rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+/* DV token pot button on the DV token card (owner 2026-10-18; dashboard.ts initDvBox): a little red clay
+   pot with a DV coin above it (sealed = dim + lock, ready = the coin bobs out of the pot with a glow,
+   opened = the coin rests on top, haloed); the overlay opens the 3D pot (giftBox.ts theme 'pot'). */
+.dv-pot {
+  position: relative;
+  flex: none;
+  width: 50px;
+  height: 52px;
+}
+.dv-pot-art {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 50px;
+  height: 50px;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.7));
+}
+.dv-pot-coin {
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 35% 30%, #fff3c4, #ffd75e 40%, #b8860b);
+  box-shadow: 0 0 10px rgba(255, 215, 94, 0.7);
+  opacity: 0;
+  transform: translateY(8px) scale(0.6);
+}
+.dv-pot-coin img {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.dv-box .rb-lock {
+  right: -4px;
+  bottom: -3px;
+}
+.dv-box .rb-lock[hidden] {
+  display: none;
+}
+.dv-box.is-locked .dv-pot-art {
+  filter: grayscale(0.6) brightness(0.6) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.7));
+}
+.dv-box.is-ready .dv-pot-coin {
+  animation: dvPotCoin 2.6s ease-in-out infinite;
+}
+.dv-box.is-opened .dv-pot-coin {
+  opacity: 1;
+  transform: translateY(-4px);
+}
+@keyframes dvPotCoin {
+  0%,
+  20% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.6) rotateY(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-6px) scale(1) rotateY(180deg);
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.9) rotateY(360deg);
+  }
+}
+html.lite .dv-box.is-ready .dv-pot-coin {
+  animation: none;
+  opacity: 1;
+  transform: translateY(-4px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dv-box.is-ready .dv-pot-coin {
+    animation: none;
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+.dv-box {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+  max-width: 360px;
+  margin-top: 0.9rem;
+  padding: 0.6rem 0.9rem 0.6rem 0.7rem;
+  border-radius: 14px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(212, 175, 55, 0.14), transparent 55%),
+    rgba(0, 0, 0, 0.3);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.dv-box:hover,
+.dv-box:focus-visible {
+  border-color: rgba(240, 205, 110, 0.8);
+  box-shadow: 0 0 22px rgba(212, 175, 55, 0.25);
+  outline: none;
+}
+
+.dv-box-text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+  flex: 1;
+}
+.dv-box-title {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #fff;
+}
+.dv-box-state {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+.dv-box-go {
+  flex: none;
+  color: var(--gold);
+  font-size: 1.1rem;
+}
+
+.dv-box.is-ready {
+  border-color: rgba(212, 175, 55, 0.7);
+  box-shadow:
+    0 0 0 1px rgba(212, 175, 55, 0.3),
+    0 0 26px rgba(212, 175, 55, 0.22);
+}
+.dv-box.is-ready .dv-pot::before,
+.dv-box.is-opened .dv-pot::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 140, 90, 0.35), rgba(255, 215, 94, 0.18) 45%, transparent 70%);
+}
+.dv-box.is-ready .dv-pot::before {
+  animation: dvCoinHalo 2.6s ease-in-out infinite;
+}
+.dv-box.is-ready .dv-box-state {
+  color: var(--gold);
+  font-weight: 700;
+}
+@keyframes dvCoinHalo {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+html.lite .dv-box.is-ready .dv-pot::before {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dv-box.is-ready .dv-pot::before {
+    animation: none;
   }
 }

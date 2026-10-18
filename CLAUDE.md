@@ -43,12 +43,23 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
   DV_TOKEN_LAUNCH -> GET /dashboard dvToken {perPackage, allocated = packages x 1500 (root 0), launch, network} ->
   dashboard #dvTokenCard under the 4 metric cards (calc chips: N packages x 1,500 = total; "about N months away" from
   DV_TOKEN_LAUNCH_DATE) + header "DV Token" button #dvMenu (total; panel = one line per package: #, Activation/Top-up,
-  date, +1,500, sum) (dashboard.ts initDvToken). Both show the token as a 3D minted coin (dvToken3d.ts mountDvToken3D:
+  date, +1,500, sum) (dashboard.ts initDvToken). DV Token Pot #dvBoxBtn on the card (owner 2026-10-18,
+  dashboard.ts initDvBox): a polished GOLD pot, belly wrapped in red cloth (gold hems, DAOvault seal on 6 sides), mouth under a RED CLOTH tied with a gold cord (owner: traditional cloth-covered pot;
+  card: SVG pot + bobbing DV coin) that opens the giftBox.ts overlay with theme
+  'pot' (makePot: lathe pot, gold bands, DV seals, lid = folded red cloth + gold hem, cord, knot + tassels; same parts as makeBox so packing/opening VFX run unchanged;
+  14 minted DV coins (dvToken3d.ts dvCoinMaterials, face the camera, gold halo sprites) fountain out and float in
+  frame, a gold light column from the mouth, 520 sparks) and reveals the allocation (optional texts format/kicker/label/note/lockedNote/previewNote/
+  doneLabel, allowPreview). Sealed before the first package; with tokens it opens EVERYWHERE incl.
+  production (owner 2026-10-18: show the member his tokens as soon as he buys); "Preview the opening" on the sealed pot only
+  with VITE_REWARD_PREVIEW=true / dev server (VITE_DV_BOX_OPEN removed).
+  Opened state per wallet in localStorage only. Rank reward boxes: "Preview the opening" on a sealed box only with VITE_REWARD_PREVIEW=true or the dev
+  server (rewardVaults.ts REWARD_PREVIEW; render.yaml true; Dockerfile / compose default false = production has no preview). Both show the token as a 3D minted coin (dvToken3d.ts mountDvToken3D:
   three.js, logo face via CanvasTexture turned FACE_TURN upright, engraved "DAOVAULT · DV TOKEN" ring on the card coin,
   reeded edge, ~33 fps, only while visible); html.lite / no WebGL / reduced motion = flat logo + CSS coin spin (.is-css).
   Header pinned to both edges (owner bug 2026-10-18, Trust in-app browser ran the capsule past the right edge): .top-header
   left/right 0 + max-width 100vw (main.css), dashboard wallet chip shrinks with an ellipsis address (end of dashboard.css);
   Phones (<=960px): the capsule keeps a 16px gutter each side on landing + dashboard (width calc(100% - 2rem - insets), end of main.css);
+  Phones: .top-header::before = dark scrim behind the capsule (Chrome showed scrolled text above it, owner 2026-10-18).
   html + body use overflow-x: clip (never hidden on html: that makes body a scroll box), body keeps hidden as fallback.
   .dv-token-slot is a fixed round box (overflow hidden, img max 100%): a CSS width:auto once let the 256 px logo stretch
   the header to 290 px (owner bug 2026-10-15). Dashboard header <=430px hides the brand text (logo + DV + wallet fit). Wording: allocation + "planned", never value / profit / guarantee.
@@ -56,7 +67,9 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
   rewards, fast-start bonus): activation.engine creditIntoCap fills ACTIVE packages oldest first, spills to the next, the
   part over the cap stays with the company (never carried forward). Caps ADD UP: a member can add a $300 package (top-up)
   ANY time (dashboard canTopUp = activated + not root; was "only when every package is capped"), 2 packages = $15,000;
-  GET /dashboard capTotalUsd / capEarnedUsd drive the cap meter. 5% withdrawal fee.
+  GET /dashboard capTotalUsd / capEarnedUsd drive the cap meter. 5% withdrawal fee (taken from the amount). Withdrawal
+  minimum $100 (owner 2026-10-18, WITHDRAWAL_MIN_USD default 100, GET /dashboard withdrawalMinUsd), maximum = the whole
+  available balance (Max button); per-claim caps still apply: contract maxPerClaim + signer SIGNER_MAX_PER_CLAIM_USD (1000).
 - No referral (owner 2026-10-18): nobody stays outside the tree. processActivation without a (known) on-chain sponsor and
   without a recorded one links the member under the company root (rootFallback) and places it on the root's LEFT; the
   join gate falls back to GET /dashboard companyCode ("DAOVAULT (DVxxxx)"); placeUnplacedPaid at start (after the root
@@ -64,7 +77,10 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
 - Fast-start bonus (owner 2026-10-18; plan.ts FAST_START): 10 PAID directs (sponsor tree) counted from the member's own
   activation (joining date): within 3 days = "Rocket Start Bonus" $100, else within 7 days = "Fast Start Bonus" $50. ONE
   bonus per member (faster wins, never both), paid at once by the plan queue (awardFastStart after the 10th direct or the
-  member's own activation), inside the 25x cap. EarningType FAST_START_BONUS (level = 3 / 7). Dashboard #fastStartCard (under the
+  member's own activation), inside the 25x cap. EarningType FAST_START_BONUS (level = 3 / 7). Dashboard #fastStartCard (ABOVE #dvTokenCard, owner 2026-10-18: rocket badge, directs ring + bar from --fs-fill
+  (@property, filled once on screen), soft sheen, open tier breathes; bonus rows = gold frame with a running light,
+  rocket / bolt gold medallion, reward in a gold coin pill with a sheen, sparkles (green when earned, grey when closed); dashboard.ts riseIn = one rise-in on first view for
+  both cards; lite / reduced motion static) (under the
   metric cards, ALWAYS shown: offer before activation, countdown + per-bonus rows, earned / closed; root = info only)
   GET /dashboard bonusUsd + fastStart (always sent, eligible=false for root); admin "rank rewards" totals include the bonus.
   Clock = ON-CHAIN payment time (owner 2026-10-18): packages.paid_at = the Activated / ToppedUp event timestamp
@@ -190,13 +206,15 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
                       configured = "Published here at launch" / "Coming at launch".
                       Dashboard: #dashActivationTx chip links the member's own activationTxHash on BscScan.
   Landing wording (owner 2026-10-09): no "ROI"/"Ponzi"/"FIFO"/"pool"/"guarantee"/"solvency"/instant-payout claims;
-  rank rule copy says "DAO Matching on Both Sides". CTA has only Connect Wallet. Flip hint says Tap on touch screens.
+  rank rule copy says "DAO Matching on Both Sides"; legs are "Left Leg" / "Right Leg" everywhere (was Strong / Other,
+  owner 2026-10-18); #ranks leg card ends with .btn-leg-shine (gold outline + sheen) -> #rankCalcCard. CTA has only Connect Wallet. Flip hint says Tap on touch screens.
     landingFx.ts      nav scrollspy, "How to Join" progress rail / lit steps, initDropCards() ([data-drop] cards fall
                       from above then their .drop-body unfolds; used by the #vision DAO + VAULT = DAOVAULT cards); initJoinSteps(): #how expanding step
                       cards (one open at a time, auto-advance, progress stage)
   Also: preloader + header/footer brand use the DAOvault logo images (DAOlogo.jpg / favicon.png); loader counts 1%..100%;
-  #how stage has electric arcs (landingFx electrifyStage); signal cards flip in/out on phones (initSignalCardFlips);
+  #how stage has electric arcs (landingFx electrifyStage); signal cards rise in ONCE on phones and stay (initSignalCardFlips, owner 2026-10-18: no flip-away, threshold 0.08; id-level CSS so the tap-glow transition cannot drop the fade);
   countdown digits drop in; gold buttons sheen; on phones the compare table and dashboard 20-level table become cards.
+  Hero kicker pill (owner 2026-10-18): .kicker-seg spans; <=600px two centred lines + dot beside, font min(0.64rem, 2.75vw).
   Brand copy: "DAOVAULT — Where Communities Build Wealth Together" (hero, #vision, CTA, footer, meta).
   Mobile: audited at 360/390/768/1024 with no horizontal overflow; see "Mobile hardening" block at end of main.css.
   GSAP cleanup must clear only animated props (ANIMATED_PROPS in scrollAnimations.ts), never clearProps 'all'.
@@ -284,8 +302,10 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   Launch traffic (owner 2026-10-13, measured on the dev PC, 1 Node copy, 200 conns): health ~2.5k req/s, invite lookup ~1.5k,
   dashboard ~350 req/s, plan queue ~92 payments/s. Per-IP limits sized for CGNAT shared mobile IPs (API 1200/min, auth
   600/15min, financial 200/min; Nginx api 100r/s, auth 20r/s) + per-wallet sign-in limiter (authWalletRateLimiter,
-  AUTH_WALLET_RATE_LIMIT_MAX 20), also in render.yaml (owner asked, 2026-10-13). VPS env: backend/.env.prd (= backend/.env.production
-  on the server; its old PAYMENT_CONTRACT_ADDRESS was an example address, cleared) + root .env.production (generated secrets). activation.service caches the payment contract's immutable config per address.
+  AUTH_WALLET_RATE_LIMIT_MAX 20), also in render.yaml (owner asked, 2026-10-13). VPS env (owner 2026-10-18): ONE file, root .env.prod
+  (git-ignored; every key, secrets filled, contract addresses / tunnel token / INDEXER_START_BLOCK empty until known); compose
+  reads it as --env-file AND env_file of backend + worker. All *.example templates and the old .env.prod /
+  .env.prod were removed; local dev keeps backend/.env + frontend/.env. activation.service caches the payment contract's immutable config per address.
   Render backend is the free plan: not for launch traffic (VPS / paid plan + paid RPC).
   Review fixes (2026-10-14): withdrawals reserve payout capacity (reservedPayout: open unexpired vouchers + requests being
   signed, checked inside the serializable create; voucherAmount set at create; unsigned >5 min released); on-chain sponsor
@@ -313,6 +333,10 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   Admin / company wallet (owner 2026-10-15): the dashboard never shows #activationCard or #withdrawSection to an isAdmin
   wallet, in any view (also ?view=member); .dash-content-grid.is-single; the Withdraw menu shortcut hides with it; the
   server refuses an admin withdrawal (403, withdrawals.service request).
+  Launch gate (owner 2026-10-18): dashboard.ts gateLaunch hides #activationCard, #incomeCard, #withdrawSection (+ .is-single)
+  until PAYMENTS_OPEN_AT; an open page reloads itself at that moment (clock ahead of server = recheck in 60s; the activation
+  countdown no longer reloads); withdrawals.service request refuses (403) before it. render.yaml sets PAYMENTS_OPEN_AT to a
+  past date (Render = testing, shows all now; remove before launch there; VPS leaves it unset = 10 Nov). Withdraw box = .wd-* layout (dashboard.css end): Max button #withMaxBtn, fee label #withFeeLbl.
   Dashboard 20-level rows open the level modal whenever the level has members (locked levels are viewable, owner).
   Phones (owner 2026-10-12): html.lite = no .lvl-row / .reward-box entrance (a row stayed unpainted), finished entrances dropped
   via tbody/.reward-boxes.is-settled, particleScene skips frames while scrolling on LITE. Tap feedback site-wide: core.ts
@@ -333,7 +357,10 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   (landingFx initFaqAccordion wraps content in .faq-answer-inner; max-height made the close jump); plain plan-accurate answers.
   Rank calculator: data-unfold (unfoldCard.ts): scrolling down it drops in from above and its content opens top-down,
   scrolling up it rises from below and opens bottom-up (clip-path, replays after it leaves); gold-only internals,
-  slider gold fill via --fill (rankCalculator.ts); texts plain (no literal &bull;, no "instant cash", no emoji).
+  slider gold fill via --fill (rankCalculator.ts); the quick-target pill of the rank the numbers reach gets .is-active
+  (markPill, owner 2026-10-18: typed / +- team size selects its pill; ranks without a pill light none);
+  Results cards = raised 3D gold panels with a staggered light sweep, slider pin = 3D gold ball on a sunken glossy track
+  (end of main.css, owner 2026-10-18); texts plain (no literal &bull;, no "instant cash", no emoji).
   Mobile nav (owner 2026-10-13): <=960px the header is one floating gold capsule (logo, Connect Wallet, 2-line menu
   button #mnavToggle); landingFx initMobileNav opens #mnavPanel (numbered sections with icons, active highlight, Connect
   CTA), tap = close + smooth scroll below the header. Tap glow never changes the transform of .matrix-stack-card,
@@ -343,7 +370,8 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   down and the page showed above it); env(safe-area-inset-top) only under display-mode standalone/fullscreen (end of main.css).
   Four pillars (#about) retitled "Four Rules That Keep It Fair & Balanced", gold-only.
   #bonus (owner 2026-10-18, between #matrix and #about): "Start Fast, Earn Extra" = Rocket Start $100 / Fast Start $50 cards,
-  Day 0-3-7 timeline, rules (one bonus, counted from own activation, inside the 25x cap); data-scene "bonus" (logo); .fsb-* in main.css.
+  Day 0-3-7 timeline, two notes (one bonus; directs = referral link + activated; the credited/25x note and "(72 hours)"
+  removed by the owner 2026-10-18; bottom padding tightened); data-scene "bonus" (logo); .fsb-* in main.css.
   #matrix level cards (owner 2026-10-11): matrixAutoDeck.ts revealCard on every active-card change (after the deck
   reaches 70% of the screen): .mx-scan light sweeps down, content drops in piece by piece, % and USDT count up; CSS
   `.mx-reveal` block at the end of main.css, removed after 2.4s so the cards' own loops return; off for reduced motion.
@@ -357,7 +385,7 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
 - Frontend: `cd frontend; npm run dev` | `npm run build`
 - Docker (owner 2026-10-11; plain npm run dev unchanged): dev `docker compose -f docker-compose.dev.yml up --build`
   (own Postgres on 5433, code mounted, vite.config.js DOCKER/API_PROXY_TARGET); prod `docker compose --env-file
-  .env.production -f docker-compose.prod.yml --profile tunnel up -d --build` (db, backend, web = Nginx in frontend/nginx/,
+  .env.prod -f docker-compose.prod.yml --profile tunnel up -d --build` (db, backend, web = Nginx in frontend/nginx/,
   cloudflared, backup, redis). Scaling (owner 2026-10-11, 4-core VPS): backend deploy.replicas BACKEND_REPLICAS (default 3),
   Nginx round robin via Docker DNS, REDIS_URL -> shared rate-limit store (config/redis.ts, rate-limit-redis; unset = memory),
   Postgres tuned (shared_buffers 1GB, parallel 4), connection_limit=10 per copy. env.ts: empty optional values = unset.

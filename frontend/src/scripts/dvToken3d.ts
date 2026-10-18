@@ -116,6 +116,37 @@ function edgeTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+/** the minted DV coin's materials for a CylinderGeometry: [reeded edge, front face, back face] */
+function coinMaterials(img: HTMLImageElement, engraved: boolean): THREE.Material[] {
+  const face = faceTexture(img, engraved);
+  const faceBack = face.clone();
+  faceBack.needsUpdate = true;
+  faceBack.center.set(0.5, 0.5);
+  faceBack.rotation = -FACE_TURN; // the back cap is mirrored: the opposite quarter turn keeps it upright
+  const faceMat = (map: THREE.Texture) =>
+    new THREE.MeshStandardMaterial({
+      map,
+      metalness: 0.55,
+      roughness: 0.32,
+      emissive: 0xffffff,
+      emissiveMap: map,
+      emissiveIntensity: 0.32,
+    });
+  const edgeMat = new THREE.MeshStandardMaterial({
+    map: edgeTexture(),
+    metalness: 0.8,
+    roughness: 0.25,
+    emissive: 0x3a2a05,
+    emissiveIntensity: 0.6,
+  });
+  return [edgeMat, faceMat(face), faceMat(faceBack)];
+}
+
+/** The same minted DV coin look for other scenes (giftBox.ts DV token pot coins). */
+export async function dvCoinMaterials(engraved = true): Promise<THREE.Material[]> {
+  return coinMaterials(await loadLogo(), engraved);
+}
+
 /**
  * Mounts a 3D DV coin of `size` CSS px into `slot` (its <img> stays as the fallback). `engraved`
  * adds the ring text (worth it from about 60 px). Returns false when it fell back to CSS.
@@ -170,32 +201,10 @@ export async function mountDvToken3D(
   const sweep = new THREE.PointLight(0xffe08a, 6, 6); // the light that runs across the face
   scene.add(sweep);
 
-  const face = faceTexture(img, engraved);
-  const faceBack = face.clone();
-  faceBack.needsUpdate = true;
-  faceBack.center.set(0.5, 0.5);
-  faceBack.rotation = -FACE_TURN; // the back cap is mirrored: the opposite quarter turn keeps it upright
-  const faceMat = (map: THREE.Texture) =>
-    new THREE.MeshStandardMaterial({
-      map,
-      metalness: 0.55,
-      roughness: 0.32,
-      emissive: 0xffffff,
-      emissiveMap: map,
-      emissiveIntensity: 0.32,
-    });
-  const edgeMat = new THREE.MeshStandardMaterial({
-    map: edgeTexture(),
-    metalness: 0.8,
-    roughness: 0.25,
-    emissive: 0x3a2a05,
-    emissiveIntensity: 0.6,
-  });
-  const coin = new THREE.Mesh(new THREE.CylinderGeometry(1.25, 1.25, 0.26, 72, 1), [
-    edgeMat,
-    faceMat(face),
-    faceMat(faceBack),
-  ]);
+  const coin = new THREE.Mesh(
+    new THREE.CylinderGeometry(1.25, 1.25, 0.26, 72, 1),
+    coinMaterials(img, engraved),
+  );
   coin.rotation.x = Math.PI / 2; // faces toward the camera
   const pivot = new THREE.Group();
   pivot.add(coin);

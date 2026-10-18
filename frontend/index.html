@@ -255,7 +255,12 @@
           <div class="hero-left" data-reveal>
             <div class="kicker mono">
               <i class="kicker-dot"></i>
-              <span>BNB SMART CHAIN &middot; USDT (BEP-20) &middot; COMMUNITY-POWERED REWARDS</span>
+              <!-- two clean lines on phones (owner 2026-10-18), one line on wider screens -->
+              <span class="kicker-text"
+                ><span class="kicker-seg">BNB SMART CHAIN &middot; USDT (BEP-20)</span
+                ><span class="kicker-sep"> &middot; </span
+                ><span class="kicker-seg">COMMUNITY-POWERED REWARDS</span></span
+              >
             </div>
 
             <!-- Animated Section Path Laser Beam -->
@@ -641,8 +646,8 @@
             </h2>
             <p class="section-sub">
               Build a balanced organization and unlock a one-time reward at every milestone. Each
-              rank needs its <b>DAO target matched on both sides</b>: your Strong Leg and your Other
-              Leg (all your other legs combined).
+              rank needs its <b>DAO target matched on both sides</b>: your Left Leg and your Right Leg
+              (the two sides of your team).
             </p>
           </header>
 
@@ -653,8 +658,8 @@
               <h3>Balance Both Sides.<br /><span class="grad-text">Claim Your Reward.</span></h3>
               <p>
                 Eleven rank tiers, each with a one-time reward: from <b>$150 at Starter</b> to
-                <b>$200,000 at Crown President</b>. Match a rank's DAO target on your Strong Leg and
-                on your Other Leg, and its reward is credited to your balance. Ranks never go down,
+                <b>$200,000 at Crown President</b>. Match a rank's DAO target on your Left Leg and
+                on your Right Leg, and its reward is credited to your balance. Ranks never go down,
                 and every reward is paid once.
               </p>
               <p class="rule mono">
@@ -787,22 +792,22 @@
                 </div>
                 <p class="leg-rule-sub">
                   The rank's DAO must be matched on <b>both sides</b>: the full amount from your
-                  <b>Strong Leg</b> (your biggest team) <b>and</b> the same amount from your
-                  <b>Other Leg</b> (all your other legs combined).
+                  <b>Left Leg</b> <b>and</b> the same amount from your <b>Right Leg</b>
+                  (the two sides of your team).
                 </p>
 
                 <div class="leg-split-bar" aria-hidden="true">
-                  <div class="leg-power" title="Full DAO from the Strong Leg"></div>
-                  <div class="leg-other" title="Full DAO from the Other Leg"></div>
+                  <div class="leg-power" title="Full DAO from the Left Leg"></div>
+                  <div class="leg-other" title="Full DAO from the Right Leg"></div>
                 </div>
 
                 <div class="leg-labels">
                   <div class="leg-stat leg-stat--power">
-                    <span class="leg-stat-lbl mono"><i></i>Strong Leg Target</span>
+                    <span class="leg-stat-lbl mono"><i></i>Left Leg Target</span>
                     <strong id="rankPowerLegVal">25 DAO</strong>
                   </div>
                   <div class="leg-stat leg-stat--other">
-                    <span class="leg-stat-lbl mono"><i></i>Other Leg Target</span>
+                    <span class="leg-stat-lbl mono"><i></i>Right Leg Target</span>
                     <strong id="rankOtherLegVal">25 DAO</strong>
                   </div>
                 </div>
@@ -811,6 +816,12 @@
                   <span class="lbl-dim">Total team volume needed</span>
                   <span class="val-bold" id="rankDisplayDao">50 DAO</span>
                 </div>
+
+                <!-- shining theme button under the Left / Right targets (owner 2026-10-18) -->
+                <a class="btn-leg-shine" href="#rankCalcCard">
+                  <span>Calculate Your Rank</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></svg>
+                </a>
               </div>
             </div>
           </div>
@@ -842,7 +853,7 @@
                     <span class="rcalc-pulse-dot"></span> YOUR TEAM SIZE
                   </label>
                   <span class="rcalc-input-hint mono"
-                    >1 member ($300) = 1 DAO &bull; split evenly between Strong Leg and Other
+                    >1 member ($300) = 1 DAO &bull; split evenly between Left Leg and Right
                     Leg</span
                   >
                 </div>
@@ -1772,7 +1783,7 @@
               <h3>Rocket Start Bonus</h3>
               <p class="fsb-amount"><b>$100</b><span class="mono">USDT</span></p>
               <p class="fsb-rule">
-                10 activated directs within <b>3 days (72 hours)</b> of your activation.
+                10 activated directs within <b>3 days</b> of your activation.
               </p>
             </article>
             <article class="glass fsb-card" data-reveal>
@@ -1801,10 +1812,6 @@
             </li>
             <li>
               Directs are members who joined with your referral link and activated, on either side.
-            </li>
-            <li>
-              Credited to your balance when your 10th direct activates; it counts toward the
-              25&times; earnings cap.
             </li>
           </ul>
         </div>
@@ -2137,7 +2144,7 @@
               <tr>
                 <td><strong>Leadership Balancing</strong></td>
                 <td><span class="badge-negative">&cross; Ranks won with a single strong leg</span></td>
-                <td><span class="badge-positive">&rarr; DAO Matching on Both Sides (Strong Leg + Other Leg)</span></td>
+                <td><span class="badge-positive">&rarr; DAO Matching on Both Sides (Left Leg + Right Leg)</span></td>
               </tr>
               <tr>
                 <td><strong>Level Depth</strong></td>
@@ -2727,8 +2734,8 @@
                   <p>
                     There are 11 ranks, from <b>Starter ($150)</b> to
                     <b>Crown President ($200,000)</b>. Each rank needs its DAO target on
-                    <b>both sides</b>: your Strong Leg (your biggest team) and your Other Leg (all
-                    your other teams together). 1 DAO = 1 activated $300 package. Each reward is
+                    <b>both sides</b>: your Left Leg and your Right Leg (the two sides of your
+                    team). 1 DAO = 1 activated $300 package. Each reward is
                     paid once, to your balance, and ranks never go down.
                   </p>
                 </div>

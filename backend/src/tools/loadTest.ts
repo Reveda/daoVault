@@ -2,7 +2,7 @@
  * Launch load test (owner, 2026-10-14). Run on the VPS BEFORE launch (DOCKER.md B17), inside the
  * Docker network so it measures the API itself:
  *
- *   docker compose --env-file .env.production -f docker-compose.prod.yml run --rm \
+ *   docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm \
  *     -e LOAD_USERS=300 -e LOAD_SECONDS=60 -e LOAD_SIGNIN=1 backend node dist/tools/loadTest.js
  *   ... same with -e LOAD_CLEANUP=1 afterwards (removes every test wallet again)
  *

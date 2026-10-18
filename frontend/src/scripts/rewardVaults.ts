@@ -26,6 +26,10 @@ export const RANK_TIERS = [
 ];
 
 const money = (n: number) => `$${n.toLocaleString('en-US')}`;
+
+/** a sealed rank box offers 'Preview the opening' only on the dev server and review builds (Render:
+ *  VITE_REWARD_PREVIEW=true); production keeps sealed boxes sealed (owner 2026-10-18) */
+const REWARD_PREVIEW = import.meta.env.DEV || import.meta.env.VITE_REWARD_PREVIEW === 'true';
 const openedKey = (wallet: string, rank: number) =>
   `daovault_box_opened_${wallet.toLowerCase()}_${rank}`;
 
@@ -81,6 +85,7 @@ export function renderRewardVaults(wallet: string, currentRank: number): void {
           reward: tier.reward,
           requirement: `${tier.volume.toLocaleString()} DAO matching on each side (${tier.name} rank)`,
           mode: state,
+          allowPreview: REWARD_PREVIEW,
           onOpened: () => {
             markOpened(wallet, rank);
             draw();

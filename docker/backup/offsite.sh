@@ -9,7 +9,7 @@
 # rclone's settings (remote + crypt passwords) are ./secrets/rclone.conf, mounted read-only.
 set -eu
 
-REMOTE="${OFFSITE_REMOTE:?set OFFSITE_REMOTE (e.g. daovault-crypt:) in .env.production}"
+REMOTE="${OFFSITE_REMOTE:?set OFFSITE_REMOTE (e.g. daovault-crypt:) in .env.prod}"
 EVERY="${OFFSITE_EVERY_SECONDS:-21600}"
 KEEP_DAYS="${OFFSITE_KEEP_DAYS:-30}"
 

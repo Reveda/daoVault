@@ -61,6 +61,7 @@ import {
   celebrate,
 } from './dashboardFx.ts';
 import { renderRewardVaults, initWalletMenu, RANK_TIERS } from './rewardVaults.ts';
+import { openGiftBox } from './giftBox.ts';
 import { initDvLogos } from './dvLogo.ts';
 import { openLevelModal } from './levelModal.ts';
 import { renderRankProgress } from './rankProgress.ts';
@@ -323,6 +324,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('activationCard')?.setAttribute('hidden', '');
     document.getElementById('withdrawSection')?.setAttribute('hidden', '');
     document.querySelector('.dash-content-grid')?.classList.add('is-single');
+  } else {
+    gateLaunch(dashboardData?.paymentsOpen ?? true, dashboardData?.paymentsOpenAt ?? null);
   }
   // pay with the sponsor the server recorded (the team tree), so the on-chain sponsor always matches it;
   // a member who still has to pick Left / Right joins first (joinCode)
@@ -349,6 +352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   );
   renderPowerBusiness(dashboardData);
   initDvToken(dashboardData);
+  initDvBox(account, dashboardData);
   updateMemberDetails(dashboardData, Boolean(pkg) || isRoot, capEarned, maxCap);
 
   // 7. 25x capping gauge
@@ -388,6 +392,27 @@ function initDashboardNavigation(): void {
  * only the opening date and a live countdown (no other message, owner), with the button off; the
  * page reloads by itself at that moment.
  */
+/**
+ * Launch gate (owner 2026-10-18): Pay & Activate (#activationCard), Recent Income (#incomeCard) and the USDT
+ * withdrawal (#withdrawSection) stay hidden until payments open (PAYMENTS_OPEN_AT, server clock: 10 Nov 00:00
+ * IST; Render sets a past date so they show there now). At that moment an open dashboard reloads by itself
+ * and everything appears with fresh data. If this device's clock runs ahead of the server, it checks again
+ * a minute later instead of reloading in a loop. Display only: the server refuses payments-side actions
+ * (withdrawals) before the date on its own.
+ */
+function gateLaunch(open: boolean, openAt: string | null): void {
+  if (open) return;
+  for (const id of ['activationCard', 'incomeCard', 'withdrawSection'])
+    document.getElementById(id)?.setAttribute('hidden', '');
+  document.querySelector('.dash-content-grid')?.classList.add('is-single');
+  const at = openAt ? new Date(openAt).getTime() : NaN;
+  if (!Number.isFinite(at)) return;
+  const wait = at - Date.now();
+  // setTimeout holds at most ~24.8 days; a later date is picked up on the next visit
+  if (wait > 2_000_000_000) return;
+  window.setTimeout(() => window.location.reload(), wait > 0 ? wait + 3_000 : 60_000);
+}
+
 function showPaymentsCountdown(button: HTMLButtonElement, openAt: string): void {
   const title = document.getElementById('activationTitle');
   const status = document.getElementById('activationStatus');
@@ -399,7 +424,7 @@ function showPaymentsCountdown(button: HTMLButtonElement, openAt: string): void 
   const tick = () => {
     const left = at.getTime() - Date.now();
     if (left <= 0) {
-      window.location.reload();
+      if (status) status.textContent = 'Opening now';
       return;
     }
     const d = Math.floor(left / 86_400_000),
@@ -584,6 +609,84 @@ function initActivation(
  * the "DV Token" header button show the server's numbers: packages x 1,500, one line per package.
  * Hidden for the company root and when the server is unreachable (never a guessed number).
  */
+/**
+ * DV token pot (owner 2026-10-18): a gold pot under a red cloth on the DV token card that opens like the
+ * rank reward boxes (giftBox.ts theme 'pot': the cloth blows off and DV coins erupt) and reveals the member's DV
+ * allocation (packages x 1,500). Everywhere, production included (owner 2026-10-18: "as soon as he takes a
+ * package, show him how many tokens he has"):
+ *   no package yet  -> sealed: rattles, shows the 1,500 DV a first package records; "Preview the opening"
+ *                      only on the dev server / review builds (VITE_REWARD_PREVIEW=true), never in production
+ *   allocation new  -> ready: "Open box", the pot bursts and reveals the total; remembered on this device
+ *   already opened  -> opened: replays the reveal; a top-up (more DV) makes it ready again
+ * Display only: the tokens are credited at the planned DV launch; nothing is minted or sent now. Texts say
+ * "allocated" and "planned", never value or profit.
+ */
+const DV_POT_PREVIEW = import.meta.env.DEV || import.meta.env.VITE_REWARD_PREVIEW === 'true';
+function initDvBox(account: string, data: DashboardData | null): void {
+  const btn = document.getElementById('dvBoxBtn');
+  const stateEl = document.getElementById('dvBoxState');
+  const dv = data?.dvToken;
+  if (!btn || !stateEl || !dv || data?.isRoot) return;
+  const fmt = (n: number) => `${Math.round(n).toLocaleString('en-US')} DV`;
+  const key = `daovault_dv_box_${account.toLowerCase()}`;
+  const openedAmount = () => {
+    try {
+      return Number(localStorage.getItem(key)) || 0;
+    } catch {
+      return 0;
+    }
+  };
+  const draw = () => {
+    const mode: 'locked' | 'ready' | 'opened' =
+      dv.allocated <= 0
+        ? 'locked'
+        : openedAmount() >= dv.allocated
+          ? 'opened'
+          : 'ready';
+    btn.className = `dv-box is-${mode}`;
+    btn.querySelector('.rb-lock')?.toggleAttribute('hidden', mode !== 'locked');
+    stateEl.textContent =
+      mode === 'locked'
+        ? 'Unlocks with your activation'
+        : mode === 'ready'
+          ? 'Ready to open'
+          : `Opened · ${fmt(dv.allocated)} allocated`;
+    btn.setAttribute(
+      'aria-label',
+      `DV token pot: ${mode === 'locked' ? 'sealed until you activate' : mode === 'ready' ? 'ready to open' : `opened, ${fmt(dv.allocated)} allocated`}`,
+    );
+    return mode;
+  };
+  draw();
+  btn.addEventListener('click', () => {
+    const mode = draw();
+    const launch = `Planned to be credited to this wallet at the DV launch on ${dv.network} (${dv.launch}).`;
+    openGiftBox({
+      rank: 'DV Token Allocation',
+      reward: mode === 'locked' ? dv.perPackage : dv.allocated,
+      requirement: 'your $300 package activation',
+      mode,
+      format: fmt,
+      theme: 'pot',
+      allowPreview: DV_POT_PREVIEW,
+      kicker: mode === 'locked' ? 'SEALED DV TOKEN POT' : 'DV TOKEN POT',
+      label: 'DV TOKENS ALLOCATED',
+      note: `${fmt(dv.allocated)} allocated to your wallet (${fmt(dv.perPackage)} per package). ${launch}`,
+      lockedNote: `Activate your $300 package and ${fmt(dv.perPackage)} are allocated to you. ${launch}`,
+      previewNote: `This was a preview. The pot opens for real once your $300 package is activated: ${fmt(dv.perPackage)} per package.`,
+      doneLabel: 'Got it',
+      onOpened: () => {
+        try {
+          localStorage.setItem(key, String(dv.allocated));
+        } catch {
+          /* storage blocked: the box simply stays ready */
+        }
+        draw();
+      },
+    });
+  });
+}
+
 function initDvToken(data: DashboardData | null): void {
   const card = document.getElementById('dvTokenCard');
   const menu = document.getElementById('dvMenu');
@@ -606,6 +709,7 @@ function initDvToken(data: DashboardData | null): void {
 
   if (card) {
     card.hidden = false;
+    riseIn(card);
     card.classList.toggle('is-empty', count === 0);
     rollNumber(document.getElementById('dvTokenAmount'), dv.allocated, fmt);
     const calc = document.getElementById('dvTokenCalc');
@@ -923,7 +1027,22 @@ function renderFastStart(data: DashboardData | null): void {
     ? (fs.tiers.find((t) => t.deadline && new Date(t.deadline).getTime() > now) ?? null)
     : null;
   card.hidden = false;
-  // one row per bonus, with its own state
+  // ring + bar fill (--fs-fill) start once the card has risen into view, so the fill is seen growing
+  const show = (pct: number) =>
+    riseIn(card, () =>
+      requestAnimationFrame(() => card.style.setProperty('--fs-fill', `${Math.min(100, pct)}%`)),
+    );
+  const ring = document.getElementById('fastStartRing');
+  if (ring) ring.hidden = !fs.eligible;
+  // ring: the number big, "of 10" under it (one line "0 / 10" did not fit small phones)
+  const setCount = (n: number) => {
+    set('fastStartCount', String(n));
+    set('fastStartOf', `of ${fs.directsNeeded}`);
+    ring?.setAttribute('aria-label', `${n} of ${fs.directsNeeded} directs activated`);
+  };
+  // one row per bonus, with its own state; rocket = the 3-day bonus, bolt = the 7-day one
+  const ICON_ROCKET = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>';
+  const ICON_BOLT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>';
   tiersEl.innerHTML = fs.tiers
     .map((t) => {
       const state = !fs.eligible
@@ -946,20 +1065,20 @@ function renderFastStart(data: DashboardData | null): void {
               ? ' is-closed'
               : '';
       return (
-        `<div class="fs-tier${cls}"><span class="fs-tier-name">${t.name}</span><span class="fs-tier-rule">${fs.directsNeeded} directs within ${t.days} days</span>` +
-        `<b class="mono">$${t.rewardUsd}</b>${state ? `<small class="fs-tier-state mono">${state}</small>` : ''}</div>`
+        `<div class="fs-tier${cls}"><span class="fs-tier-icon" aria-hidden="true">${t.days <= 3 ? ICON_ROCKET : ICON_BOLT}</span>` +
+        `<span class="fs-tier-name">${t.name}</span><span class="fs-tier-rule">${fs.directsNeeded} directs within ${t.days} days</span>` +
+        `<b class="mono fs-tier-amt">$${t.rewardUsd}</b>${state ? `<small class="fs-tier-state mono">${state}</small>` : ''}</div>`
       );
     })
     .join('');
 
-  const count = document.getElementById('fastStartCount');
   if (!fs.eligible) {
     set('fastStartTitle', 'Fast-start bonuses for members');
     set(
       'fastStartText',
       'Members earn these when 10 of their directs activate soon after they do. The company root does not receive them.',
     );
-    if (count) count.hidden = true;
+    show(0);
     return;
   }
   if (earned) {
@@ -969,8 +1088,8 @@ function renderFastStart(data: DashboardData | null): void {
       'fastStartText',
       `${fs.directsNeeded} directs activated within ${earned.days} days: +$${fs.earnedUsd.toLocaleString()} added to your balance.`,
     );
-    set('fastStartCount', `${fs.directsNeeded} / ${fs.directsNeeded}`);
-    card.style.setProperty('--fs-fill', '100%');
+    setCount(fs.directsNeeded);
+    show(100);
     return;
   }
   if (!fs.joinedAt) {
@@ -979,8 +1098,8 @@ function renderFastStart(data: DashboardData | null): void {
       'fastStartText',
       `The clock starts the day you activate your ID. Get ${fs.directsNeeded} directs activated within 3 days for $100, or within 7 days for $50.`,
     );
-    set('fastStartCount', `0 / ${fs.directsNeeded}`);
-    card.style.setProperty('--fs-fill', '0%');
+    setCount(0);
+    show(0);
     return;
   }
   if (!open) {
@@ -990,12 +1109,9 @@ function renderFastStart(data: DashboardData | null): void {
       'fastStartText',
       `${Math.min(last.directs, fs.directsNeeded)} of ${fs.directsNeeded} directs activated within ${last.days} days of joining.`,
     );
-    set('fastStartCount', `${Math.min(last.directs, fs.directsNeeded)} / ${fs.directsNeeded}`);
+    setCount(Math.min(last.directs, fs.directsNeeded));
     card.classList.add('is-closed');
-    card.style.setProperty(
-      '--fs-fill',
-      `${Math.min(100, (last.directs / fs.directsNeeded) * 100)}%`,
-    );
+    show((last.directs / fs.directsNeeded) * 100);
     return;
   }
   set('fastStartTitle', `${open.name}: $${open.rewardUsd}`);
@@ -1003,8 +1119,42 @@ function renderFastStart(data: DashboardData | null): void {
     'fastStartText',
     `Get ${fs.directsNeeded} directs activated within ${open.days} days of joining. ${timeLeft(open.deadline!)}.`,
   );
-  set('fastStartCount', `${Math.min(open.directs, fs.directsNeeded)} / ${fs.directsNeeded}`);
-  card.style.setProperty('--fs-fill', `${Math.min(100, (open.directs / fs.directsNeeded) * 100)}%`);
+  setCount(Math.min(open.directs, fs.directsNeeded));
+  show((open.directs / fs.directsNeeded) * 100);
+}
+
+/**
+ * Cards that appear after the data loads (fast-start bonus, DV token) rise in ONCE when they first
+ * scroll into view (owner 2026-10-18: they popped in). onShow runs at that moment (fills, counters).
+ * Reduced motion or no IntersectionObserver = shown at once. A later refresh only re-runs onShow.
+ */
+function riseIn(card: HTMLElement, onShow?: () => void): void {
+  // the page-load cascade (dashboardFx fx-pre) must not hide a card that appears later
+  card.classList.remove('fx-pre', 'fx-in');
+  if (card.dataset.risen) {
+    onShow?.();
+    return;
+  }
+  card.dataset.risen = '1';
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+    onShow?.();
+    return;
+  }
+  card.classList.add('rise-pre');
+  const io = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((e) => e.isIntersecting)) return;
+      io.disconnect();
+      card.classList.replace('rise-pre', 'rise-in');
+      onShow?.();
+      // the card's own animation only (children run their own loops); timer as a safety net
+      const done = () => card.classList.remove('rise-in');
+      card.addEventListener('animationend', (e) => e.target === card && done());
+      window.setTimeout(done, 1600);
+    },
+    { threshold: 0.12 },
+  );
+  io.observe(card);
 }
 
 /** Latest level commissions, rank rewards and bonuses. */
@@ -1222,7 +1372,7 @@ function renderWithdrawalSummary(summary: WithdrawalSummary): void {
   const meta = document.getElementById('withMeta');
   rollNumber(availEl, summary.availableUsd, (n) => `${formatUsd(n)} USDT`);
   if (meta)
-    meta.textContent = `Pending ${formatUsd(summary.pendingUsd)} · Withdrawn ${formatUsd(summary.withdrawnUsd)} · Min ${formatUsd(summary.minimumUsd)}`;
+    meta.textContent = `Pending ${formatUsd(summary.pendingUsd)} · Withdrawn ${formatUsd(summary.withdrawnUsd)} · Minimum ${formatUsd(summary.minimumUsd)}`;
   const box = document.getElementById('withHistory');
   const list = document.getElementById('withHistoryList');
   if (!box || !list) return;
@@ -1265,23 +1415,34 @@ function initWithdrawals(
   const submitBtn = document.getElementById('withSubmitBtn') as HTMLButtonElement | null;
   const label = document.getElementById('withSubmitLabel');
   const note = document.getElementById('withPayoutNote');
+  const feeLbl = document.getElementById('withFeeLbl');
   let available = availableBalance;
   let feePercent = 5;
+  // minimum $100 (owner 2026-10-18; the server value wins), maximum = the whole available balance
+  let minimum = data?.withdrawalMinUsd ?? 100;
   let items: Withdrawal[] = [];
 
   rollNumber(availEl, available, (n) => `${formatUsd(n)} USDT`);
   const meta = document.getElementById('withMeta');
   if (meta && data)
-    meta.textContent = `Pending ${formatUsd(data.pendingWithdrawalUsd)} · Withdrawn ${formatUsd(data.withdrawnUsd)}`;
+    meta.textContent = `Pending ${formatUsd(data.pendingWithdrawalUsd)} · Withdrawn ${formatUsd(data.withdrawnUsd)} · Minimum ${formatUsd(minimum)}`;
 
   const updateMath = (): void => {
     const amount = Math.max(0, parseFloat(inputEl?.value || '0') || 0);
     const fee = Math.round(amount * feePercent) / 100;
     if (grossEl) grossEl.textContent = formatUsd(amount);
-    if (feeEl) feeEl.textContent = `-${formatUsd(fee)} (${feePercent}%)`;
+    if (feeEl) feeEl.textContent = `-${formatUsd(fee)}`;
+    if (feeLbl) feeLbl.textContent = `Withdrawal fee (${feePercent}%)`;
     if (netEl) netEl.textContent = `${formatUsd(Math.max(0, amount - fee))} USDT`;
   };
   inputEl?.addEventListener('input', updateMath);
+  // Max = the whole available balance (whole cents, never more than the server reports)
+  document.getElementById('withMaxBtn')?.addEventListener('click', () => {
+    if (!inputEl) return;
+    inputEl.value = String(Math.floor(Math.max(0, available) * 100) / 100);
+    updateMath();
+    inputEl.focus();
+  });
   updateMath();
 
   if (!data || !submitBtn) {
@@ -1294,11 +1455,12 @@ function initWithdrawals(
     const summary = await getWithdrawals(token);
     available = summary.availableUsd;
     feePercent = summary.feePercent;
+    minimum = summary.minimumUsd;
     items = summary.items;
     if (note)
       note.textContent = summary.instant
-        ? '• Instant: confirm once in your wallet and the USDT arrives in seconds (a tiny BNB network fee applies). Signing in costs no gas.'
-        : '• Withdrawals open soon. Your balance stays safe here until then.';
+        ? 'Confirm once in your wallet and the USDT is sent to you on BNB Smart Chain, usually within seconds. A small BNB network fee applies.'
+        : 'Withdrawals are not available right now. Your balance stays recorded here until they open.';
     renderWithdrawalSummary(summary);
     updateMath();
   };
@@ -1336,8 +1498,12 @@ function initWithdrawals(
       showToast('Enter the amount you want to withdraw.', true);
       return;
     }
+    if (amount < minimum) {
+      showToast(`The minimum withdrawal is ${formatUsd(minimum)}.`, true);
+      return;
+    }
     if (amount > available) {
-      showToast('That is more than your available balance.', true);
+      showToast(`You can withdraw up to ${formatUsd(available)}, your available balance.`, true);
       return;
     }
     submitBtn.disabled = true;

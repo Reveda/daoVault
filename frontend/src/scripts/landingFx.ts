@@ -414,23 +414,22 @@ export function initSignalCardFlips(): void {
   const cards = [
     ...document.querySelectorAll<HTMLElement>('#heroMetricsGrid .crypto-exchange-card'),
   ];
-  if (!cards.length || !('IntersectionObserver' in window)) return;
-  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
+  if (!cards.length) return;
+  // owner bug 2026-10-18: cards got stuck half-turned (a tall card never reached the old 45% threshold)
+  // and flipped away when scrolled past. Now each card rises in ONCE, as soon as a bit of it shows, and stays.
+  if (!('IntersectionObserver' in window)) {
+    cards.forEach((c) => c.classList.add('fx-flip-in'));
+    return;
+  }
   const io = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
-        const card = entry.target as HTMLElement;
-        if (entry.isIntersecting) {
-          card.classList.add('fx-flip-in');
-          card.classList.remove('fx-flip-past');
-        } else {
-          const above = entry.boundingClientRect.top < 0;
-          card.classList.remove('fx-flip-in');
-          card.classList.toggle('fx-flip-past', above);
-        }
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add('fx-flip-in');
+        io.unobserve(entry.target);
       });
     },
-    { threshold: isMobile ? 0.45 : 0.3 },
+    { threshold: 0.08, rootMargin: '0px 0px -6% 0px' },
   );
   cards.forEach((c) => io.observe(c));
 }

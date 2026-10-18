@@ -2,7 +2,7 @@
  * Production settings check (owner review, 2026-10-14). Run before going live, and after any
  * settings change, on the server itself:
  *
- *   docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backend node dist/tools/checkEnv.js
+ *   docker compose --env-file .env.prod -f docker-compose.prod.yml run --rm backend node dist/tools/checkEnv.js
  *   (Render / a PC: cd backend && npm run check:env)
  *
  * Checks that every value the live system needs is set AND agrees with the blockchain:

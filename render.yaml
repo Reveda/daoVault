@@ -58,6 +58,11 @@ services:
         sync: false
       - key: ACTIVATION_AMOUNT_USDT
         value: 300
+      # Render = testing (owner 2026-10-18): a past date, so Pay & Activate, Recent Income and Withdrawal
+      # show now. The VPS (launch) leaves it unset = 2026-11-10 00:00 IST. Real-money payments stay locked
+      # by VITE_ALLOW_MAINNET_PAYMENTS=false on the frontend.
+      - key: PAYMENTS_OPEN_AT
+        value: "2026-10-01T00:00:00+05:30"
 
   - type: web
     name: daovault-frontend
@@ -107,6 +112,10 @@ services:
       # development lock: real-money payments stay off until this is set to "true" at launch
       - key: VITE_ALLOW_MAINNET_PAYMENTS
         value: "false"
+      # sealed rank reward boxes AND the sealed DV token pot offer "Preview the opening" on Render (review)
+      # only; production = no preview (a pot with tokens opens everywhere)
+      - key: VITE_REWARD_PREVIEW
+        value: "true"
 
 databases:
   - name: daovault-db

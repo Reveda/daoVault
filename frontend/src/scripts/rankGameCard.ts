@@ -364,7 +364,7 @@ function renderRankData(rank: RankTier): void {
 
   if (titleEl) titleEl.textContent = `${rank.id}. ${rank.title}`;
   if (descEl) descEl.textContent = rank.desc;
-  // DAO matching: the rank's DAO is needed on BOTH sides (power leg and other legs), so the
+  // DAO matching: the rank's DAO is needed on BOTH sides (Left Leg and Right Leg), so the
   // total team volume is twice the rank's DAO (Starter: 25 + 25 = 50 DAO)
   if (daoEl) daoEl.textContent = `${(rank.dao * 2).toLocaleString()} DAO`;
   const daoRoll = (el: HTMLElement | null, to: number) => {

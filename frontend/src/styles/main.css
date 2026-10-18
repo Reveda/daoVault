@@ -7149,32 +7149,31 @@ main {
   }
 }
 
-/* Signal cards flip (phones / tablets): turn in from below, flip away above
-   (landingFx.ts initSignalCardFlips) */
+/* Signal cards on phones / tablets (landingFx.ts initSignalCardFlips; owner bug 2026-10-18: cards stuck
+   half-turned and jerky): ONE smooth rise-in when a card first shows, then it simply stays (no flip away).
+   Id-level selectors so the tap-glow transition rule cannot drop the fade. */
 @media (max-width: 900px) {
-  .hero-metrics-section .hero-metrics-grid {
-    perspective: 900px;
-  }
-
-  .hero-metrics-section .hero-metrics-grid .crypto-exchange-card {
+  #heroMetricsGrid .crypto-exchange-card:not(#_):not(#__) {
     animation: none !important;
     opacity: 0;
-    transform-origin: center top;
-    transform: perspective(900px) rotateX(-78deg) rotateZ(-5deg) translateY(34px) scale(0.9) !important;
+    transform: translateY(18px) !important;
     transition:
-      transform 0.95s cubic-bezier(0.2, 0.9, 0.25, 1.12),
-      opacity 0.55s ease;
+      opacity 0.6s ease,
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.45s ease,
+      box-shadow 0.45s ease !important;
   }
 
-  .hero-metrics-section .hero-metrics-grid .crypto-exchange-card.fx-flip-in {
+  #heroMetricsGrid .crypto-exchange-card.fx-flip-in:not(#_):not(#__) {
     opacity: 1;
     transform: none !important;
   }
-
-  .hero-metrics-section .hero-metrics-grid .crypto-exchange-card.fx-flip-past {
-    opacity: 0;
-    transform-origin: center bottom;
-    transform: perspective(900px) rotateX(72deg) rotateZ(5deg) translateY(-26px) scale(0.9) !important;
+}
+@media (max-width: 900px) and (prefers-reduced-motion: reduce) {
+  #heroMetricsGrid .crypto-exchange-card:not(#_):not(#__) {
+    opacity: 1;
+    transform: none !important;
+    transition: none !important;
   }
 }
 
@@ -12775,5 +12774,276 @@ body { overflow-x: hidden; overflow-x: clip; }
     font-size: min(0.52rem, 2.05vw);
     letter-spacing: 0.06em;
     line-height: 1.3;
+  }
+}
+
+/* Rank card (#ranks): shining theme button under the Left / Right Leg targets (owner 2026-10-18).
+   A gold-outline "normal" button, so the solid "Start Qualifying Now" stays the main action; a light
+   sweeps across it every few seconds. Opens the rank calculator just below. */
+.btn-leg-shine {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.8rem 1.2rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.16), rgba(212, 175, 55, 0.05));
+  color: #ffe58a;
+  font-weight: 700;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+  box-shadow:
+    0 0 18px rgba(212, 175, 55, 0.14),
+    inset 0 1px 0 rgba(255, 240, 190, 0.18);
+  transition:
+    border-color 0.3s ease,
+    box-shadow 0.3s ease,
+    color 0.3s ease;
+}
+.btn-leg-shine svg {
+  width: 16px;
+  height: 16px;
+}
+.btn-leg-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 236, 160, 0.38) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: legShine 3.6s ease-in-out 0.8s infinite;
+}
+@keyframes legShine {
+  55%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+.btn-leg-shine:hover,
+.btn-leg-shine:focus-visible {
+  border-color: rgba(240, 205, 110, 0.9);
+  color: #fff3c4;
+  box-shadow:
+    0 0 26px rgba(212, 175, 55, 0.28),
+    inset 0 1px 0 rgba(255, 240, 190, 0.25);
+}
+#rankCalcCard {
+  scroll-margin-top: 96px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-leg-shine::after {
+    animation: none;
+  }
+}
+
+/* Phone header scrim (owner bug 2026-10-18, Chrome on Android: while scrolling, page text showed in the
+   gap above the capsule and around it, so the header looked cut / half hidden). Below 960px the header
+   gets a dark band behind the capsule: solid under the status bar, fading out just below the capsule,
+   so scrolled content never shows above it. Landing page and dashboard alike (both load main.css). */
+@media (max-width: 960px) {
+  .top-header::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 -14px 0;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+      180deg,
+      rgba(5, 5, 5, 0.97) 0%,
+      rgba(5, 5, 5, 0.9) 55%,
+      rgba(5, 5, 5, 0.55) 80%,
+      rgba(5, 5, 5, 0) 100%
+    );
+  }
+}
+
+/* Rank calculator quick targets on touch screens: a tapped pill keeps :hover, so only .is-active (the rank the
+   numbers reach, rankCalculator.ts markPill) stays gold; otherwise two pills looked selected */
+@media (hover: none) {
+  #rankCalcCard .rcalc-pill:hover:not(.is-active) {
+    background: rgba(212, 175, 55, 0.06);
+    border-color: rgba(212, 175, 55, 0.25);
+    color: #e6e7eb;
+    transform: none;
+  }
+}
+
+/* Rank calculator results + slider pin, 3D gold (owner 2026-10-18: "shine + thora 3D feel").
+   Result cards: raised gold panel (top bevel light, bottom shade, drop shadow), a light sweep across each
+   card in turn, gold gradient values. Slider: a sunken track with a glossy gold fill and the pin as a
+   3D gold ball (specular highlight, shaded underside, shadow under it). Lite / reduced motion: no sweep. */
+#rankCalcCard .rcalc-stat {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 236, 160, 0.09), rgba(212, 175, 55, 0.02) 45%, rgba(0, 0, 0, 0.25)),
+    linear-gradient(180deg, rgba(26, 22, 11, 0.9), rgba(10, 9, 6, 0.9)) !important;
+  border: 1px solid rgba(212, 175, 55, 0.36) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 240, 190, 0.22),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.45),
+    0 14px 26px -16px rgba(0, 0, 0, 0.95),
+    0 0 22px -12px rgba(212, 175, 55, 0.5);
+}
+#rankCalcCard .rcalc-stat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    rgba(255, 236, 160, 0.06) 44%,
+    rgba(255, 244, 200, 0.2) 50%,
+    rgba(255, 236, 160, 0.06) 56%,
+    transparent 70%
+  );
+  transform: translateX(-110%);
+  animation: rcalcShine 6s ease-in-out infinite;
+}
+#rankCalcCard .rcalc-stat:nth-child(2)::after {
+  animation-delay: 0.6s;
+}
+#rankCalcCard .rcalc-stat:nth-child(3)::after {
+  animation-delay: 1.2s;
+}
+@keyframes rcalcShine {
+  0% {
+    transform: translateX(-110%);
+  }
+  35%,
+  100% {
+    transform: translateX(110%);
+  }
+}
+#rankCalcCard .rcalc-stat > * {
+  position: relative;
+  z-index: 1;
+}
+#rankCalcCard .rcalc-stat-title.text-gold {
+  background: linear-gradient(180deg, #fff3c4 0%, #ffd75e 45%, #d4af37 70%, #b8860b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 2px 0 rgba(70, 48, 0, 0.55)) drop-shadow(0 0 10px rgba(212, 175, 55, 0.3));
+}
+#rankCalcCard .rcalc-crest-preview {
+  box-shadow:
+    0 0 18px rgba(212, 175, 55, 0.45),
+    0 8px 16px -6px rgba(0, 0, 0, 0.8),
+    inset 0 2px 3px rgba(255, 240, 190, 0.25),
+    inset 0 -4px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* slider: sunken track, glossy gold fill */
+#rankCalcCard .rcalc-slider {
+  height: 10px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 55%) 0 0 / var(--fill, 0%) 100% no-repeat,
+    linear-gradient(90deg, #8a6510, #d4af37 60%, #ffe58a) 0 0 / var(--fill, 0%) 100% no-repeat,
+    rgba(255, 255, 255, 0.08) !important;
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.7),
+    0 1px 0 rgba(255, 255, 255, 0.06);
+}
+/* the pin: a 3D gold ball */
+#rankCalcCard .rcalc-slider::-webkit-slider-thumb {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 240, 190, 0.9);
+  background:
+    radial-gradient(circle at 34% 28%, #ffffff 0 8%, rgba(255, 255, 255, 0) 24%),
+    radial-gradient(circle at 50% 50%, #ffe58a 0%, #d4af37 48%, #8a6510 82%, #4a3406 100%);
+  box-shadow:
+    0 6px 10px -2px rgba(0, 0, 0, 0.75),
+    0 0 18px rgba(212, 175, 55, 0.65),
+    inset 0 -4px 6px rgba(70, 45, 0, 0.6),
+    inset 0 2px 3px rgba(255, 255, 255, 0.55);
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s ease;
+}
+#rankCalcCard .rcalc-slider::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(255, 240, 190, 0.9);
+  background:
+    radial-gradient(circle at 34% 28%, #ffffff 0 8%, rgba(255, 255, 255, 0) 24%),
+    radial-gradient(circle at 50% 50%, #ffe58a 0%, #d4af37 48%, #8a6510 82%, #4a3406 100%);
+  box-shadow:
+    0 6px 10px -2px rgba(0, 0, 0, 0.75),
+    0 0 18px rgba(212, 175, 55, 0.65),
+    inset 0 -4px 6px rgba(70, 45, 0, 0.6),
+    inset 0 2px 3px rgba(255, 255, 255, 0.55);
+}
+#rankCalcCard .rcalc-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+#rankCalcCard .rcalc-slider:active::-webkit-slider-thumb {
+  cursor: grabbing;
+  transform: scale(1.14);
+  box-shadow:
+    0 8px 14px -2px rgba(0, 0, 0, 0.8),
+    0 0 28px rgba(255, 215, 94, 0.85),
+    inset 0 -4px 6px rgba(70, 45, 0, 0.6),
+    inset 0 2px 3px rgba(255, 255, 255, 0.6);
+}
+html.lite #rankCalcCard .rcalc-stat::after {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  #rankCalcCard .rcalc-stat::after {
+    display: none;
+  }
+}
+
+/* Hero kicker pill on phones (owner 2026-10-18: it broke into uneven lines with the dot alone on top).
+   Up to 600px it is two clean centred lines, "BNB SMART CHAIN · USDT (BEP-20)" / "COMMUNITY-POWERED REWARDS",
+   with the dot beside them; the type scales with the screen so both lines fit from 320px up. */
+.kicker-seg {
+  white-space: nowrap;
+}
+@media (max-width: 600px) {
+  .hero-left .kicker {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.6rem;
+    max-width: calc(100% - 0.5rem);
+    padding: 0.5rem 1.05rem 0.5rem 0.85rem;
+    border-radius: 18px;
+    font-size: min(0.64rem, 2.75vw);
+    line-height: 1.55;
+    letter-spacing: 0.06em;
+    text-align: center;
+  }
+  .hero-left .kicker-dot {
+    flex: none;
+  }
+  .hero-left .kicker-text {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+  }
+  .hero-left .kicker-sep {
+    display: none;
+  }
+}
+
+/* #bonus ends with the two notes (owner 2026-10-18 removed the "credited / 25x cap" note): less empty space
+   under it before the next section */
+#bonus.fsb-section {
+  padding-bottom: 3rem;
+}
+@media (max-width: 960px) {
+  #bonus.fsb-section {
+    padding-bottom: 1.6rem;
   }
 }

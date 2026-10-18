@@ -23,6 +23,27 @@ export interface GiftBoxOptions {
   mode: 'ready' | 'locked' | 'opened';
   /** called once the box has burst open (mode 'ready') */
   onOpened?: () => void;
+  /* Optional texts for other reward boxes (owner 2026-10-18: the DV token box on the dashboard).
+     Left out = the rank reward box texts. */
+  /** amount format (default "$1,500"; the DV box shows "1,500 DV") */
+  format?: (n: number) => string;
+  /** kicker above the title (default RANK REWARD BOX / SEALED REWARD BOX) */
+  kicker?: string;
+  /** label over the opened amount (default "<RANK> REWARD") */
+  label?: string;
+  /** note under the opened amount */
+  note?: string;
+  /** note after a preview opening of a sealed box */
+  previewNote?: string;
+  /** note on a sealed box (default "Unlocks at <requirement>.") */
+  lockedNote?: string;
+  /** button after the real opening (default "Collect") */
+  doneLabel?: string;
+  /** 'box' = the red rank reward gift (default); 'pot' = the DV token pot: a red glazed clay pot with
+   *  gold bands and DV seals that erupts DV coins (owner 2026-10-18: "token type, red pottery, VFX") */
+  theme?: 'box' | 'pot';
+  /** a sealed box offers "Preview the opening" (default true; the DV pot hides it in production) */
+  allowPreview?: boolean;
 }
 
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -159,6 +180,212 @@ export function makeBox(logo: THREE.Texture | null) {
   knot.position.y = 0.32;
   lid.add(knot);
   parts.bow.push(knot);
+  lid.position.y = 0.72;
+  box.add(lid);
+
+  return { box, body, lid, parts, glow: { red, ribbon, gold } };
+}
+
+/**
+ * The DV token pot (owner 2026-10-18): a polished GOLD pot (lathe-turned body with a belly, neck and a
+ * flared rim) whose belly is wrapped in RED CLOTH (gold hems) with the DAOvault seal on six sides, so the
+ * logo shows from every angle (owner: "red cloth se cover, logo sab side se"), its mouth covered by a RED CLOTH with a gold
+ * hem, tied at the neck with a gold cord (knot, two hanging tails with tassels), like the traditional
+ * cloth-covered pot. It has the same parts as makeBox (body / lid = the cloth / bodyRibbons / seals /
+ * lidRibbons = the cord / bow = knot + tails / glow), so the packing intro and the opening (the cloth blows
+ * off, the gold glows hot, minted DV coins erupt) work unchanged.
+ */
+export function makePot(logo: THREE.Texture | null): ReturnType<typeof makeBox> {
+  const red = new THREE.MeshPhysicalMaterial({
+    color: 0xe0b04a,
+    metalness: 0.88,
+    roughness: 0.2,
+    clearcoat: 0.6,
+    clearcoatRoughness: 0.1,
+    emissive: 0x5a3a06,
+    emissiveIntensity: 0.35,
+    side: THREE.DoubleSide,
+  }); // polished gold (named "red" for the shared glow: the burst heats it up)
+  const enamel = new THREE.MeshPhysicalMaterial({
+    color: 0xd0101a,
+    roughness: 0.6,
+    metalness: 0,
+    sheen: 1,
+    sheenRoughness: 0.45,
+    sheenColor: 0xff6a6a,
+    emissive: 0x4a0006,
+    emissiveIntensity: 0.3,
+    side: THREE.DoubleSide,
+  }); // the red cloth wrapped round the belly
+  const cloth = new THREE.MeshPhysicalMaterial({
+    color: 0xe0121c,
+    roughness: 0.62,
+    metalness: 0,
+    sheen: 1,
+    sheenRoughness: 0.45,
+    sheenColor: 0xff6a6a,
+    emissive: 0x5a0006,
+    emissiveIntensity: 0.3,
+    side: THREE.DoubleSide,
+  }); // the red cloth over the mouth
+  const ribbon = new THREE.MeshStandardMaterial({
+    color: 0xf0c75e,
+    metalness: 0.85,
+    roughness: 0.24,
+    emissive: 0x6b4c0a,
+    emissiveIntensity: 0.14,
+  }); // gold bands
+  const gold = new THREE.MeshStandardMaterial({
+    color: 0xd4af37,
+    metalness: 0.9,
+    roughness: 0.22,
+    emissive: 0x5a3f06,
+    emissiveIntensity: 0.25,
+  });
+  const box = new THREE.Group();
+  const parts = {
+    bodyRibbons: [] as THREE.Object3D[],
+    seals: [] as THREE.Object3D[],
+    lidRibbons: [] as THREE.Object3D[],
+    bow: [] as THREE.Object3D[],
+  };
+  const v = (x: number, y: number) => new THREE.Vector2(x, y);
+
+  // body: bottom at -0.8, belly ~1.05 wide, neck 0.56, flared rim at the top (local y, like the box body)
+  const body = new THREE.Group();
+  const profile = [
+    v(0, -0.8),
+    v(0.5, -0.8),
+    v(0.62, -0.75),
+    v(0.84, -0.52),
+    v(1.0, -0.22),
+    v(1.05, 0.02),
+    v(0.99, 0.26),
+    v(0.82, 0.48),
+    v(0.62, 0.64),
+    v(0.56, 0.72),
+    v(0.64, 0.8),
+    v(0.7, 0.85),
+    v(0.6, 0.86),
+    v(0.52, 0.78),
+  ];
+  body.add(new THREE.Mesh(new THREE.LatheGeometry(profile, 64), red));
+  // the red cloth wrapped round the belly: a shell just outside the pot, softly folded, gold hems top and
+  // bottom (it ends at 0.3, just under the hanging skirt of the top cloth, so the two never cut into each other) (one group, so the packer wraps it on from the top)
+  const wrapProfile = [
+    v(0.77, -0.62),
+    v(0.88, -0.52),
+    v(1.03, -0.24),
+    v(1.085, 0.02),
+    v(1.04, 0.22),
+    v(1.0, 0.3),
+  ];
+  const wrapGeo = new THREE.LatheGeometry(wrapProfile, 96);
+  const wp = wrapGeo.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < wp.count; i++) {
+    const x = wp.getX(i),
+      z = wp.getZ(i);
+    const k = 1 + 0.018 * Math.sin(12 * Math.atan2(z, x));
+    wp.setX(i, x * k);
+    wp.setZ(i, z * k);
+  }
+  wrapGeo.computeVertexNormals();
+  const wrap = new THREE.Group();
+  wrap.add(new THREE.Mesh(wrapGeo, enamel));
+  for (const [y, r] of [
+    [-0.62, 0.79],
+    [0.3, 1.015],
+  ] as const) {
+    const hemBand = new THREE.Mesh(new THREE.TorusGeometry(r, 0.035, 10, 96), gold);
+    hemBand.rotation.x = Math.PI / 2;
+    hemBand.position.y = y;
+    wrap.add(hemBand);
+  }
+  body.add(wrap);
+  parts.bodyRibbons.push(wrap);
+  // the DAOvault seal on six sides of the cloth, so the logo faces you from every angle
+  const sealFace = new THREE.MeshBasicMaterial({ color: logo ? 0xffffff : 0x111111, map: logo });
+  const sealDisc = new THREE.CircleGeometry(0.3, 48);
+  const sealRim = new THREE.TorusGeometry(0.31, 0.035, 12, 48);
+  for (let i = 0; i < 6; i++) {
+    const side = new THREE.Group();
+    side.rotation.y = (i * Math.PI) / 3;
+    const face = new THREE.Mesh(sealDisc, sealFace);
+    face.position.set(0, -0.1, 1.1);
+    const rim = new THREE.Mesh(sealRim, gold);
+    rim.position.copy(face.position);
+    side.add(face, rim);
+    body.add(side);
+    parts.seals.push(face, rim);
+  }
+  body.position.y = -0.3;
+  box.add(body);
+
+  // "lid" = the red cloth: a soft dome over the mouth, pulled in at the neck by the cord, then a folded
+  // skirt hanging over the shoulder (lid local y; the lid group sits at 0.72, the neck is at local -0.38)
+  const lid = new THREE.Group();
+  const clothProfile = [
+    v(0.001, 0.19),
+    v(0.3, 0.16),
+    v(0.55, 0.07),
+    v(0.72, -0.05),
+    v(0.77, -0.16),
+    v(0.7, -0.3),
+    v(0.66, -0.38),
+    v(0.73, -0.44),
+    v(0.86, -0.52),
+    v(0.96, -0.6),
+    v(0.99, -0.65),
+  ];
+  const clothGeo = new THREE.LatheGeometry(clothProfile, 96);
+  // folds: the cloth ripples around, most in the hanging skirt, a little over the rim
+  const p = clothGeo.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i),
+      y = p.getY(i),
+      z = p.getZ(i);
+    const th = Math.atan2(z, x);
+    const skirt = Math.min(1, Math.max(0, (-0.38 - y) / 0.27));
+    const shoulder = Math.min(1, Math.max(0, (-0.02 - y) / 0.3)) * (1 - skirt) * 0.35;
+    const k = 1 + (0.045 * skirt + 0.02 * shoulder) * Math.sin(9 * th + 0.6) + 0.015 * skirt * Math.sin(17 * th);
+    p.setX(i, x * k);
+    p.setZ(i, z * k);
+    p.setY(i, y - skirt * 0.03 * (1 + Math.sin(9 * th + 0.6)));
+  }
+  clothGeo.computeVertexNormals();
+  lid.add(new THREE.Mesh(clothGeo, cloth));
+  // gold hem along the bottom of the cloth
+  const hem = new THREE.Mesh(new THREE.TorusGeometry(0.985, 0.022, 8, 96), gold);
+  hem.rotation.x = Math.PI / 2;
+  hem.position.y = -0.66;
+  lid.add(hem);
+  // the gold cord tied round the neck
+  const cord = new THREE.Mesh(new THREE.TorusGeometry(0.665, 0.035, 12, 72), ribbon);
+  cord.rotation.x = Math.PI / 2;
+  cord.position.y = -0.38;
+  const cordWrap = new THREE.Group();
+  cordWrap.add(cord);
+  lid.add(cordWrap);
+  parts.lidRibbons.push(cordWrap);
+  // the knot at the front and two cord tails with tassels hanging from it
+  const knot = new THREE.Mesh(new THREE.SphereGeometry(0.075, 18, 14), ribbon);
+  knot.position.set(0, -0.38, 0.68);
+  knot.scale.set(1.3, 1, 0.8);
+  lid.add(knot);
+  parts.bow.push(knot);
+  for (const dir of [-1, 1]) {
+    const tail = new THREE.Group();
+    const strand = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.34, 8), ribbon);
+    strand.position.y = -0.17;
+    const tassel = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.14, 12), gold);
+    tassel.position.y = -0.38;
+    tassel.rotation.x = Math.PI;
+    tail.add(strand, tassel);
+    tail.position.set(dir * 0.05, -0.39, 0.72);
+    tail.rotation.set(0.25, 0, dir * 0.28);
+    lid.add(tail);
+    parts.bow.push(tail);
+  }
   lid.position.y = 0.72;
   box.add(lid);
 
@@ -364,8 +591,13 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   if (!canvas || !kicker || !title || !reveal || !label || !amount || !note || !actions || !flash)
     return;
 
-  kicker.textContent = opts.mode === 'locked' ? 'SEALED REWARD BOX' : 'RANK REWARD BOX';
+  const fmt = opts.format ?? money;
+  const lockedNote = opts.lockedNote ?? `Unlocks at ${opts.requirement}.`;
+  kicker.textContent =
+    opts.kicker ?? (opts.mode === 'locked' ? 'SEALED REWARD BOX' : 'RANK REWARD BOX');
   title.textContent = opts.rank;
+  el.setAttribute('aria-label', `${opts.rank} reward box`);
+  el.classList.toggle('is-pot', opts.theme === 'pot');
   reveal.hidden = true;
   el.classList.remove('is-burst', 'is-locked-shake');
   actions.innerHTML = '';
@@ -405,22 +637,22 @@ export function openGiftBox(opts: GiftBoxOptions): void {
 
   const showReveal = (preview: boolean) => {
     reveal.hidden = false;
-    label.textContent = preview
-      ? `PREVIEW · ${opts.rank.toUpperCase()} REWARD`
-      : `${opts.rank.toUpperCase()} REWARD`;
+    const what = opts.label ?? `${opts.rank.toUpperCase()} REWARD`;
+    label.textContent = preview ? `PREVIEW · ${what}` : what;
     note.textContent = preview
-      ? `Unlocks at ${opts.requirement}. This was a preview: the box opens for real once you reach the rank.`
-      : 'Reward unlocked. It is credited to your balance after on-chain rank verification.';
+      ? (opts.previewNote ??
+        `Unlocks at ${opts.requirement}. This was a preview: the box opens for real once you reach the rank.`)
+      : (opts.note ?? 'Reward unlocked. It is credited to your balance after on-chain rank verification.');
     // count the amount up
     const start = performance.now();
     const step = (now: number) => {
       const t = Math.min(1, (now - start) / 1400);
-      amount.textContent = money(opts.reward * (1 - Math.pow(1 - t, 3)));
+      amount.textContent = fmt(opts.reward * (1 - Math.pow(1 - t, 3)));
       if (t < 1 && alive) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
     actions.innerHTML = '';
-    button(preview ? 'Got it' : 'Collect', 'btn-grad', close);
+    button(preview ? 'Got it' : (opts.doneLabel ?? 'Collect'), 'btn-grad', close);
   };
 
   /* ---------- no WebGL / reduced motion: the reveal on its own */
@@ -429,8 +661,8 @@ export function openGiftBox(opts: GiftBoxOptions): void {
     if (opts.mode === 'locked') {
       reveal.hidden = false;
       label.textContent = 'SEALED';
-      amount.textContent = money(opts.reward);
-      note.textContent = `Unlocks at ${opts.requirement}.`;
+      amount.textContent = fmt(opts.reward);
+      note.textContent = lockedNote;
       button('Got it', 'btn-grad', close);
     } else {
       showReveal(false);
@@ -445,8 +677,18 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   try {
     renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
   } catch {
+    // no 3D after all: a sealed box stays sealed (never a preview reveal); a ready box opens for real
     canvas.hidden = true;
-    showReveal(opts.mode === 'locked');
+    if (opts.mode === 'locked') {
+      reveal.hidden = false;
+      label.textContent = 'SEALED';
+      amount.textContent = fmt(opts.reward);
+      note.textContent = lockedNote;
+      button('Got it', 'btn-grad', close);
+    } else {
+      showReveal(false);
+      if (opts.mode === 'ready') opts.onOpened?.();
+    }
     return;
   }
   const size = () => {
@@ -473,6 +715,7 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   });
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+  const pot = opts.theme === 'pot';
   scene.add(new THREE.HemisphereLight(0xffffff, 0x5a0a0a, 0.8));
   const rimLight = new THREE.DirectionalLight(0xffc46b, 1.6);
   rimLight.position.set(-4, 3, -4);
@@ -489,12 +732,12 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   // the square logo inside the round seal: shrink it so its corners are not cut (the edge pixels are black)
   logo.repeat.set(1.3, 1.3);
   logo.offset.set(-0.15, -0.15);
-  const built = makeBox(logo);
+  const built = pot ? makePot(logo) : makeBox(logo);
   const { box, lid, glow } = built;
   scene.add(box);
 
   // burst pieces, hidden until the box opens
-  const sparkCount = 260;
+  const sparkCount = pot ? 520 : 260;
   const sparkPos = new Float32Array(sparkCount * 3);
   const sparkVel = new Float32Array(sparkCount * 3);
   const sparkGeo = new THREE.BufferGeometry();
@@ -513,7 +756,9 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   sparks.visible = false;
   scene.add(sparks);
 
-  const coinGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.05, 28);
+  const coinGeo = pot
+    ? new THREE.CylinderGeometry(0.3, 0.3, 0.06, 48)
+    : new THREE.CylinderGeometry(0.22, 0.22, 0.05, 28);
   const coinMat = new THREE.MeshStandardMaterial({
     color: 0xffcf4a,
     metalness: 0.95,
@@ -521,17 +766,85 @@ export function openGiftBox(opts: GiftBoxOptions): void {
     emissive: 0x6b4c0a,
     emissiveIntensity: 0.4,
   });
-  const coins = Array.from({ length: 9 }, (_, i) => {
-    const c = new THREE.Mesh(coinGeo, coinMat);
+  // DV token pot (owner 2026-10-18: "the DAOVAULT token must show well, golden"): each coin is the minted
+  // DV coin of the dashboard card (dvToken3d.ts: gold rim, engraved ring, DV logo), standing up to face the
+  // camera inside a pivot that turns it, with a soft gold halo sprite behind it
+  const coinCount = pot ? 14 : 9;
+  const halo = pot
+    ? (() => {
+        const c = document.createElement('canvas');
+        c.width = c.height = 128;
+        const g = c.getContext('2d')!;
+        const gr = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+        gr.addColorStop(0, 'rgba(255,236,160,0.95)');
+        gr.addColorStop(0.35, 'rgba(255,200,80,0.45)');
+        gr.addColorStop(1, 'rgba(255,180,40,0)');
+        g.fillStyle = gr;
+        g.fillRect(0, 0, 128, 128);
+        const t = new THREE.CanvasTexture(c);
+        t.colorSpace = THREE.SRGBColorSpace;
+        return t;
+      })()
+    : null;
+  const coinMeshes: THREE.Mesh[] = [];
+  const coins: THREE.Object3D[] = Array.from({ length: coinCount }, (_, i) => {
+    const mesh = new THREE.Mesh(coinGeo, coinMat);
+    coinMeshes.push(mesh);
+    let c: THREE.Object3D = mesh;
+    if (pot) {
+      mesh.rotation.x = Math.PI / 2; // the face looks at the camera
+      const pivot = new THREE.Group();
+      const glowSprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: halo,
+          color: 0xffd76a,
+          transparent: true,
+          opacity: 0.75,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        }),
+      );
+      glowSprite.scale.setScalar(1.25);
+      glowSprite.position.z = -0.05;
+      pivot.add(glowSprite, mesh);
+      c = pivot;
+    }
     c.visible = false;
     c.userData = {
-      a: (i / 9) * Math.PI * 2,
+      a: (i / coinCount) * Math.PI * 2,
       speed: 0.7 + Math.random() * 0.6,
-      lift: 1.4 + Math.random() * 1.2,
+      lift: pot ? 0.9 + (i % 4) * 0.28 + Math.random() * 0.15 : 1.4 + Math.random() * 1.2,
+      r: pot ? 1.45 + (i % 3) * 0.22 : 1.3,
+      delay: pot ? (i / coinCount) * 0.5 : 0,
     };
     scene.add(c);
     return c;
   });
+  if (pot)
+    void import('./dvToken3d.ts')
+      .then(({ dvCoinMaterials }) => dvCoinMaterials(true))
+      .then((mats) => {
+        if (alive) coinMeshes.forEach((m) => (m.material = mats));
+      })
+      .catch(() => {
+        /* the plain gold coins stay */
+      });
+
+  // a column of gold light out of the pot's mouth after it opens (pot only)
+  const column = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.45, 0.62, 4.2, 32, 1, true),
+    new THREE.MeshBasicMaterial({
+      color: 0xffd76a,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    }),
+  );
+  column.position.y = 0.55 + 2.1;
+  column.visible = false;
+  scene.add(column);
 
   const beams = new THREE.Group();
   for (let i = 0; i < 7; i++) {
@@ -748,6 +1061,7 @@ export function openGiftBox(opts: GiftBoxOptions): void {
       c.visible = true;
       c.position.set(0, 0.4, 0);
     });
+    if (pot) column.visible = true;
     const preview = !!(box.userData as { preview?: boolean }).preview;
     window.setTimeout(() => {
       if (alive) showReveal(preview);
@@ -764,13 +1078,14 @@ export function openGiftBox(opts: GiftBoxOptions): void {
         el.classList.add('is-locked-shake');
         reveal.hidden = false;
         label.textContent = 'SEALED';
-        amount.textContent = money(opts.reward);
-        note.textContent = `Unlocks at ${opts.requirement}.`;
-        button('Preview the opening', 'btn-line', () => {
-          reveal.hidden = true;
-          el.classList.remove('is-locked-shake');
-          startOpening(true);
-        });
+        amount.textContent = fmt(opts.reward);
+        note.textContent = lockedNote;
+        if (opts.allowPreview !== false)
+          button('Preview the opening', 'btn-line', () => {
+            reveal.hidden = true;
+            el.classList.remove('is-locked-shake');
+            startOpening(true);
+          });
         button('Got it', 'btn-grad', close);
       },
       PACK_S * 1000 + 250,
@@ -844,17 +1159,45 @@ export function openGiftBox(opts: GiftBoxOptions): void {
       (sparks.material as THREE.PointsMaterial).opacity = Math.max(0, 1 - t / 2.2);
       // coins rise and circle above the box
       coins.forEach((c) => {
-        const { a, speed, lift } = c.userData as { a: number; speed: number; lift: number };
+        const { a, speed, lift, r, delay } = c.userData as {
+          a: number;
+          speed: number;
+          lift: number;
+          r: number;
+          delay: number;
+        };
+        if (pot) {
+          // the DV coins fountain out of the mouth one after another, then float in a ring around
+          // and above the pot (inside the frame), each turning to flash its face
+          const tt = Math.max(0, t - delay);
+          const k = Math.min(1, tt / 1.1);
+          const ang = a + tt * speed * 0.45;
+          c.visible = tt > 0;
+          c.position.set(
+            Math.cos(ang) * r * k,
+            0.5 + (lift + 0.6 * Math.sin(k * Math.PI)) * easeOutBack(k) + Math.sin(now / 600 + a) * 0.06,
+            Math.sin(ang) * r * k * 0.55,
+          );
+          c.rotation.y = Math.sin(tt * speed * 1.6 + a) * 1.1;
+          c.scale.setScalar(0.4 + 0.6 * k);
+          return;
+        }
         const k = Math.min(1, t / 1.2);
         const ang = a + t * speed;
         c.position.set(
-          Math.cos(ang) * 1.3 * k,
+          Math.cos(ang) * r * k,
           0.4 + lift * easeOutBack(k),
-          Math.sin(ang) * 1.3 * k,
+          Math.sin(ang) * r * k,
         );
         c.rotation.x = t * 3 * speed;
         c.rotation.z = Math.PI / 2;
       });
+      // pot: the gold light column breathes out of the mouth
+      if (pot) {
+        (column.material as THREE.MeshBasicMaterial).opacity =
+          Math.min(0.32, t * 0.8) * (0.75 + 0.25 * Math.sin(now / 180));
+        column.scale.set(1 + 0.08 * Math.sin(now / 240), 1, 1 + 0.08 * Math.sin(now / 240));
+      }
       // light beams flare then settle
       beams.children.forEach((b, i) => {
         const m = (b as THREE.Mesh).material as THREE.MeshBasicMaterial;

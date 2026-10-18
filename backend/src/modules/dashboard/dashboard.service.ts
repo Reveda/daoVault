@@ -157,6 +157,8 @@ export class DashboardService {
       // pre-launch marketing (owner, 2026-10-13): "Pay & Activate" shows only from this moment (server clock)
       paymentsOpenAt: env.PAYMENTS_OPEN_AT.toISOString(),
       paymentsOpen: env.PAYMENTS_OPEN_AT.getTime() <= Date.now(),
+      // the withdrawal form shows and checks the minimum before sign-in
+      withdrawalMinUsd: env.WITHDRAWAL_MIN_USD,
       activeDirects: user.activeDirectsCount,
       levelsUnlocked: unlockedLevels(user.activeDirectsCount),
       currentRank: user.currentRank,

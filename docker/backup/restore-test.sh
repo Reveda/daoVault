@@ -11,7 +11,7 @@ set -eu
 
 FILE="${1:?usage: restore-test.sh backups/daovault-YYYYMMDD-HHMMSS.sql.gz}"
 [ -f "${FILE}" ] || { echo "No such file: ${FILE}"; exit 1; }
-COMPOSE="docker compose --env-file .env.production -f docker-compose.prod.yml"
+COMPOSE="docker compose --env-file .env.prod -f docker-compose.prod.yml"
 TEST_DB="daovault_restore_test"
 
 echo "1/4 testing the file..."
