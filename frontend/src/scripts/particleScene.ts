@@ -52,6 +52,8 @@ export const SCENE_STATES: Record<string, SceneState> = {
   vision:  { shape: 'mark', x: -0.58, y: 0,    s: 0.95, op: 0.85, storm: 0.6, anchor: '#vision .scene-slot' },
   ranks:   { shape: 'logo', x: 0.58,  y: 0,    s: 0.95, op: 0.85, storm: 0.8, anchor: '#ranks .scene-slot' },
   matrix:  { shape: 'dial', x: -0.58, y: 0,    s: 0.95, op: 0.8,  storm: 0.6, anchor: '#matrix .scene-slot' },
+  // fast-start bonus (owner, 2026-10-18): the DAOVAULT logo beside the heading, with lightning
+  bonus:   { shape: 'logo', x: 0.58,  y: 0,    s: 0.95, op: 0.85, storm: 0.9, anchor: '#bonus .scene-slot' },
   about:   { shape: 'mark', x: 0.58,  y: 0,    s: 0.95, op: 0.8,  storm: 0.5, anchor: '#about .scene-slot', fit: 0.9 },
   compare: { shape: 'logo', x: -0.56, y: 0,    s: 0.85, op: 0.8,  storm: 0.6, anchor: '#compare .scene-slot' },
   how:     { shape: 'dial', x: 0.6,   y: 0,    s: 0.95, op: 0.8,  storm: 0.6, anchor: '#how .scene-slot' },
@@ -68,6 +70,13 @@ export const SCENE_STATES: Record<string, SceneState> = {
   // dashboard: the logo forms while the wallet is checked, then calm dust
   vault:   { shape: 'logo', x: 0,     y: 0.05, s: 1.1,  op: 0.9,  storm: 1.0, mop: 0.7 },
   dash:    { shape: 'dust', x: 0,     y: 0,    s: 1,    op: 0.28, storm: 0.2, mop: 0.22 },
+  // dashboard sections (owner, 2026-10-18): like the landing, the cloud re-forms as the member
+  // scrolls - logo, DV mark, vault dial - with lightning, beside the cards and soft enough to read over
+  dashTop:     { shape: 'logo', x: 0.6,  y: 0.05, s: 0.9, op: 0.5,  storm: 0.8, mx: 0, my: 0, mop: 0.3 },
+  dashRewards: { shape: 'mark', x: -0.6, y: 0,    s: 0.9, op: 0.5,  storm: 0.9, mx: 0, my: 0, mop: 0.3 },
+  dashRanks:   { shape: 'dial', x: 0.6,  y: 0,    s: 0.9, op: 0.45, storm: 0.8, mx: 0, my: 0, mop: 0.28 },
+  dashTeam:    { shape: 'logo', x: -0.6, y: 0,    s: 0.9, op: 0.45, storm: 0.7, mx: 0, my: 0, mop: 0.28 },
+  dashIncome:  { shape: 'mark', x: 0.6,  y: 0,    s: 0.9, op: 0.45, storm: 0.7, mx: 0, my: 0, mop: 0.28 },
   // admin Command Center: livelier dust and lightning behind the charts
   admin:   { shape: 'dust', x: 0,     y: 0,    s: 1,    op: 0.42, storm: 0.6, mop: 0.3 },
 };

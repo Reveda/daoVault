@@ -287,12 +287,15 @@ export class WithdrawalsService {
   // ── admin ────────────────────────────────────────────────────────────
 
   /** Admin queue, 20 per page. Open requests oldest first (first come, first served); paid and rejected newest first. */
-  async list(status?: WithdrawalStatus, page = 1) {
+  /** admin list: by status, optionally only requests from the last 7 / 30 days, with the period's totals */
+  async list(status?: WithdrawalStatus, page = 1, period: "all" | "week" | "month" = "all") {
     const pageSize = 20;
-    const where = status ? { status } : {};
+    const since = period === "all" ? null : new Date(Date.now() - (period === "week" ? 7 : 30) * 86_400_000);
+    const where: Prisma.WithdrawalWhereInput = { ...(status ? { status } : {}), ...(since ? { createdAt: { gte: since } } : {}) };
     const open = status === "PENDING" || status === "PROCESSING";
-    const [total, items] = await Promise.all([
+    const [total, sums, items] = await Promise.all([
       prisma.withdrawal.count({ where }),
+      prisma.withdrawal.aggregate({ where, _sum: { grossAmount: true, netAmount: true } }),
       prisma.withdrawal.findMany({
         where,
         orderBy: { createdAt: open ? "asc" : "desc" },
@@ -301,7 +304,12 @@ export class WithdrawalsService {
         include: { user: { select: { walletAddress: true, referralCode: true } } },
       }),
     ]);
-    return { total, page, pageSize, items: items.map((w) => ({ ...view(w), voucher: null, referralCode: w.user.referralCode })) };
+    return {
+      total, page, pageSize, period,
+      grossUsd: fromCents(toCents(sums._sum.grossAmount?.toString() ?? 0)),
+      netUsd: fromCents(toCents(sums._sum.netAmount?.toString() ?? 0)),
+      items: items.map((w) => ({ ...view(w), voucher: null, referralCode: w.user.referralCode })),
+    };
   }
 
   private async transition(id: string, from: WithdrawalStatus[], data: Prisma.WithdrawalUpdateInput) {
@@ -379,7 +387,8 @@ export class WithdrawalsService {
       prisma.package.count({ where: { status: "ACTIVE" } }),
       prisma.package.count({ where: { status: "CAPPED" } }),
       prisma.earning.aggregate({ where: { type: "LEVEL_COMMISSION" }, _sum: { amountUsd: true } }),
-      prisma.earning.aggregate({ where: { type: "RANK_REWARD" }, _sum: { amountUsd: true } }),
+      // rewards = rank rewards + fast-start bonuses (everything that is not level income)
+      prisma.earning.aggregate({ where: { type: { in: ["RANK_REWARD", "FAST_START_BONUS"] } }, _sum: { amountUsd: true } }),
       prisma.withdrawal.groupBy({ by: ["status"], _count: { _all: true }, _sum: { grossAmount: true, feeAmount: true, netAmount: true } }),
       prisma.package.count({ where: { createdAt: { gte: day } } }),
       prisma.package.count({ where: { createdAt: { gte: week } } }),

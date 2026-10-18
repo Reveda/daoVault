@@ -47,13 +47,10 @@ const server = app.listen(env.PORT, () => {
   } else {
     console.warn("COMPANY_WALLET_ADDRESS is not set: there is no company root, so no one can join under the company link.");
   }
-  // unpaid wallets with a saved invite code but no upline (data from before 2026-10-13) join their sponsor's tree
-  usersService.linkSavedSponsors().then(
-    (r) => {
-      if (r.linked.length) console.log(`Saved invite codes linked into the tree: ${r.linked.join(", ")}`);
-      if (r.skipped.length) console.warn(`Saved invite codes not linked (sponsor missing or a loop): ${r.skipped.join(", ")}`);
-    },
-    (error) => console.error("Linking saved invite codes failed:", error),
+  // paid members from before binary placement (2026-10-17) take a spot, so their business counts
+  usersService.placeUnplacedPaid().then(
+    (codes) => { if (codes.length) console.log(`Placed on the Left of their sponsor: ${codes.join(", ")}`); },
+    (error) => console.error("Placing unplaced paid members failed:", error),
   );
   // plan queue: commissions / volume / ranks for recorded payments (one runner across all copies)
   startPlanQueueTimer();

@@ -185,18 +185,33 @@ const TAP_GLOW_CARDS = '.compare-matrix tbody tr, .glass, .glass-v2, .metric-car
 export function enableTouchPress(): void {
   // iOS needs a touch listener for :active; the gold float (.tap-glow) is added only for a real tap,
   // not when the finger starts a scroll over a card (owner, 2026-10-12: cards jumped while scrolling)
-  const timers = new WeakMap<Element, number>();
-  let start: { x: number; y: number; card: Element } | null = null;
+  // owner 2026-10-18 (like the Arbit landing, in DAOVAULT gold, soft and still: no jump): on a phone
+  // the tapped card STAYS lit until another card is tapped or the member taps outside the cards;
+  // a desktop click lights it briefly
+  let lit: Element | null = null;
+  const light = (card: Element | null) => {
+    if (lit === card) return;
+    lit?.classList.remove('tap-glow');
+    card?.classList.add('tap-glow');
+    lit = card;
+  };
+  let start: { x: number; y: number; card: Element | null } | null = null;
   document.addEventListener('touchstart', (e) => {
-    const card = (e.target as Element | null)?.closest?.(TAP_GLOW_CARDS);
     const t = e.touches[0];
-    start = card && t ? { x: t.clientX, y: t.clientY, card } : null;
+    start = t ? { x: t.clientX, y: t.clientY, card: (e.target as Element | null)?.closest?.(TAP_GLOW_CARDS) ?? null } : null;
   }, { passive: true });
   document.addEventListener('touchend', (e) => {
     const t = e.changedTouches[0];
+    // a scroll (finger moved) changes nothing; a real tap lights its card, or clears outside a card
     if (!start || !t || Math.hypot(t.clientX - start.x, t.clientY - start.y) > 10) { start = null; return; }
-    const card = start.card;
+    light(start.card);
     start = null;
+  }, { passive: true });
+  const timers = new WeakMap<Element, number>();
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    const card = (e.target as Element | null)?.closest?.(TAP_GLOW_CARDS);
+    if (!card) return;
     card.classList.add('tap-glow');
     window.clearTimeout(timers.get(card));
     timers.set(card, window.setTimeout(() => card.classList.remove('tap-glow'), 900));

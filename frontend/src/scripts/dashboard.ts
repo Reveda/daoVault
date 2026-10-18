@@ -32,12 +32,13 @@ import {
   getDashboardData,
   getSponsorByCode,
   getAdminStats,
-  savePendingSponsor,
+  joinTeam,
   registerWallet,
   getWithdrawals,
   requestWithdrawal,
   confirmWithdrawal,
   type DashboardData,
+  type Side,
   type WithdrawalSummary,
   type Withdrawal,
 } from './api.ts';
@@ -209,32 +210,38 @@ document.addEventListener('DOMContentLoaded', async () => {
   // the package earning now (top-ups wait in line behind a package still under its cap)
   const pkg = dashboardData?.currentPackage ?? dashboardData?.packages?.[0];
   const totalEarned = toNumber(dashboardData?.totalEarned, 0);
-  const capEarned = toNumber(pkg?.totalEarned, 0); // level income only: rank rewards sit outside the 25x cap
+  const capEarned = toNumber(pkg?.totalEarned, 0); // everything earned on this package (all income counts toward the 25x cap)
   const activeDirects = dashboardData?.activeDirects ?? 0;
   const maxCap = toNumber(pkg?.maxCapLimit, 0);
   const hasLiveData = dashboardData !== null;
-  scene?.setScene('dash');
+  scene?.setScene('dashTop'); // then each section re-forms the cloud as it scrolls in (data-scene)
 
-  // Latest invite link wins (owner, 2026-10-09): the code this browser captured becomes the
-  // server-side sponsor of this unpaid wallet, so it can pay from any browser or wallet app.
-  // The browser copy is then dropped, so an older link left in another browser can never
-  // overwrite a newer one.
+  // Binary placement (owner, 2026-10-17): a member joins a team once, by picking LEFT or RIGHT
+  // under the invite code (the sponsor tells them which side). Owner 2026-10-18: this is the FIRST
+  // thing after sign-in, a gate the member cannot close; the dashboard opens only after joining.
+  // The invite code is the latest link this browser opened, else the one saved on the server; an
+  // unknown code is skipped (so nobody is locked out by a bad link). Once joined, the spot and the
+  // sponsor never change.
   const isRoot = Boolean(dashboardData?.isRoot);
-  if (dashboardData && !pkg && !isRoot) {
+  let joinCode = '';
+  if (dashboardData && !pkg && !isRoot && !dashboardData.placement) {
     const ref = getPendingReferral().replace(/[^A-Za-z0-9]/g, '').toUpperCase();
-    if (ref && ref !== dashboardData.referralCode && ref !== dashboardData.pendingSponsorCode) {
+    if (ref === dashboardData.referralCode) clearPendingReferral(); // their own link
+    const candidates = [ref !== dashboardData.referralCode ? ref : '', dashboardData.pendingSponsorCode ?? '', dashboardData.sponsorCode ?? '']
+      .filter((c, i, all) => c && all.indexOf(c) === i);
+    for (const code of candidates) {
       try {
-        dashboardData.pendingSponsorCode = (await savePendingSponsor(account, ref, token)).pendingSponsorCode;
-        clearPendingReferral();
+        await getSponsorByCode(code);
+        joinCode = code;
+        break;
       } catch (error) {
-        if (error instanceof ApiError && error.status < 500) {
-          clearPendingReferral();
-          showToast(`Invite code ${ref} was not found. Check your invite link.`, true);
-        }
+        if (!(error instanceof ApiError && error.status === 404)) { joinCode = code; break; } // server busy: let the join itself report it
+        if (code === ref) { clearPendingReferral(); showToast(`Invite code ${code} was not found. Check your invite link.`, true); }
       }
-    } else if (ref) {
-      clearPendingReferral(); // own code, or already saved on the server
     }
+    if (joinCode) showJoinGate(account, joinCode, token, () => void logOut());
+  } else if (dashboardData?.placement) {
+    clearPendingReferral(); // joined: an invite link opened later changes nothing
   }
 
   // admin = company wallet: the company overview (same data as the admin panel) + menu link
@@ -259,9 +266,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('withdrawSection')?.setAttribute('hidden', '');
     document.querySelector('.dash-content-grid')?.classList.add('is-single');
   }
-  // pay with the sponsor the server recorded (the team tree), so the on-chain sponsor always matches it
-  if (!adminWallet) initActivation(account, Boolean(pkg) || isRoot, serverDown, dashboardData?.sponsorCode ?? dashboardData?.pendingSponsorCode ?? getPendingReferral(),
-    Boolean(dashboardData?.canTopUp), dashboardData?.packageCount ?? 0, dashboardData?.paymentsOpenAt ?? null, dashboardData?.paymentsOpen ?? true);
+  // pay with the sponsor the server recorded (the team tree), so the on-chain sponsor always matches it;
+  // a member who still has to pick Left / Right joins first (joinCode)
+  if (!adminWallet) initActivation(account, Boolean(pkg) || isRoot, serverDown, dashboardData?.sponsorCode ?? '',
+    Boolean(dashboardData?.canTopUp), dashboardData?.packageCount ?? 0, dashboardData?.paymentsOpenAt ?? null, dashboardData?.paymentsOpen ?? true, joinCode);
   // the rank the member sees includes Power Business (shown as normal business); money stays official
   updateOverviewMetrics(activeDirects, totalEarned, capEarned, maxCap, Math.max(dashboardData?.currentRank ?? 0, dashboardData?.powerBusiness?.rank ?? 0), pkg?.status);
   renderPowerBusiness(dashboardData);
@@ -279,6 +287,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderLevelTable(dashboardData);
   renderLegs(dashboardData);
   renderIncome(dashboardData);
+  renderFastStart(dashboardData);
 
   // 9. Withdrawals (wallet-signature sign-in)
   if (!adminWallet) initWithdrawals(account, hasLiveData ? dashboardData!.availableUsd : 0, dashboardData);
@@ -319,8 +328,66 @@ function showPaymentsCountdown(button: HTMLButtonElement, openAt: string): void 
   window.setInterval(tick, 30_000);
 }
 
+/**
+ * Join gate (binary placement, owner 2026-10-17 / 2026-10-18): right after sign-in, a full-screen
+ * modal the member cannot close: pick the LEFT or RIGHT side of the invite code's team (the sponsor
+ * tells them which), confirm that the spot is permanent, and the dashboard opens (page reload with
+ * the new placement). The only other way out is Log out.
+ */
+function showJoinGate(account: string, code: string, token: string, onLogout: () => void): void {
+  const card = document.createElement('div');
+  card.className = 'sign-gate join-gate';
+  card.setAttribute('role', 'dialog');
+  card.setAttribute('aria-modal', 'true');
+  card.setAttribute('aria-labelledby', 'joinGateTitle');
+  card.innerHTML = `
+    <div class="sign-gate-card glass join-gate-card">
+      <span class="mono sign-gate-tag">JOIN YOUR TEAM</span>
+      <h3 id="joinGateTitle">Choose your side under <span class="grad-text"></span></h3>
+      <p>Select the side your sponsor has advised. You will be placed in the next open position on that side of
+        their team.</p>
+      <div class="join-side-buttons">
+        <button type="button" class="btn btn-line join-side-btn" data-side="LEFT"><span aria-hidden="true">&larr;</span> Join Left</button>
+        <button type="button" class="btn btn-line join-side-btn" data-side="RIGHT">Join Right <span aria-hidden="true">&rarr;</span></button>
+      </div>
+      <button type="button" class="join-gate-out mono" data-out>Not your wallet? Log out</button>
+    </div>`;
+  card.querySelector('.grad-text')!.textContent = code;
+  document.body.appendChild(card);
+  // the dashboard behind stays still until the member has joined
+  document.documentElement.classList.add('lv-lock');
+  card.querySelector('[data-out]')!.addEventListener('click', onLogout);
+  card.querySelector<HTMLButtonElement>('[data-side]')?.focus({ preventScroll: true });
+  card.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const side = button.dataset.side === 'RIGHT' ? 'RIGHT' : 'LEFT' as Side;
+      const sideName = side === 'LEFT' ? 'Left' : 'Right';
+      const go = await confirmNotice({
+        kicker: 'Join your team',
+        title: 'Confirm your placement',
+        message: `You are joining on the {highlight} and will take the next open position on that side. Please make sure this is the side your sponsor advised.`,
+        highlight: `${sideName} side of ${code}`,
+        confirm: `Confirm ${sideName} side`,
+        cancel: 'Back',
+      });
+      if (!go) return;
+      card.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) => { b.disabled = true; });
+      try {
+        const joined = await joinTeam(account, code, side, token);
+        clearPendingReferral();
+        showToast(`Joined: ${sideName} side under ${joined.placement.underCode}. Opening your dashboard...`);
+        window.setTimeout(() => window.location.reload(), 1200);
+      } catch (error) {
+        card.querySelectorAll<HTMLButtonElement>('[data-side]').forEach((b) => { b.disabled = false; });
+        if (error instanceof ApiError && error.status === 404) clearPendingReferral();
+        showToast(error instanceof Error ? error.message : 'Could not join right now. Please try again.', true);
+      }
+    });
+  });
+}
+
 function initActivation(account: string, activated: boolean, serverDown = false, sponsorCode = '', canTopUp = false, packageCount = 0,
-  paymentsOpenAt: string | null = null, paymentsOpen = true): void {
+  paymentsOpenAt: string | null = null, paymentsOpen = true, joinCode = ''): void {
   const card = document.getElementById('activationCard');
   const button = document.getElementById('dashActivateBtn') as HTMLButtonElement | null;
   const status = document.getElementById('activationStatus');
@@ -343,6 +410,12 @@ function initActivation(account: string, activated: boolean, serverDown = false,
   if (!isPaymentConfigured()) {
     button.disabled = true;
     if (status) status.textContent = 'Payment contract is not configured yet.';
+    return;
+  }
+  // binary placement: pick Left / Right in the join card first, then pay
+  if (joinCode && !topUp) {
+    button.disabled = true;
+    if (status) status.textContent = `Join a side (Left or Right) under ${joinCode} first, then activate.`;
     return;
   }
   const code = sponsorCode.replace(/[^A-Za-z0-9]/g, '');
@@ -519,7 +592,7 @@ function renderPowerBusiness(data: DashboardData | null): void {
   cards.forEach((card) => { card.hidden = !show; });
   if (!show || !pb || !dao || !daoNote || !business || !businessNote) return;
   dao.textContent = `${pb.dao.toLocaleString('en-US')} DAO`;
-  daoNote.textContent = `Strong ${pb.legs.power.toLocaleString('en-US')} · Other ${pb.legs.other.toLocaleString('en-US')} DAO`;
+  daoNote.textContent = `Left ${pb.legs.left.toLocaleString('en-US')} · Right ${pb.legs.right.toLocaleString('en-US')} DAO`;
   business.textContent = formatUsd(own);
   businessNote.textContent = `${pb.legs.matched.toLocaleString('en-US')} DAO matched`;
   if (rankNote) rankNote.textContent = `Rank: ${pb.rankName ?? 'Unranked'}`;
@@ -545,54 +618,132 @@ function updateMemberDetails(data: DashboardData | null, active: boolean, capEar
   const set = (id: string, text: string) => { const el = document.getElementById(id); if (el) el.textContent = text; };
   set('metricDirectsNote', unlocked >= 20 ? 'All 20 levels unlocked' : `Levels unlocked: ${unlocked} / 20`);
   set('metricEarnedNote', cap > 0
-    ? `Level $${(data?.levelIncomeUsd ?? 0).toLocaleString()} · Rank $${(data?.rankRewardsUsd ?? 0).toLocaleString()} · ${formatUsd(Math.max(cap - capEarned, 0))} to cap`
+    ? `Level $${(data?.levelIncomeUsd ?? 0).toLocaleString()} · Rank $${(data?.rankRewardsUsd ?? 0).toLocaleString()}${data?.bonusUsd ? ` · Bonus $${data.bonusUsd.toLocaleString()}` : ''} · ${formatUsd(Math.max(cap - capEarned, 0))} to cap`
     : data?.isRoot ? 'Company root: its commission shares stay in the treasury' : 'Activate the $300 package to start earning');
   // same rank as the Current Rank card (Power Business counted as normal business)
   const next = RANK_TIERS[Math.max(data?.currentRank ?? 0, data?.powerBusiness?.rank ?? 0)];
   set('metricRankNote', next ? `Next: ${next.name} at ${next.volume.toLocaleString()} DAO` : 'Top rank reached');
 }
 
-/** Leg card: DAO matching toward the next rank (power leg vs other legs, each needs the full DAO). */
+/**
+ * Leg card: DAO matching toward the next rank. Binary placement (owner, 2026-10-17): the Left and
+ * the Right side of the member's placement team, each needs the full DAO.
+ */
 function renderLegs(data: DashboardData | null): void {
   const set = (id: string, html: string) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
-  const legs = data?.legs ?? { total: 0, power: 0, other: 0, count: 0 };
+  const legs = data?.legs ?? { left: 0, right: 0, total: 0 };
   const next = data?.nextRank;
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 1 });
   set('legTeamVal', `${fmt(data?.teamVolume ?? 0)} DAO`);
-  set('legCountVal', String(legs.count));
+  // where the member sits: "Left · DV1234" (or not joined yet)
+  const placed = data?.placement;
+  const placeEl = document.getElementById('legCountVal');
+  if (placeEl) placeEl.textContent = placed ? `${placed.side === 'LEFT' ? 'Left' : 'Right'} · ${placed.underCode ?? '—'}` : data?.isRoot ? 'Top ID' : 'Not joined';
   if (!next) {
     set('legNextTarget', '<strong>Top rank reached: Crown President</strong>');
-    set('legPowerVal', `${fmt(legs.power)} DAO`);
-    set('legOtherVal', `${fmt(legs.other)} DAO`);
+    set('legPowerVal', `${fmt(legs.left)} DAO`);
+    set('legOtherVal', `${fmt(legs.right)} DAO`);
     set('legCountedVal', `${fmt(legs.total)} DAO`);
     return;
   }
   // DAO matching: the rank's DAO is needed on EACH side; matched = the smaller side
   const need = next.volume;
   set('legNextTarget', `Next target: <strong>${next.name} &middot; ${need.toLocaleString()} DAO each side &middot; $${next.rewardUsd.toLocaleString()} reward</strong>`);
-  set('legPowerVal', `${fmt(legs.power)} / ${fmt(need)} DAO`);
-  set('legOtherVal', `${fmt(legs.other)} / ${fmt(need)} DAO`);
+  set('legPowerVal', `${fmt(legs.left)} / ${fmt(need)} DAO`);
+  set('legOtherVal', `${fmt(legs.right)} / ${fmt(need)} DAO`);
   set('legCountedVal', `${fmt(next.countedVolume)} / ${fmt(need)}`);
   window.setTimeout(() => {
     const p = document.getElementById('legPowerBar');
     const o = document.getElementById('legOtherBar');
-    if (p) p.style.width = `${Math.min(100, (legs.power / need) * 100)}%`;
-    if (o) o.style.width = `${Math.min(100, (legs.other / need) * 100)}%`;
+    if (p) p.style.width = `${Math.min(100, (legs.left / need) * 100)}%`;
+    if (o) o.style.width = `${Math.min(100, (legs.right / need) * 100)}%`;
   }, 400);
 }
 
-/** Latest level commissions and rank rewards. */
+/**
+ * Fast-start bonus card (owner, 2026-10-18): 10 paid directs within 3 days of activating = Rocket
+ * Start Bonus $100, within 7 days = Fast Start Bonus $50 (one bonus, inside the 25x cap). Shown
+ * from the first visit (owner: both bonuses visible up front): before activation as the offer,
+ * then with the countdown and direct count, then as earned or closed. Each bonus has its own row.
+ */
+function renderFastStart(data: DashboardData | null): void {
+  const card = document.getElementById('fastStartCard');
+  const tiersEl = document.getElementById('fastStartTiers');
+  const fs = data?.fastStart;
+  if (!card || !tiersEl || !fs) return;
+  const set = (id: string, text: string) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  const now = Date.now();
+  const timeLeft = (deadline: string) => {
+    const left = new Date(deadline).getTime() - now;
+    const d = Math.floor(left / 86_400_000), h = Math.floor(left / 3_600_000) % 24;
+    return d > 0 ? `${d}d ${h}h left` : `${Math.max(1, h)}h left`;
+  };
+  const earned = fs.earnedDays ? fs.tiers.find((t) => t.days === fs.earnedDays) ?? null : null;
+  const open = fs.joinedAt ? fs.tiers.find((t) => t.deadline && new Date(t.deadline).getTime() > now) ?? null : null;
+  card.hidden = false;
+  // one row per bonus, with its own state
+  tiersEl.innerHTML = fs.tiers.map((t) => {
+    const state = !fs.eligible ? ''
+      : earned ? (t === earned ? `Earned +$${fs.earnedUsd.toLocaleString()}` : '')
+        : !t.deadline ? 'Starts when you activate'
+          : new Date(t.deadline).getTime() > now ? `${Math.min(t.directs, fs.directsNeeded)} / ${fs.directsNeeded} · ${timeLeft(t.deadline)}`
+            : 'Closed';
+    const cls = earned === t ? ' is-earned' : t === open ? ' is-open' : state === 'Closed' ? ' is-closed' : '';
+    return `<div class="fs-tier${cls}"><span class="fs-tier-name">${t.name}</span><span class="fs-tier-rule">${fs.directsNeeded} directs within ${t.days} days</span>`
+      + `<b class="mono">$${t.rewardUsd}</b>${state ? `<small class="fs-tier-state mono">${state}</small>` : ''}</div>`;
+  }).join('');
+
+  const count = document.getElementById('fastStartCount');
+  if (!fs.eligible) {
+    set('fastStartTitle', 'Fast-start bonuses for members');
+    set('fastStartText', 'Members earn these when 10 of their directs activate soon after they do. The company root does not receive them.');
+    if (count) count.hidden = true;
+    return;
+  }
+  if (earned) {
+    card.classList.add('is-earned');
+    set('fastStartTitle', `${earned.name} earned`);
+    set('fastStartText', `${fs.directsNeeded} directs activated within ${earned.days} days: +$${fs.earnedUsd.toLocaleString()} added to your balance.`);
+    set('fastStartCount', `${fs.directsNeeded} / ${fs.directsNeeded}`);
+    card.style.setProperty('--fs-fill', '100%');
+    return;
+  }
+  if (!fs.joinedAt) {
+    set('fastStartTitle', 'Earn up to $100 extra');
+    set('fastStartText', `The clock starts the day you activate your ID. Get ${fs.directsNeeded} directs activated within 3 days for $100, or within 7 days for $50.`);
+    set('fastStartCount', `0 / ${fs.directsNeeded}`);
+    card.style.setProperty('--fs-fill', '0%');
+    return;
+  }
+  if (!open) {
+    const last = fs.tiers[fs.tiers.length - 1];
+    set('fastStartTitle', 'Fast-start window closed');
+    set('fastStartText', `${Math.min(last.directs, fs.directsNeeded)} of ${fs.directsNeeded} directs activated within ${last.days} days of joining.`);
+    set('fastStartCount', `${Math.min(last.directs, fs.directsNeeded)} / ${fs.directsNeeded}`);
+    card.classList.add('is-closed');
+    card.style.setProperty('--fs-fill', `${Math.min(100, (last.directs / fs.directsNeeded) * 100)}%`);
+    return;
+  }
+  set('fastStartTitle', `${open.name}: $${open.rewardUsd}`);
+  set('fastStartText', `Get ${fs.directsNeeded} directs activated within ${open.days} days of joining. ${timeLeft(open.deadline!)}.`);
+  set('fastStartCount', `${Math.min(open.directs, fs.directsNeeded)} / ${fs.directsNeeded}`);
+  card.style.setProperty('--fs-fill', `${Math.min(100, (open.directs / fs.directsNeeded) * 100)}%`);
+}
+
+/** Latest level commissions, rank rewards and bonuses. */
 function renderIncome(data: DashboardData | null): void {
   const list = document.getElementById('incomeList');
   const split = document.getElementById('incomeSplit');
-  if (split && data) split.textContent = `Level $${data.levelIncomeUsd.toLocaleString()} · Rank $${data.rankRewardsUsd.toLocaleString()}`;
+  if (split && data) split.textContent = `Level $${data.levelIncomeUsd.toLocaleString()} · Rank $${data.rankRewardsUsd.toLocaleString()}${data.bonusUsd ? ` · Bonus $${data.bonusUsd.toLocaleString()}` : ''}`;
   if (!list || !data?.recentEarnings.length) return;
   list.innerHTML = data.recentEarnings.map((e) => {
     const what = e.type === 'RANK_REWARD'
       ? `Rank reward &middot; ${RANK_TIERS[(e.level ?? 1) - 1]?.name ?? ''}`
-      : `Level ${e.level} &middot; from ${formatAddress(e.from)}`;
+      : e.type === 'FAST_START_BONUS'
+        ? (e.level === 3 ? 'Rocket Start Bonus &middot; 10 directs in 3 days' : 'Fast Start Bonus &middot; 10 directs in 7 days')
+        : `Level ${e.level} &middot; from ${formatAddress(e.from)}`;
     const when = new Date(e.at).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
-    return `<li class="${e.type === 'RANK_REWARD' ? 'is-rank' : ''}"><span>${what}</span><span class="income-when">${when}</span><b>+${formatUsd(e.amountUsd)}</b></li>`;
+    return `<li class="${e.type === 'LEVEL_COMMISSION' ? '' : 'is-rank'}"><span>${what}</span><span class="income-when">${when}</span><b>+${formatUsd(e.amountUsd)}</b></li>`;
   }).join('');
 }
 
@@ -621,7 +772,7 @@ function initReferralLink(account: string, data: DashboardData | null, serverDow
   const activated = Boolean(data?.packages?.length) || Boolean(data?.isRoot); // the root sponsors without paying
   // the member's own invite code is never their sponsor (they opened their own link)
   // before payment the sponsor is the latest invite saved on the server (browser copy if offline)
-  let pendingRef = (data?.pendingSponsorCode ?? getPendingReferral()).replace(/[^A-Za-z0-9]/g, '');
+  let pendingRef = (getPendingReferral() || data?.pendingSponsorCode || '').replace(/[^A-Za-z0-9]/g, '');
   if (data && pendingRef === refCode) { clearPendingReferral(); pendingRef = ''; }
   if (sponsorTag) {
     // before activation the sponsor is still the invite code this visitor arrived with

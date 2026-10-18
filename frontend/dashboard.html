@@ -123,7 +123,7 @@
       </section>
 
       <!-- 4 Overview Metric Cards -->
-      <div class="metrics-grid">
+      <div class="metrics-grid" data-scene="dashTop">
         <div class="glass metric-card">
           <div class="metric-top">
             <span class="metric-label mono">Active Directs</span>
@@ -213,7 +213,24 @@
       </section>
 
       <!-- Rank reward vaults: one sealed DAOvault box per rank (giftBox.ts) -->
-      <section class="glass rewards-card" id="rewardsSection">
+      <!-- Fast-start bonus (owner 2026-10-18): 10 directs in 3 days $100 / 7 days $50 (dashboard.ts renderFastStart) -->
+      <div class="glass ref-box-card fast-start-card" id="fastStartCard" hidden>
+        <div class="fast-start-top">
+          <div>
+            <span class="mono fast-start-kicker">Fast-start bonus</span>
+            <h3 id="fastStartTitle">Earn up to $100 extra</h3>
+            <p id="fastStartText">Bring 10 activated directs soon after you activate.</p>
+          </div>
+          <b class="mono fast-start-count" id="fastStartCount">0 / 10</b>
+        </div>
+        <div class="fast-start-tiers" id="fastStartTiers">
+          <div class="fs-tier"><span class="fs-tier-name">Rocket Start Bonus</span><span class="fs-tier-rule">10 directs within 3 days</span><b class="mono">$100</b></div>
+          <div class="fs-tier"><span class="fs-tier-name">Fast Start Bonus</span><span class="fs-tier-rule">10 directs within 7 days</span><b class="mono">$50</b></div>
+        </div>
+        <div class="fast-start-track"><i></i></div>
+      </div>
+
+      <section class="glass rewards-card" id="rewardsSection" data-scene="dashRewards">
         <div class="rewards-head">
           <div>
             <span class="mono rewards-tag">RANK REWARD VAULTS</span>
@@ -232,13 +249,13 @@
         <div class="reward-boxes" id="rewardBoxes"></div>
       </section>
 
-      <!-- All ranks: Strong Leg / Other Leg progress, reward and status per rank (rankProgress.ts) -->
-      <section class="glass rewards-card rank-list-card" id="rankListSection">
+      <!-- All ranks: Left Leg / Right Leg progress, reward and status per rank (rankProgress.ts) -->
+      <section class="glass rewards-card rank-list-card" id="rankListSection" data-scene="dashRanks">
         <div class="rank-list-head">
           <div>
             <span class="mono rewards-tag">ALL RANKS</span>
             <h3>Rank <span class="grad-text">Progress</span></h3>
-            <p>Each rank needs its DAO on both sides: your Strong Leg and your Other Leg.</p>
+            <p>Each rank needs its DAO on both sides: your Left Leg and your Right Leg.</p>
           </div>
           <span class="rank-achieved-chip mono" id="rankAchievedChip">0 / 11 Achieved</span>
         </div>
@@ -275,7 +292,7 @@
                 25&times; Sustainability <span class="grad-text">Gauge Meter</span>
               </h3>
               <p style="color: var(--text-muted); font-size: 0.88rem;">
-                Level income is capped at 25&times; ($7,500) per $300 package. Rank rewards are paid on top of the cap.
+                All earnings (level income, rank rewards and bonuses) are capped at 25&times; ($7,500) per $300 package.
               </p>
             </div>
             <div class="mono" id="capPctText" style="font-size: 1rem; font-weight: 700; color: var(--gold);">
@@ -295,7 +312,7 @@
       </div>
 
       <!-- Affiliate Link Card -->
-      <div class="glass ref-box-card" id="inviteSection">
+      <div class="glass ref-box-card" id="inviteSection" data-scene="dashTeam">
         <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
           <div>
             <h3 style="font-size: 1.2rem; margin-bottom: 0.2rem;">Your Permanent Affiliate Link</h3>
@@ -326,7 +343,7 @@
       </div>
 
       <!-- Main 2-Column Content Grid -->
-      <div class="dash-content-grid">
+      <div class="dash-content-grid" data-scene="dashIncome">
         <!-- Left: 20-Level Matrix Table & 50% Leg Breakdown -->
         <div>
           <!-- 20-Level Matrix Accordion -->
@@ -373,13 +390,13 @@
 
             <div class="leg-box">
               <div class="leg-row mono">
-                <span style="color: var(--gold);">Strong Leg <small>(your biggest team)</small></span>
+                <span style="color: var(--gold);">Left Leg <small>(your Left side)</small></span>
                 <span id="legPowerVal">0 / 25 DAO</span>
               </div>
               <div class="cap-bar-track leg-track"><div class="leg-fill leg-fill--power" id="legPowerBar"></div></div>
 
               <div class="leg-row mono">
-                <span style="color: #f3ecd6;">Other Leg <small>(all other legs combined)</small></span>
+                <span style="color: #f3ecd6;">Right Leg <small>(your Right side)</small></span>
                 <span id="legOtherVal">0 / 25 DAO</span>
               </div>
               <div class="cap-bar-track leg-track"><div class="leg-fill leg-fill--other" id="legOtherBar"></div></div>
@@ -387,7 +404,7 @@
               <div class="leg-stats mono">
                 <span>Matched <b id="legCountedVal">0 / 25</b></span>
                 <span>Team volume <b id="legTeamVal">0 DAO</b></span>
-                <span>Legs <b id="legCountVal">0</b></span>
+                <span>Placed <b id="legCountVal">—</b></span>
               </div>
             </div>
           </div>

@@ -19,9 +19,17 @@ enum PackageSource {
   POWER_BUSINESS
 }
 
+/// Binary placement (owner, 2026-10-17): the side of the member above that a member takes
+enum PlacementSide {
+  LEFT
+  RIGHT
+}
+
 enum EarningType {
   LEVEL_COMMISSION
   RANK_REWARD
+  /// 10 paid directs within 3 / 7 days of joining (plan.ts FAST_START); level = the days (3 or 7)
+  FAST_START_BONUS
 }
 
 enum WithdrawalStatus {
@@ -35,10 +43,18 @@ model User {
   id                 String         @id @default(uuid()) @db.Uuid
   walletAddress      String         @unique @map("wallet_address") @db.VarChar(42)
   referralCode       String         @unique @map("referral_code") @db.VarChar(16)
+  /// SPONSOR (referral tree: who invited whom): directs, level unlock and the 20-level income
   uplineId           String?        @map("upline_id") @db.Uuid
   activeDirectsCount Int            @default(0) @map("active_directs_count")
   currentRank        Int            @default(0) @map("current_rank")
-  /// activated packages anywhere below this member (1 DAO = 1 package); own package not included
+  /// PLACEMENT (binary tree, owner 2026-10-17): the member this one sits under and on which side.
+  /// Chosen once when joining, never changed. Team business, legs and ranks follow this tree.
+  placementId        String?        @map("placement_id") @db.Uuid
+  placementSide      PlacementSide? @map("placement_side")
+  /// counted packages (1 DAO each) in this member's LEFT / RIGHT placement team; own package not included
+  leftVolume         Int            @default(0) @map("left_volume")
+  rightVolume        Int            @default(0) @map("right_volume")
+  /// left_volume + right_volume
   teamVolume         Int            @default(0) @map("team_volume")
   /// invite code of the LATEST referral link this wallet opened before paying (owner, 2026-10-09).
   /// Saved on the server so the member can pay from any browser or wallet app; the real
@@ -47,15 +63,17 @@ model User {
   createdAt          DateTime       @default(now()) @map("created_at")
   upline             User?          @relation("UserUpline", fields: [uplineId], references: [id])
   downline            User[]        @relation("UserUpline")
+  placement          User?          @relation("UserPlacement", fields: [placementId], references: [id])
+  placedBelow        User[]         @relation("UserPlacement")
   packages           Package[]
   receivedEarnings   Earning[]      @relation("EarningRecipient")
   sourceEarnings     Earning[]      @relation("EarningSource")
   withdrawals        Withdrawal[]
   powerBusinesses    PowerBusiness[] @relation("PowerBusinessOwner")
-  /// Power Business records placed in this member's leg (they belong to the member's upline)
-  powerBusinessLegs  PowerBusiness[] @relation("PowerBusinessLeg")
 
   @@index([uplineId])
+  /// one member per spot: two members can never take the same LEFT / RIGHT place
+  @@unique([placementId, placementSide])
   @@map("users")
 }
 
@@ -88,11 +106,10 @@ model PowerBusiness {
   amountUsd  Decimal  @map("amount_usd") @db.Decimal(18, 2)
   reference  String   @unique @db.VarChar(100)
   note       String?  @db.VarChar(280)
-  /// the direct whose leg receives the whole amount (owner, 2026-10-15: one side only); empty = its own side
-  legUserId  String?  @map("leg_user_id") @db.Uuid
+  /// the member's side that receives the whole amount (one side only)
+  side       PlacementSide @default(LEFT)
   createdAt  DateTime @default(now()) @map("created_at")
   user       User     @relation("PowerBusinessOwner", fields: [userId], references: [id], onDelete: Restrict)
-  leg        User?    @relation("PowerBusinessLeg", fields: [legUserId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@map("power_businesses")

@@ -30,8 +30,22 @@ export const RANKS = [
   { rank: 11, name: "Crown President", volume: 50_000, rewardUsd: 200_000 },
 ] as const;
 
-/** Level income cap per package: 25x ($7,500 on $300); owner 2026-10-09, was 10x. Rank rewards sit outside it. */
+/**
+ * Earnings cap per package: 25x ($7,500 on $300); owner 2026-10-09, was 10x. Since 2026-10-18 EVERY
+ * income counts toward it (level income, rank rewards, fast-start bonus): total earnings never pass 25x.
+ */
 export const CAP_MULTIPLIER = 25;
+
+/**
+ * Fast-start bonuses (owner, 2026-10-18), counted from the member's own activation (its joining
+ * date): 10 paid directs within 3 days = Rocket Start Bonus $100; otherwise within 7 days = Fast
+ * Start Bonus $50. One bonus per member (the faster one wins), paid at once, inside the 25x cap.
+ */
+export const FAST_START_DIRECTS = 10;
+export const FAST_START = [
+  { days: 3, rewardUsd: 100, name: "Rocket Start Bonus" },
+  { days: 7, rewardUsd: 50, name: "Fast Start Bonus" },
+] as const;
 
 /**
  * DAOVAULT token (DV) allocation (owner, 2026-10-15): every $300 package (activation or top-up)

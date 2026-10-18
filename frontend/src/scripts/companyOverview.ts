@@ -37,19 +37,19 @@ export function renderCompanyOverview(target: HTMLElement, s: AdminStats): void 
   const toPay = (pending?.netUsd ?? 0) + (approved?.netUsd ?? 0);
   const treasury = s.volumeUsd - s.paidOutUsd;
   const payout = s.payout
-    ? tile('bolt', 'amber', 'Instant payout float', s.payout.error ? 'Unreadable' : usd(s.payout.floatUsd ?? 0),
-      s.payout.error ?? `${s.payout.paused ? 'PAUSED · ' : ''}max ${usd(s.payout.maxPerClaimUsd ?? 0)} each · ${usd(s.payout.dailyLimitUsd ?? 0)} / day`)
-    : tile('bolt', 'amber', 'Instant payouts', 'Off', 'withdrawals stay closed until the payout contract + signer are set');
+    ? tile('bolt', 'amber', 'Payout contract balance', s.payout.error ? 'Unavailable' : usd(s.payout.floatUsd ?? 0),
+      s.payout.error ?? `${s.payout.paused ? 'Paused · ' : ''}Max ${usd(s.payout.maxPerClaimUsd ?? 0)} per withdrawal · ${usd(s.payout.dailyLimitUsd ?? 0)} per day`)
+    : tile('bolt', 'amber', 'Withdrawals', 'Not configured', 'Withdrawals open once the payout contract and signer are configured');
   target.innerHTML = [
-    tile('users', 'violet', 'Members', int(s.members), `${int(s.registered)} wallets registered · ${int(s.payments24h)} payments in 24h · ${int(s.payments7d)} in 7 days`),
-    tile('deposit', 'gold', 'Deposits (money in)', usd(s.volumeUsd), `${int(s.packages)} packages × $300 · ${int(s.topUps)} top-ups`),
-    tile('coins', 'amber', 'Credited to members', usd(s.creditedUsd), `Level ${usd(s.levelCommissionsUsd)} · Rank ${usd(s.rankRewardsUsd)}`),
-    tile('payout', 'green', 'Paid out', usd(s.paidOutUsd), `fees kept ${usd(s.feesUsd)} (5%)`),
-    tile('wallet', 'gold', 'Treasury balance', usd(treasury), 'deposits − payouts so far'),
-    tile('clock', toPay > 0 ? 'red' : 'violet', 'To pay now', usd(toPay), `${pending?.count ?? 0} pending · ${approved?.count ?? 0} approved`),
-    tile('coins', 'violet', 'Members can still withdraw', usd(s.memberBalancesUsd), 'credited minus requested withdrawals'),
-    tile('trend', 'green', 'Company net', usd(s.companyNetUsd), 'deposits − all credits + fees'),
-    tile('box', 'gold', 'Packages', `${int(s.activePackages)} active`, `${int(s.cappedPackages)} reached the 25× cap`),
+    tile('users', 'violet', 'Members', int(s.members), `${int(s.registered)} registered wallets · ${int(s.payments24h)} payments (24h) · ${int(s.payments7d)} (7 days)`),
+    tile('deposit', 'gold', 'Total deposits', usd(s.volumeUsd), `${int(s.packages)} packages × $300 · ${int(s.topUps)} top-ups`),
+    tile('coins', 'amber', 'Member credits', usd(s.creditedUsd), `Level income ${usd(s.levelCommissionsUsd)} · Rewards ${usd(s.rankRewardsUsd)}`),
+    tile('payout', 'green', 'Withdrawals paid', usd(s.paidOutUsd), `Fees retained ${usd(s.feesUsd)} (5%)`),
+    tile('wallet', 'gold', 'Treasury balance', usd(treasury), 'Total deposits less withdrawals paid'),
+    tile('clock', toPay > 0 ? 'red' : 'violet', 'Awaiting payment', usd(toPay), `${pending?.count ?? 0} pending · ${approved?.count ?? 0} approved`),
+    tile('coins', 'violet', 'Member balances', usd(s.memberBalancesUsd), 'Credits not yet withdrawn'),
+    tile('trend', 'green', 'Company net', usd(s.companyNetUsd), 'Deposits less member credits, plus fees'),
+    tile('box', 'gold', 'Packages', `${int(s.activePackages)} active`, `${int(s.cappedPackages)} at the 25× cap`),
     payout,
   ].join('');
 }

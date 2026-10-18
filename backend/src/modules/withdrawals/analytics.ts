@@ -37,7 +37,7 @@ export async function adminAnalytics() {
     prisma.$queryRaw<MoneyRow[]>`
       SELECT date_trunc('day', created_at) AS day,
              SUM(amount_usd) FILTER (WHERE type = 'LEVEL_COMMISSION')::text AS level,
-             SUM(amount_usd) FILTER (WHERE type = 'RANK_REWARD')::text AS rank
+             SUM(amount_usd) FILTER (WHERE type <> 'LEVEL_COMMISSION')::text AS rank
         FROM earnings WHERE created_at >= ${since} GROUP BY 1 ORDER BY 1`,
     prisma.$queryRaw<PaidRow[]>`
       SELECT date_trunc('day', COALESCE(reviewed_at, created_at)) AS day, SUM(net_amount)::text AS paid
@@ -106,4 +106,72 @@ export async function adminAnalytics() {
       return { code: u?.referralCode ?? "—", earnedUsd: Number(t._sum.amountUsd ?? 0), rank: u?.currentRank ?? 0, directs: u?.activeDirectsCount ?? 0, team: u?.teamVolume ?? 0 };
     }),
   };
+}
+
+export type LedgerGroup = "day" | "week" | "month";
+/** how many periods the treasury ledger shows: 30 days, 12 weeks, 12 months */
+const LEDGER_PERIODS: Record<LedgerGroup, number> = { day: 30, week: 12, month: 12 };
+
+/** first moment (UTC) of the period that is `back` periods before the current one */
+function periodStart(group: LedgerGroup, back: number): Date {
+  const now = new Date();
+  if (group === "month") return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - back, 1));
+  const day = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  // ISO weeks start on Monday, like Postgres date_trunc('week')
+  const weekStart = new Date(day.getTime() - ((day.getUTCDay() + 6) % 7) * 86_400_000);
+  return group === "week" ? new Date(weekStart.getTime() - back * 7 * 86_400_000) : new Date(day.getTime() - back * 86_400_000);
+}
+
+/**
+ * Treasury ledger (owner, 2026-10-18: daily / weekly / monthly filter): per period, the deposits
+ * (activations and top-ups at their recorded amounts), what was credited to members (level income,
+ * rank rewards and bonuses) and the withdrawals paid, with the treasury balance (deposits minus
+ * withdrawals, running from before the window). All periods of the window, oldest first, zero-filled.
+ */
+export async function adminLedger(group: LedgerGroup) {
+  const count = LEDGER_PERIODS[group];
+  const since = periodStart(group, count - 1);
+  const [joins, credited, paid, packagesBefore, paidBefore] = await Promise.all([
+    prisma.$queryRaw<DayRow[]>`
+      WITH p AS (
+        SELECT created_at, package_amount, ROW_NUMBER() OVER (PARTITION BY user_id ORDER BY created_at) AS n FROM packages
+      )
+      SELECT date_trunc(${group}, created_at) AS day,
+             COUNT(*) FILTER (WHERE n = 1) AS activations,
+             COUNT(*) FILTER (WHERE n > 1) AS topups,
+             SUM(package_amount)::text AS money_in
+        FROM p WHERE created_at >= ${since} GROUP BY 1`,
+    prisma.$queryRaw<MoneyRow[]>`
+      SELECT date_trunc(${group}, created_at) AS day,
+             SUM(amount_usd) FILTER (WHERE type = 'LEVEL_COMMISSION')::text AS level,
+             SUM(amount_usd) FILTER (WHERE type <> 'LEVEL_COMMISSION')::text AS rank
+        FROM earnings WHERE created_at >= ${since} GROUP BY 1`,
+    prisma.$queryRaw<PaidRow[]>`
+      SELECT date_trunc(${group}, COALESCE(reviewed_at, created_at)) AS day, SUM(net_amount)::text AS paid
+        FROM withdrawals WHERE status = 'COMPLETED' AND COALESCE(reviewed_at, created_at) >= ${since} GROUP BY 1`,
+    prisma.package.aggregate({ where: { createdAt: { lt: since } }, _sum: { packageAmount: true } }),
+    prisma.$queryRaw<Array<{ paid: string | null }>>`
+      SELECT SUM(net_amount)::text AS paid FROM withdrawals WHERE status = 'COMPLETED' AND COALESCE(reviewed_at, created_at) < ${since}`,
+  ]);
+  const at = <T extends { day: Date }>(rows: T[]) => new Map(rows.map((r) => [dayKey(new Date(r.day)), r]));
+  const j = at(joins), c = at(credited), p = at(paid);
+  const openingTreasuryUsd = Number(packagesBefore._sum.packageAmount ?? 0) - Number(paidBefore[0]?.paid ?? 0);
+  let treasury = openingTreasuryUsd;
+  const periods = Array.from({ length: count }, (_, i) => {
+    const start = dayKey(periodStart(group, count - 1 - i));
+    const depositsUsd = Number(j.get(start)?.money_in ?? 0);
+    const paidOutUsd = Number(p.get(start)?.paid ?? 0);
+    treasury += depositsUsd - paidOutUsd;
+    return {
+      start,
+      activations: Number(j.get(start)?.activations ?? 0),
+      topups: Number(j.get(start)?.topups ?? 0),
+      depositsUsd,
+      levelUsd: Number(c.get(start)?.level ?? 0),
+      rewardsUsd: Number(c.get(start)?.rank ?? 0),
+      paidOutUsd,
+      treasuryUsd: treasury,
+    };
+  });
+  return { group, openingTreasuryUsd, periods };
 }

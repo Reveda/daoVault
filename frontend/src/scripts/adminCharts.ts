@@ -8,7 +8,7 @@ import {
   ArcElement, BarController, BarElement, CategoryScale, Chart, DoughnutController, Filler, Legend,
   LinearScale, LineController, LineElement, PointElement, Tooltip, type ChartConfiguration, type ChartType, type ScriptableContext,
 } from 'chart.js';
-import type { AdminAnalytics, AdminStats } from './api.ts';
+import type { AdminAnalytics, AdminLedger, AdminStats } from './api.ts';
 import { LITE } from './perf.ts';
 import { pageCount, pageOf, renderPager } from './pager.ts';
 
@@ -108,9 +108,9 @@ export function renderAdminCharts(stats: AdminStats, a: AdminAnalytics): void {
     data: {
       labels: days,
       datasets: [
-        { label: 'Money in', data: moneyIn, borderColor: GOLD_LIGHT, backgroundColor: fade(GOLD, 0.5), fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5 },
-        { label: 'Credited to members', data: credited, borderColor: AMBER, backgroundColor: fade(AMBER, 0.18), fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, borderDash: [6, 4] },
-        { label: 'Paid out', data: paid, borderColor: GREEN, backgroundColor: fade(GREEN, 0.18), fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5 },
+        { label: 'Deposits', data: moneyIn, borderColor: GOLD_LIGHT, backgroundColor: fade(GOLD, 0.5), fill: true, tension: 0.4, borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5 },
+        { label: 'Member credits', data: credited, borderColor: AMBER, backgroundColor: fade(AMBER, 0.18), fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, borderDash: [6, 4] },
+        { label: 'Withdrawals', data: paid, borderColor: GREEN, backgroundColor: fade(GREEN, 0.18), fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5 },
       ],
     },
     options: {
@@ -138,7 +138,7 @@ export function renderAdminCharts(stats: AdminStats, a: AdminAnalytics): void {
   draw('chartSplit', {
     type: 'doughnut',
     data: {
-      labels: ['Level income', 'Rank rewards', 'Company keeps'],
+      labels: ['Level income', 'Rank rewards and bonuses', 'Company retained'],
       datasets: [{ data: [stats.levelCommissionsUsd, stats.rankRewardsUsd, kept], backgroundColor: [AMBER, VIOLET, GREEN], borderColor: '#0b0b0b', borderWidth: 3, hoverOffset: 10 }],
     },
     options: {
@@ -219,7 +219,7 @@ export function renderAdminCharts(stats: AdminStats, a: AdminAnalytics): void {
   set('net', usd(stats.companyNetUsd));
 }
 
-/* ── Live tracking: four panel charts (chart on a coloured panel, Material-style) + ledger ── */
+/* ── Live tracking: four panel charts (chart on a coloured panel, Material-style); the ledger is renderLedger ── */
 
 const WHITE = 'rgba(255, 255, 255, 0.92)';
 const panelOptions = (money: boolean) => ({
@@ -278,26 +278,42 @@ export function renderTracking(a: AdminAnalytics): void {
   }
   const stamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   document.querySelectorAll('.pc-updated').forEach((el) => { el.textContent = `updated ${stamp}`; });
+}
 
-  // treasury ledger: every day with activity, newest first, 10 per page
+/**
+ * Treasury ledger (owner, 2026-10-18: daily / weekly / monthly): every period with activity,
+ * newest first, 10 per page. Treasury = deposits minus withdrawals, running.
+ */
+export function renderLedger(l: AdminLedger): void {
   const body = document.getElementById('ledgerBody');
   if (!body) return;
-  const rows = a.series
-    .map((d, i) => ({ ...d, treasury: treasury[i] }))
-    .filter((d) => d.moneyInUsd || d.levelUsd || d.rankUsd || d.paidOutUsd)
-    .reverse();
+  const name = l.group === 'month'
+    ? (d: string) => new Date(`${d}T00:00:00Z`).toLocaleDateString(undefined, { month: 'short', year: 'numeric', timeZone: 'UTC' })
+    : l.group === 'week' ? (d: string) => `Week of ${label(d)}` : label;
+  const head = document.getElementById('ledgerDateHead');
+  if (head) head.textContent = l.group === 'month' ? 'Month' : l.group === 'week' ? 'Week' : 'Date';
+  const sub = document.getElementById('ledgerSub');
+  if (sub) {
+    sub.textContent = l.group === 'month'
+      ? 'Monthly record of deposits, member credits and withdrawals for the last 12 months (months with activity only).'
+      : l.group === 'week'
+        ? 'Weekly record of deposits, member credits and withdrawals for the last 12 weeks (weeks with activity only).'
+        : 'Daily record of deposits, member credits and withdrawals for the last 30 days (days with activity only).';
+  }
+  const span = l.group === 'month' ? '12 months' : l.group === 'week' ? '12 weeks' : '30 days';
+  const rows = l.periods.filter((d) => d.depositsUsd || d.levelUsd || d.rewardsUsd || d.paidOutUsd).reverse();
   const LEDGER_PAGE = 10;
   const show = (page: number) => {
     body.innerHTML = rows.length
       ? pageOf(rows, page, LEDGER_PAGE).map((d) => `
         <tr>
-          <td class="mono">${label(d.day)}</td>
-          <td class="lg-in">+${usd(d.moneyInUsd)}<small class="mono">${d.activations} new · ${d.topups} top-up</small></td>
-          <td>${usd(d.levelUsd + d.rankUsd)}<small class="mono">level ${usd(d.levelUsd)} · rank ${usd(d.rankUsd)}</small></td>
+          <td class="mono">${name(d.start)}</td>
+          <td class="lg-in">+${usd(d.depositsUsd)}<small class="mono">${d.activations} new · ${d.topups} top-up</small></td>
+          <td>${usd(d.levelUsd + d.rewardsUsd)}<small class="mono">level ${usd(d.levelUsd)} · rewards ${usd(d.rewardsUsd)}</small></td>
           <td class="lg-out">${d.paidOutUsd ? `−${usd(d.paidOutUsd)}` : '—'}</td>
-          <td class="lg-bal">${usd(d.treasury)}</td>
+          <td class="lg-bal">${usd(d.treasuryUsd)}</td>
         </tr>`).join('')
-      : '<tr><td colspan="5" class="lg-empty mono">No money moved in the last 30 days yet. Every deposit, credit and payout will be listed here, day by day.</td></tr>';
+      : `<tr><td colspan="5" class="lg-empty mono">No transactions in the last ${span}. Deposits, member credits and withdrawals will appear here.</td></tr>`;
     renderPager(document.getElementById('ledgerPager'), page, pageCount(rows.length, LEDGER_PAGE), show);
   };
   show(1);

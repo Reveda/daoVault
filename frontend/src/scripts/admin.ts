@@ -1,5 +1,5 @@
 /**
- * DAOvault admin = the company's Command Center (owner, 2026-10-10): overview KPIs, charts of
+ * DAOvault admin = the company's Admin Console (owner, 2026-10-10; was "Command Center"): overview KPIs, charts of
  * the business (adminCharts.ts), how the system works with live numbers, and the withdrawal
  * queue. Access = wallet listed in ADMIN_WALLETS on the backend + a wallet signature (made on
  * the dashboard). Everyone else gets "page not found" (openIfAdmin; Nginx too on the VPS).
@@ -14,13 +14,16 @@ import {
   completeWithdrawal,
   getAdminStats,
   getAdminAnalytics,
+  getAdminLedger,
   getAdminWithdrawals,
   rejectWithdrawal,
+  type LedgerGroup,
   type Withdrawal,
+  type WithdrawalPeriod,
 } from './api.ts';
 import { initDvLogos } from './dvLogo.ts';
 import { renderCompanyOverview } from './companyOverview.ts';
-import { renderAdminCharts, renderTracking } from './adminCharts.ts';
+import { renderAdminCharts, renderLedger, renderTracking } from './adminCharts.ts';
 import { init3DScene } from './scene.ts';
 import { pageCount, renderPager } from './pager.ts';
 
@@ -34,6 +37,9 @@ let adminWallet = '';
 const token = () => sessionFor(adminWallet);
 let status: Withdrawal['status'] = 'PENDING';
 let listPage = 1;
+// filters (owner, 2026-10-18): ledger by day / week / month, withdrawals by request date
+let ledgerGroup: LedgerGroup = 'day';
+let period: WithdrawalPeriod = 'all';
 
 const HELP: Record<Withdrawal['status'], string> = {
   PENDING: 'Check the member, then Approve (or Reject with a reason: the amount returns to their balance).',
@@ -79,7 +85,7 @@ function revealAdmin(): void {
   const badge = $('adminWallet');
   if (badge) { badge.hidden = false; badge.textContent = formatAddress(adminWallet); }
   $('adminApp')!.hidden = false;
-  $('adminState')!.textContent = `• Signed in as admin · ${formatAddress(adminWallet)}`;
+  $('adminState')!.textContent = `• Administrator · ${formatAddress(adminWallet)}`;
   $('adminHeroActions')!.hidden = false;
   $('adminToDash')!.hidden = false;
   loadList().catch((error) => showToast(error instanceof Error ? error.message : 'Could not load.', true));
@@ -92,14 +98,35 @@ async function loadStats(): Promise<void> {
   renderCompanyOverview($('adminStats')!, stats);
   renderAdminCharts(stats, analytics);
   renderTracking(analytics);
+  await loadLedger();
+}
+
+/** treasury ledger in the chosen grouping */
+async function loadLedger(): Promise<void> {
+  renderLedger(await getAdminLedger(await token(), ledgerGroup));
+}
+
+/** a segmented filter: marks the pressed button and calls back with its value */
+function bindSeg(id: string, key: string, onPick: (value: string) => void): void {
+  const seg = $(id);
+  seg?.querySelectorAll<HTMLButtonElement>('button').forEach((b) => b.addEventListener('click', () => {
+    if (b.classList.contains('is-active')) return;
+    seg.querySelectorAll<HTMLButtonElement>('button').forEach((x) => {
+      x.classList.toggle('is-active', x === b);
+      x.setAttribute('aria-pressed', String(x === b));
+    });
+    onPick(b.dataset[key] ?? '');
+  }));
 }
 
 /** withdrawal queue, 20 per page */
 async function loadList(page = listPage): Promise<void> {
   listPage = page;
   $('adminHelp')!.textContent = HELP[status];
-  const res = await getAdminWithdrawals(await token(), status, page);
+  const res = await getAdminWithdrawals(await token(), status, page, period);
   const items = res.items;
+  const when = period === 'week' ? 'in the last 7 days' : period === 'month' ? 'in the last 30 days' : 'in total';
+  $('wdSummary')!.textContent = `${res.total} ${res.total === 1 ? 'withdrawal' : 'withdrawals'} ${when} · ${usd(res.netUsd)} net`;
   const list = $('adminList')!;
   renderPager($('adminPager'), res.page, pageCount(res.total, res.pageSize), (p) => {
     loadList(p).catch((error) => showToast(error instanceof Error ? error.message : 'Could not load.', true));
@@ -165,14 +192,24 @@ document.addEventListener('DOMContentLoaded', () => {
   $('adminRefresh')?.addEventListener('click', async (e) => {
     const button = e.currentTarget as HTMLButtonElement;
     button.disabled = true;
+    button.classList.add('is-loading');
     try {
       await Promise.all([loadStats(), loadList()]);
-      showToast('Updated.');
+      showToast('Data refreshed.');
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Could not refresh.', true);
+      showToast(error instanceof Error ? error.message : 'Could not refresh the data. Please try again.', true);
     } finally {
       button.disabled = false;
+      button.classList.remove('is-loading');
     }
+  });
+  bindSeg('ledgerGroup', 'group', (value) => {
+    ledgerGroup = value as LedgerGroup;
+    loadLedger().catch((error) => showToast(error instanceof Error ? error.message : 'Could not load the ledger.', true));
+  });
+  bindSeg('wdPeriod', 'period', (value) => {
+    period = value as WithdrawalPeriod;
+    loadList(1).catch((error) => showToast(error instanceof Error ? error.message : 'Could not load.', true));
   });
   document.querySelectorAll<HTMLButtonElement>('.admin-tabs button').forEach((tab) => tab.addEventListener('click', () => {
     document.querySelectorAll('.admin-tabs button').forEach((t) => t.classList.toggle('is-active', t === tab));

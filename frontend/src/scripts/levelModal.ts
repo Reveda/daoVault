@@ -1,6 +1,6 @@
 /**
  * Dashboard level modal (owner, 2026-10-09): tap a row of the 20-Level Downline and a modal
- * lists everyone who joined at that level - DV code, their rank (once they have one), who
+ * lists everyone who joined at that level (sponsor tree) - DV code, their rank (once they have one), who
  * sponsored them and when they activated - 50 at a time with "Load more". Centred on every screen (phones too).
  * Closes with the X, a tap outside the card or Escape; focus returns to the row.
  */
@@ -26,6 +26,7 @@ function memberRows(members: LevelMembers['members'], startIndex: number): strin
       </span>
       <dl class="lv-facts">
         <div><dt>Sponsor</dt><dd class="mono">${esc(m.sponsorCode ?? '—')}</dd></div>
+        <div><dt>Placed</dt><dd class="mono">${m.placement ? `${m.placement.side === 'LEFT' ? 'Left' : 'Right'} · ${esc(m.placement.underCode ?? '—')}` : 'Not joined'}</dd></div>
         <div><dt>Status</dt><dd class="lv-state ${m.joinedAt ? 'is-active' : 'is-pending'}"><i aria-hidden="true"></i>${m.joinedAt ? `Active since ${date(m.joinedAt)}` : 'Not activated'}</dd></div>
       </dl>
     </li>`).join('');

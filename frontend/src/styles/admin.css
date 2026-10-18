@@ -14,6 +14,21 @@
 }
 .admin-tabs button.is-active { color: #050410; background: var(--grad-gold); border-color: transparent; font-weight: 700; }
 .admin-help { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 1.2rem; }
+/* segmented filters (owner, 2026-10-18): ledger Daily / Weekly / Monthly, withdrawals by request date */
+.ad-seg { display: inline-flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.25rem; border-radius: 999px; border: 1px solid rgba(212, 175, 55, 0.3); background: rgba(212, 175, 55, 0.05); }
+.ad-seg button {
+  padding: 0.4rem 0.95rem; border: 0; border-radius: 999px; background: transparent; color: var(--text-muted);
+  font: inherit; font-size: 0.76rem; cursor: pointer; transition: color 0.25s ease, background 0.25s ease;
+}
+.ad-seg button:hover { color: var(--gold); }
+.ad-seg button.is-active { color: #050410; background: var(--grad-gold); font-weight: 700; }
+.ad-seg button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+#ledgerGroup { margin: 0 0 1rem; }
+.admin-filter-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem 1rem; margin: 0.4rem 0 0.8rem; }
+.admin-sum { margin: 0; font-size: 0.76rem; color: var(--gold); }
+/* the table scrolls in its own box: the glass card's glow layer no longer adds a page-wide scrollbar */
+.lg-wrap { overflow: hidden; }
+.lg-scroll { overflow-x: auto; }
 .admin-list { display: grid; gap: 0.8rem; }
 .admin-empty { color: var(--text-muted); text-align: center; padding: 1.5rem 0; }
 .admin-item {
@@ -70,7 +85,11 @@ html.lite .fx-particles, html.lite .fx-particles::after { animation: none; }
 .ad-chip { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.45rem 0.85rem; border-radius: 999px; font-size: 0.72rem; color: var(--gold); border: 1px solid rgba(212, 175, 55, 0.4); background: rgba(212, 175, 55, 0.08); }
 .ad-live { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6); animation: adPulse 2s infinite; }
 @keyframes adPulse { 70% { box-shadow: 0 0 0 9px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
-.ad-refresh { padding: 0.5rem 1rem; font-size: 0.8rem; }
+.ad-refresh { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1.05rem; font-size: 0.8rem; }
+.ad-refresh-icon { width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.ad-refresh.is-loading .ad-refresh-icon { animation: adSpin 0.9s linear infinite; }
+@keyframes adSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .ad-refresh.is-loading .ad-refresh-icon { animation: none; } }
 
 .ad-section { margin: 0 0 2.6rem; padding: 1.6rem; border-radius: 24px; border: 1px solid rgba(212, 175, 55, 0.14); background: linear-gradient(160deg, rgba(212, 175, 55, 0.05), rgba(0, 0, 0, 0.25)); }
 .ad-section-head { margin-bottom: 1.3rem; }

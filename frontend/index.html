@@ -1065,7 +1065,7 @@
               <span class="retopup-dot"></span> 25&times; CAP &amp; TOP-UP
             </div>
             <h3>What Happens at the <span class="grad-text">25&times; Cap</span> ($7,500)?</h3>
-            <p>Every $300 package earns up to 25&times; ($7,500) in level income. When it reaches the cap you keep your ID, your team and your rank: a new $300 top-up starts the next package.</p>
+            <p>Every $300 package earns up to 25&times; ($7,500) in total: level income, rank rewards and bonuses. When it reaches the cap you keep your ID, your team and your rank: a new $300 top-up starts the next package.</p>
           </div>
 
           <!-- the 4 step cards were removed by the owner (2026-10-13); the heading and the simulator below stay. Kept for reference:
@@ -1105,7 +1105,7 @@
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
               </div>
               <h4>25&times; Cap Reached</h4>
-              <p>Level income for that package stops at exactly $7,500. The cap keeps the plan balanced for every member.</p>
+              <p>Earnings for that package stop at exactly $7,500. The cap keeps the plan balanced for every member.</p>
               <div class="station-badge mono text-violet">CAP REACHED</div>
             </div>
 
@@ -1138,7 +1138,7 @@
             <!-- Progress Meter -->
             <div class="retopup-meter-wrap">
               <div class="retopup-meter-meta mono">
-                <span>LEVEL INCOME ON THIS PACKAGE (25&times; CAP)</span>
+                <span>EARNINGS ON THIS PACKAGE (25&times; CAP)</span>
                 <span class="retopup-meter-num grad-text" id="retopupMeterVal">$0 / $7,500 USDT</span>
               </div>
               <div class="retopup-meter-track">
@@ -1238,6 +1238,59 @@
       </div>
     </section>
 
+    <!-- Fast-start bonus (owner 2026-10-18): Rocket Start $100 in 3 days / Fast Start $50 in 7 days -->
+    <section class="chapter fsb-section" id="bonus" data-scene="bonus">
+      <div class="wrap">
+        <header class="section-head" data-reveal>
+          <div class="scene-slot scene-slot--right" aria-hidden="true"></div>
+          <div class="section-path-beam" aria-hidden="true">
+            <svg viewBox="0 0 500 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M 0,8 L 470,8" stroke="url(#heroBeamGrad)" stroke-width="2" class="beam-line" />
+              <circle cx="470" cy="8" r="4" fill="#ffb800" class="beam-dot" />
+            </svg>
+          </div>
+          <p class="section-tag mono">FAST-START BONUS</p>
+          <h2 class="section-title">
+            <span class="wm-line"><span>Start Fast, <span class="grad-text">Earn Extra</span></span></span>
+          </h2>
+          <p class="section-sub">
+            Bring 10 activated directs soon after you activate your ID and receive a one-time bonus on top of your
+            level income.
+          </p>
+        </header>
+
+        <div class="fsb-grid">
+          <article class="glass fsb-card fsb-card--rocket" data-reveal>
+            <span class="fsb-badge mono">3 DAYS</span>
+            <h3>Rocket Start Bonus</h3>
+            <p class="fsb-amount"><b>$100</b><span class="mono">USDT</span></p>
+            <p class="fsb-rule">10 activated directs within <b>3 days</b> of your activation.</p>
+          </article>
+          <article class="glass fsb-card" data-reveal>
+            <span class="fsb-badge mono">7 DAYS</span>
+            <h3>Fast Start Bonus</h3>
+            <p class="fsb-amount"><b>$50</b><span class="mono">USDT</span></p>
+            <p class="fsb-rule">10 activated directs within <b>7 days</b> of your activation.</p>
+          </article>
+        </div>
+
+        <div class="glass fsb-timeline" data-reveal aria-label="Bonus timeline">
+          <div class="fsb-track" aria-hidden="true"><i class="fsb-track-fill"></i></div>
+          <ol class="fsb-steps">
+            <li><b class="mono">Day 0</b><span>You activate: the clock starts</span></li>
+            <li class="is-rocket"><b class="mono">Day 3</b><span>10 directs by now: $100</span></li>
+            <li><b class="mono">Day 7</b><span>10 directs by now: $50</span></li>
+          </ol>
+        </div>
+
+        <ul class="fsb-notes" data-reveal>
+          <li>One bonus per member: the faster one ($100 within 3 days, otherwise $50 within 7 days).</li>
+          <li>Directs are members who joined with your referral link and activated, on either side.</li>
+          <li>Credited to your balance when your 10th direct activates; it counts toward the 25&times; earnings cap.</li>
+        </ul>
+      </div>
+    </section>
+
     <!-- 3D Dual-Sided Flip Cards (iorca.xyz Layer Box Model) -->
     <section class="chapter" id="about" data-scene="about">
       <div class="wrap">
@@ -1267,7 +1320,7 @@
                   <span class="mono" style="font-size: 0.75rem; color: var(--gold);">RULE 01 &middot; THE CAP</span>
                   <h3 style="font-size: 1.45rem; margin-top: 0.5rem;">25&times; Earnings Cap</h3>
                   <p style="color: var(--text-muted); font-size: 0.88rem; line-height: 1.6; margin-top: 0.8rem;">
-                    Each $300 package earns up to $7,500 in level income. A $300 top-up then starts a new package.
+                    Each $300 package earns up to $7,500 in total, rewards included. A $300 top-up then starts a new package.
                   </p>
                 </div>
                 <div class="flip-hint mono">
@@ -1758,9 +1811,9 @@
             <div class="faq-answer">
               <div class="faq-answer-inner">
                 <p>
-                  Each $300 package earns up to <b>25&times; ($7,500 USDT)</b> in level income. When it reaches the cap, level income
-                  for that package stops. <b>You keep your ID, your team and your rank.</b> A new $300 top-up from your wallet starts
-                  the next package, with its own $7,500 cap. Rank rewards are separate and do not count toward the cap.
+                  Each $300 package earns up to <b>25&times; ($7,500 USDT)</b> in total: level income, rank rewards and bonuses all
+                  count toward it. When it reaches the cap, earnings for that package stop. <b>You keep your ID, your team and your
+                  rank.</b> A new $300 top-up from your wallet starts the next package, with its own $7,500 cap.
                 </p>
               </div>
             </div>

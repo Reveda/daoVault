@@ -1,5 +1,5 @@
 import { EarningType, PackageStatus, Prisma } from "@prisma/client";
-import { CAP_MULTIPLIER, LEVELS, RANKS, fromCents, isLevelUnlocked, rankForLegs, summarizeLegs, toCents } from "../plan/plan.js";
+import { CAP_MULTIPLIER, FAST_START, FAST_START_DIRECTS, LEVELS, RANKS, fromCents, isLevelUnlocked, rankForLegs, summarizeLegs, toCents } from "../plan/plan.js";
 import { isRootWallet } from "../../config/root.js";
 
 type Tx = Prisma.TransactionClient;
@@ -8,7 +8,7 @@ const ZERO = "0x0000000000000000000000000000000000000000";
 
 /**
  * One runner at a time for everything that changes commissions, directs, team volume or ranks
- * (the plan queue and linkUpline). A Postgres advisory lock: it works across every API copy and
+ * (the plan queue, linkUpline and placeMember). A Postgres advisory lock: it works across every API copy and
  * the worker, needs no Redis, and is released when the transaction ends.
  */
 const PLAN_LOCK = 0x44_56_50_51; // "DVPQ"
@@ -20,6 +20,21 @@ async function tryLockPlan(tx: Tx): Promise<boolean> {
 
 /** only packages the plan queue has processed count as DAO volume (see PlanEvent) */
 const COUNTED = { packages: { where: { countedAt: { not: null } } } } as const;
+
+/**
+ * Two trees (owner, 2026-10-17):
+ *  - SPONSOR tree (users.upline_id, who invited whom): directs, level unlock and the 20-level income.
+ *  - PLACEMENT tree (users.placement_id + placement_side, binary LEFT / RIGHT): team business, the
+ *    Left / Right legs, ranks and rank rewards. The joining member picks the side; the spot is the
+ *    bottom of that side under the sponsor and never changes (placeMember).
+ */
+export type Side = "LEFT" | "RIGHT";
+type SideVolume = Map<string, { left: number; right: number }>;
+const addTo = (volume: SideVolume, id: string, side: Side, dao: number) => {
+  const v = volume.get(id) ?? { left: 0, right: 0 };
+  if (side === "LEFT") v.left += dao; else v.right += dao;
+  volume.set(id, v);
+};
 
 export type ActivationInput = {
   walletAddress: string;   // lowercase
@@ -62,7 +77,7 @@ export async function uniqueReferralCode(tx: Pick<Tx, "user">, wallet: string): 
   throw httpError("Could not allocate a referral code.", 500);
 }
 
-/** Every upline above `userId`, nearest first (depth 1 = sponsor). */
+/** Every SPONSOR above `userId`, nearest first (depth 1 = sponsor): directs and the 20-level income. */
 async function ancestorsOf(tx: Tx, userId: string): Promise<Array<{ id: string; depth: number }>> {
   return tx.$queryRaw<Array<{ id: string; depth: number }>>`
     WITH RECURSIVE chain(id, upline_id, depth) AS (
@@ -73,6 +88,21 @@ async function ancestorsOf(tx: Tx, userId: string): Promise<Array<{ id: string; 
        WHERE c.depth < 100000
     )
     SELECT id::text AS id, depth FROM chain ORDER BY depth`;
+}
+
+/**
+ * Every member above `userId` in the PLACEMENT tree, nearest first, with the side of theirs this
+ * member's business arrives on. Depth-guarded like ancestorsOf.
+ */
+async function placementAncestorsOf(tx: Tx, userId: string): Promise<Array<{ id: string; side: Side }>> {
+  return tx.$queryRaw<Array<{ id: string; side: Side }>>`
+    WITH RECURSIVE chain(id, parent, side, depth) AS (
+      SELECT id, placement_id, placement_side, 0 FROM users WHERE id = ${userId}::uuid
+      UNION ALL
+      SELECT u.id, u.placement_id, u.placement_side, c.depth + 1 FROM users u JOIN chain c ON u.id = c.parent
+       WHERE c.depth < 1000000
+    )
+    SELECT parent::text AS id, side::text AS side FROM chain WHERE parent IS NOT NULL ORDER BY depth`;
 }
 
 /**
@@ -91,83 +121,114 @@ export async function teamHasPayment(tx: Tx, userId: string): Promise<boolean> {
   return Boolean(row?.paid);
 }
 
-/** adds `delta` DAO to each member: one UPDATE per distinct delta (a batch's root row is written once) */
-async function addVolume(tx: Tx, volume: Map<string, number>) {
-  const byDelta = new Map<number, string[]>();
-  for (const [id, delta] of volume) if (delta) byDelta.set(delta, [...(byDelta.get(delta) ?? []), id]);
-  for (const [delta, ids] of byDelta) {
+/**
+ * Adds Left / Right DAO to each member (team volume = left + right): one UPDATE per distinct
+ * (left, right) pair, so a batch writes each member once.
+ */
+async function addSideVolume(tx: Tx, volume: SideVolume) {
+  const byDelta = new Map<string, string[]>();
+  for (const [id, v] of volume) {
+    if (!v.left && !v.right) continue;
+    const key = `${v.left}:${v.right}`;
+    byDelta.set(key, [...(byDelta.get(key) ?? []), id]);
+  }
+  for (const [key, ids] of byDelta) {
+    const [left, right] = key.split(":").map(Number);
     for (let i = 0; i < ids.length; i += 5_000) {
-      await tx.user.updateMany({ where: { id: { in: ids.slice(i, i + 5_000) } }, data: { teamVolume: { increment: delta } } });
+      await tx.user.updateMany({
+        where: { id: { in: ids.slice(i, i + 5_000) } },
+        data: { leftVolume: { increment: left }, rightVolume: { increment: right }, teamVolume: { increment: left + right } },
+      });
     }
   }
 }
 
 /**
- * Puts `userId` (with its whole team) under `sponsorId`. Pre-launch marketing (owner, 2026-10-13):
- * the tree is built from invite links before anyone pays, so an unpaid wallet can be a sponsor.
- * Refuses a loop (the sponsor is the user or inside the user's own team). If the user's team
- * already holds counted packages, that DAO volume moves up to every new ancestor and their ranks
- * are re-checked. Never touches activeDirectsCount: only a PAID member counts as a direct (the
- * plan queue adds it). Holds the plan lock, so it never races the queue. Returns false on a loop.
+ * Sets `userId`'s SPONSOR (referral tree). Pre-launch marketing (owner, 2026-10-13): an unpaid
+ * wallet can be a sponsor. Refuses a loop (the sponsor is the user or below it in the sponsor
+ * tree). Moves no business: team business follows the placement tree (placeMember). Never touches
+ * activeDirectsCount: only a PAID member counts as a direct (the plan queue adds it). Holds the
+ * plan lock. Returns false on a loop.
  */
 export async function linkUpline(tx: Tx, userId: string, sponsorId: string): Promise<boolean> {
   if (userId === sponsorId) return false;
   await lockPlan(tx);
   const above = [sponsorId, ...(await ancestorsOf(tx, sponsorId)).map((a) => a.id)];
   if (above.includes(userId)) return false;
-  const user = await tx.user.update({
-    where: { id: userId }, data: { uplineId: sponsorId },
-    select: { teamVolume: true, _count: { select: COUNTED } },
-  });
-  const volume = user.teamVolume + user._count.packages;
-  if (volume > 0) {
-    await addVolume(tx, new Map(above.map((id) => [id, volume])));
-    await recomputeRanks(tx, above);
-  }
+  await tx.user.update({ where: { id: userId }, data: { uplineId: sponsorId } });
   return true;
 }
 
 /**
- * Re-evaluates the rank of each member in `ids` from their legs (50:50 rule). Ranks only
- * go up. Every newly reached tier pays its one-time reward once (rank rewards are a
- * separate pool, so they are not limited by the 25x level-income cap).
+ * Binary placement (owner, 2026-10-17): puts `userId` on the `side` of its sponsor's team, at the
+ * BOTTOM of that side: the sponsor's LEFT spot, then that member's LEFT spot, and so on down to the
+ * first empty one (RIGHT the same way). The spot is permanent. A team already placed below the
+ * member (pre-launch) moves with it: its counted business is added to every new placement ancestor
+ * and their ranks are re-checked. Holds the plan lock; the unique (placement_id, placement_side)
+ * index is the backstop. Returns the member it now sits under, or null if it was already placed or
+ * the spot would be inside its own team.
+ */
+export async function placeMember(tx: Tx, userId: string, sponsorId: string, side: Side): Promise<string | null> {
+  if (userId === sponsorId) return null;
+  await lockPlan(tx);
+  const me = await tx.user.findUniqueOrThrow({
+    where: { id: userId },
+    select: { placementId: true, leftVolume: true, rightVolume: true, _count: { select: COUNTED } },
+  });
+  if (me.placementId) return null;
+  const [bottom] = await tx.$queryRaw<Array<{ id: string }>>`
+    WITH RECURSIVE walk(id, depth) AS (
+      SELECT ${sponsorId}::uuid, 0
+      UNION ALL
+      SELECT u.id, w.depth + 1 FROM users u JOIN walk w ON u.placement_id = w.id
+       WHERE u.placement_side = ${side}::"PlacementSide" AND w.depth < 1000000
+    )
+    SELECT id::text AS id FROM walk ORDER BY depth DESC LIMIT 1`;
+  const parentId = bottom.id;
+  const above = await placementAncestorsOf(tx, parentId);
+  if (parentId === userId || above.some((a) => a.id === userId)) return null;
+  await tx.user.update({ where: { id: userId }, data: { placementId: parentId, placementSide: side } });
+  const business = me.leftVolume + me.rightVolume + me._count.packages;
+  if (business > 0) {
+    const volume: SideVolume = new Map();
+    addTo(volume, parentId, side, business);
+    for (const a of above) addTo(volume, a.id, a.side, business);
+    await addSideVolume(tx, volume);
+    await recomputeRanks(tx, [...volume.keys()]);
+  }
+  return parentId;
+}
+
+/**
+ * Re-evaluates the rank of each member in `ids` from its Left and Right business (the DAO is
+ * needed on EACH side). Ranks only go up. Every newly reached tier pays its one-time reward once,
+ * INSIDE the 25x cap (owner, 2026-10-18; creditIntoCap): a member whose packages are full reaches
+ * the rank but its reward (or the part over the cap) stays with the company.
  */
 export async function recomputeRanks(tx: Tx, ids: string[]): Promise<RankUp[]> {
   if (!ids.length) return [];
   const members = await tx.user.findMany({
     where: { id: { in: ids } },
-    select: { id: true, walletAddress: true, currentRank: true, packages: { select: { id: true }, orderBy: { createdAt: "asc" }, take: 1 } },
+    select: {
+      id: true, walletAddress: true, currentRank: true, leftVolume: true, rightVolume: true,
+      packages: { where: { status: PackageStatus.ACTIVE }, orderBy: { createdAt: "asc" } },
+    },
   });
-  const directs = await tx.user.findMany({
-    where: { uplineId: { in: ids } },
-    select: { uplineId: true, teamVolume: true, _count: { select: COUNTED } },
-  });
-  const legsBy = new Map<string, number[]>();
-  for (const d of directs) {
-    const legs = legsBy.get(d.uplineId!) ?? [];
-    legs.push(d.teamVolume + d._count.packages); // 1 DAO per package, top-ups included
-    legsBy.set(d.uplineId!, legs);
-  }
 
   const rankUps: RankUp[] = [];
   for (const m of members) {
-    const reached = rankForLegs(summarizeLegs(legsBy.get(m.id) ?? []));
+    const reached = rankForLegs(summarizeLegs([m.leftVolume, m.rightVolume]));
     if (reached <= m.currentRank) continue;
     await tx.user.update({ where: { id: m.id }, data: { currentRank: reached } });
-    let rewardUsd = 0;
-    const pkg = m.packages[0];
-    if (pkg) {
-      for (let r = m.currentRank + 1; r <= reached; r++) {
-        const paid = await tx.earning.findFirst({ where: { recipientId: m.id, type: EarningType.RANK_REWARD, level: r }, select: { id: true } });
-        if (paid) continue;
-        const tier = RANKS[r - 1];
-        await tx.earning.create({
-          data: { recipientId: m.id, sourceId: m.id, packageId: pkg.id, type: EarningType.RANK_REWARD, level: r, amountUsd: tier.rewardUsd },
-        });
-        rewardUsd += tier.rewardUsd;
-      }
+    let rewardCents = 0;
+    for (let r = m.currentRank + 1; r <= reached; r++) {
+      const paid = await tx.earning.findFirst({ where: { recipientId: m.id, type: EarningType.RANK_REWARD, level: r }, select: { id: true } });
+      if (paid) continue;
+      rewardCents += await creditIntoCap(tx, m.id, m.packages, toCents(RANKS[r - 1].rewardUsd), {
+        sourceId: m.id, type: EarningType.RANK_REWARD, level: r,
+      });
     }
-    rankUps.push({ wallet: m.walletAddress, from: m.currentRank, to: reached, rewardUsd });
+    rankUps.push({ wallet: m.walletAddress, from: m.currentRank, to: reached, rewardUsd: fromCents(rewardCents) });
   }
   return rankUps;
 }
@@ -240,7 +301,8 @@ export async function processActivation(tx: Tx, input: ActivationInput): Promise
     // is safe: nobody in the member's team has paid (no volume to move). Otherwise the platform
     // tree stays, so commissions already paid through it remain consistent.
     // (a rare path: only a direct contract call reaches it; the website pays with the recorded sponsor)
-    if (await teamHasPayment(tx, user.id)) sponsorMismatch = "kept";
+    // a member who already took a placement spot keeps its sponsor (the spot is permanent)
+    if (user.placementId || await teamHasPayment(tx, user.id)) sponsorMismatch = "kept";
     else if (await linkUpline(tx, user.id, validSponsor.id)) {
       sponsorMismatch = "moved";
       await tx.user.update({ where: { id: user.id }, data: { pendingSponsorCode: validSponsor.referralCode } });
@@ -248,12 +310,90 @@ export async function processActivation(tx: Tx, input: ActivationInput): Promise
     if (sponsorMismatch === "moved") user = await tx.user.findUniqueOrThrow({ where: { id: user.id }, include: { _count: { select: { packages: true, downline: true } } } });
   }
 
+  // paid without choosing a side on the website (e.g. a direct contract call): the bottom of the
+  // sponsor's LEFT side (owner, 2026-10-18)
+  if (user.uplineId && !user.placementId) await placeMember(tx, user.id, user.uplineId, "LEFT");
+
   const pkg = await queuePackage(tx, user.id, amountUsd, transactionHash, true);
   return {
     walletAddress, referralCode: user.referralCode, transactionHash, status: pkg.status,
     alreadyProcessed: false, sponsorLinked: Boolean(user.uplineId), queued: true, commissions: [], skipped: [], rankUps: [],
     ...(sponsorMismatch ? { sponsorMismatch } : {}),
   };
+}
+
+type CapPackage = { id: string; totalEarned: { toString(): string }; maxCapLimit: { toString(): string }; status: PackageStatus };
+
+/**
+ * Credits up to `cents` to a member inside the 25x cap (owner, 2026-10-18: level income, rank
+ * rewards and the fast-start bonus ALL count toward it; total earnings never pass 25x). Fills the
+ * member's ACTIVE packages oldest first; a package that reaches its cap becomes CAPPED and the
+ * rest spills into the next (a top-up waiting in line). One Earning per package touched. The
+ * `packages` objects are updated in place, so several credits in a row stay correct. Returns the
+ * cents paid: less than asked (or 0) when the packages are full; the rest stays with the company.
+ */
+async function creditIntoCap(
+  tx: Tx, recipientId: string, packages: CapPackage[], cents: number,
+  earning: { sourceId: string; type: EarningType; level: number; percentage?: number },
+): Promise<number> {
+  let remaining = cents;
+  let paid = 0;
+  for (const p of packages) {
+    if (remaining <= 0) break;
+    if (p.status !== PackageStatus.ACTIVE) continue;
+    const earnedCents = toCents(p.totalEarned.toString());
+    const capCents = toCents(p.maxCapLimit.toString());
+    const payCents = Math.min(remaining, capCents - earnedCents);
+    if (payCents <= 0) {
+      await tx.package.update({ where: { id: p.id }, data: { status: PackageStatus.CAPPED } });
+      p.status = PackageStatus.CAPPED;
+      continue;
+    }
+    await tx.earning.create({
+      data: {
+        recipientId, sourceId: earning.sourceId, packageId: p.id, type: earning.type,
+        level: earning.level, percentage: earning.percentage, amountUsd: fromCents(payCents),
+      },
+    });
+    const newEarned = earnedCents + payCents;
+    const status = newEarned >= capCents ? PackageStatus.CAPPED : PackageStatus.ACTIVE;
+    await tx.package.update({ where: { id: p.id }, data: { totalEarned: fromCents(newEarned), status } });
+    p.totalEarned = fromCents(newEarned);
+    p.status = status;
+    remaining -= payCents;
+    paid += payCents;
+  }
+  return paid;
+}
+
+/**
+ * Fast-start bonus (owner, 2026-10-18; plan.ts FAST_START): counted from the member's own
+ * activation (its joining date). 10 paid directs (sponsor tree) whose activation is within 3 days
+ * = Rocket Start Bonus $100, else within 7 days = Fast Start Bonus $50. One bonus per member, paid
+ * the moment the 10th direct is counted (or the member's own activation, when its directs paid
+ * first), inside the 25x cap. The company root earns nothing.
+ */
+async function awardFastStart(tx: Tx, userId: string): Promise<{ wallet: string; days: number; rewardUsd: number } | null> {
+  const m = await tx.user.findUnique({
+    where: { id: userId },
+    select: { walletAddress: true, packages: { orderBy: { createdAt: "asc" } } },
+  });
+  if (!m?.packages.length || isRootWallet(m.walletAddress)) return null;
+  if (await tx.earning.findFirst({ where: { recipientId: userId, type: EarningType.FAST_START_BONUS }, select: { id: true } })) return null;
+  const joined = m.packages[0].createdAt.getTime();
+  for (const tier of FAST_START) {
+    const deadline = new Date(joined + tier.days * 86_400_000);
+    const [row] = await tx.$queryRaw<Array<{ n: number }>>`
+      SELECT COUNT(*)::int AS n FROM users d
+       WHERE d.upline_id = ${userId}::uuid
+         AND (SELECT MIN(p.created_at) FROM packages p WHERE p.user_id = d.id AND p.counted_at IS NOT NULL) <= ${deadline}`;
+    if (Number(row?.n ?? 0) < FAST_START_DIRECTS) continue;
+    const paid = await creditIntoCap(tx, userId, m.packages, toCents(tier.rewardUsd), {
+      sourceId: userId, type: EarningType.FAST_START_BONUS, level: tier.days,
+    });
+    return paid > 0 ? { wallet: m.walletAddress, days: tier.days, rewardUsd: fromCents(paid) } : null;
+  }
+  return null;
 }
 
 /**
@@ -283,31 +423,10 @@ async function payCommissions(tx: Tx, sourceUserId: string, amountCents: number,
     if (!upline.packages.length) { skipped.push({ level, wallet: upline.walletAddress, reason: "capped" }); continue; }
     if (!isLevelUnlocked(level, upline.activeDirectsCount)) { skipped.push({ level, wallet: upline.walletAddress, reason: "level_locked" }); continue; }
 
-    let remaining = Math.round((amountCents * LEVELS[level - 1].pct) / 100);
-    let paid = 0;
-    for (const upPkg of upline.packages) {
-      if (remaining <= 0) break;
-      const earnedCents = toCents(upPkg.totalEarned.toString());
-      const capCents = toCents(upPkg.maxCapLimit.toString());
-      const payCents = Math.min(remaining, capCents - earnedCents);
-      if (payCents <= 0) {
-        await tx.package.update({ where: { id: upPkg.id }, data: { status: PackageStatus.CAPPED } });
-        continue;
-      }
-      await tx.earning.create({
-        data: {
-          recipientId: upline.id, sourceId: sourceUserId, packageId: upPkg.id, type: EarningType.LEVEL_COMMISSION,
-          level, percentage: LEVELS[level - 1].pct, amountUsd: fromCents(payCents),
-        },
-      });
-      const newEarned = earnedCents + payCents;
-      await tx.package.update({
-        where: { id: upPkg.id },
-        data: { totalEarned: fromCents(newEarned), status: newEarned >= capCents ? PackageStatus.CAPPED : PackageStatus.ACTIVE },
-      });
-      remaining -= payCents;
-      paid += payCents;
-    }
+    const share = Math.round((amountCents * LEVELS[level - 1].pct) / 100);
+    const paid = await creditIntoCap(tx, upline.id, upline.packages, share, {
+      sourceId: sourceUserId, type: EarningType.LEVEL_COMMISSION, level, percentage: LEVELS[level - 1].pct,
+    });
     if (paid > 0) commissions.push({ level, wallet: upline.walletAddress, amountUsd: fromCents(paid) });
     else skipped.push({ level, wallet: upline.walletAddress, reason: "capped" });
   }
@@ -319,24 +438,27 @@ export type PlanBatch = {
   processed: number;
   events: Array<{ packageId: string; wallet: string; commissions: Commission[]; skipped: Skipped[] }>;
   rankUps: RankUp[];
+  /** fast-start bonuses paid in this batch (awardFastStart) */
+  bonuses: Array<{ wallet: string; days: number; rewardUsd: number }>;
 };
 
 /**
  * The plan queue: takes up to `limit` unprocessed payments, oldest first, and for each one
  *  1. the sponsor gains an active direct (activations only; before commissions, so it can
  *     unlock their next level, exactly as when the payment arrived)
- *  2. 20-level commissions (payCommissions)
- *  3. +1 DAO for every upline: summed over the batch and written once per upline
- * then re-checks the ranks of every upline touched. Runs under the plan lock (one runner across
+ *  2. 20-level commissions up the SPONSOR tree (payCommissions)
+ *  3. +1 DAO on the matching side of every member above it in the PLACEMENT tree, summed over
+ *     the batch and written once per member
+ * then re-checks the ranks of every member touched. Runs under the plan lock (one runner across
  * all API copies and the worker); `lock: false` only inside the plan self-test's own transaction.
  */
 export async function processPlanEvents(tx: Tx, { limit = 100, lock = true } = {}): Promise<PlanBatch> {
-  const batch: PlanBatch = { busy: false, processed: 0, events: [], rankUps: [] };
+  const batch: PlanBatch = { busy: false, processed: 0, events: [], rankUps: [], bonuses: [] };
   if (lock && !(await tryLockPlan(tx))) return { ...batch, busy: true };
   const events = await tx.planEvent.findMany({ where: { processedAt: null }, orderBy: { id: "asc" }, take: limit });
   if (!events.length) return batch;
 
-  const volume = new Map<string, number>();
+  const volume: SideVolume = new Map();
   const now = new Date();
   for (const ev of events) {
     const user = await tx.user.findUniqueOrThrow({ where: { id: ev.userId }, select: { walletAddress: true } });
@@ -345,12 +467,20 @@ export async function processPlanEvents(tx: Tx, { limit = 100, lock = true } = {
       await tx.user.update({ where: { id: chain[0].id }, data: { activeDirectsCount: { increment: 1 } } });
     }
     const paid = chain.length ? await payCommissions(tx, ev.userId, ev.amountCents, chain) : { commissions: [], skipped: [] };
-    for (const c of chain) volume.set(c.id, (volume.get(c.id) ?? 0) + 1);
+    for (const a of await placementAncestorsOf(tx, ev.userId)) addTo(volume, a.id, a.side, 1);
     await tx.package.update({ where: { id: ev.packageId }, data: { countedAt: now } });
     await tx.planEvent.update({ where: { id: ev.id }, data: { processedAt: now } });
     batch.events.push({ packageId: ev.packageId, wallet: user.walletAddress, ...paid });
+    // fast-start bonus: the sponsor may just have reached 10 paid directs; a member activating after
+    // its directs did may already have them
+    if (ev.isActivation) {
+      for (const id of [chain[0]?.id, ev.userId]) {
+        const bonus = id ? await awardFastStart(tx, id) : null;
+        if (bonus) batch.bonuses.push(bonus);
+      }
+    }
   }
-  await addVolume(tx, volume);
+  await addSideVolume(tx, volume);
   batch.rankUps = await recomputeRanks(tx, [...volume.keys()]);
   batch.processed = events.length;
   return batch;
@@ -364,9 +494,9 @@ export type TopUpInput = {
 
 /**
  * Re-entry (owner, 2026-10-10): a verified on-chain ToppedUp adds a NEW package to an activated
- * member, with its own 25x cap. Same ID, same upline and team; the sponsor gains no new direct
- * (already counted). The plan queue pays the uplines the 20 levels again and adds 1 DAO to their
- * team volume. Commissions keep filling the oldest active package first. Idempotent per
+ * member, with its own 25x cap. Same ID, same sponsor and placement; the sponsor gains no new
+ * direct (already counted). The plan queue pays the sponsors the 20 levels again and adds 1 DAO
+ * to the matching side of every placement upline. Commissions keep filling the oldest active package first. Idempotent per
  * transaction hash. Must run inside a serializable transaction.
  */
 export async function processTopUp(tx: Tx, input: TopUpInput): Promise<ActivationResult> {

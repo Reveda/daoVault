@@ -19,9 +19,9 @@ export const registerWallet: RequestHandler = async (req, res, next) => {
   }
 };
 
-export const savePendingSponsor: RequestHandler = async (req, res, next) => {
+export const joinTeam: RequestHandler = async (req, res, next) => {
   try {
-    const data = await usersService.savePendingSponsor(String(req.body.walletAddress), String(req.body.sponsorCode));
+    const data = await usersService.joinTeam(String(req.body.walletAddress), String(req.body.sponsorCode), req.body.side === "RIGHT" ? "RIGHT" : "LEFT");
     res.json({ success: true, data });
   } catch (error) {
     next(error);

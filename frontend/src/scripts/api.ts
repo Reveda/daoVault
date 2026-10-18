@@ -1,9 +1,13 @@
+export type Side = 'LEFT' | 'RIGHT';
+
 export type DashboardData = {
   walletAddress: string;
   referralCode: string;
   sponsorCode: string | null;
-  /** before payment: the latest invite code opened, saved on the server (null once activated) */
+  /** before payment: the invite code the member joined with (null once activated) */
   pendingSponsorCode: string | null;
+  /** binary placement (owner, 2026-10-17): where the member sits; null = has not joined a team yet */
+  placement?: { side: Side; underCode: string | null } | null;
   /** pre-launch marketing (owner, 2026-10-13): Pay & Activate opens at this moment (null = open) */
   paymentsOpenAt?: string | null;
   paymentsOpen?: boolean;
@@ -16,20 +20,37 @@ export type DashboardData = {
   currentRank: number;
   rankName: string | null;
   teamVolume: number;
-  /** DAO per side; powerMembers / otherMembers = members on each side, paid or not (all depths) */
-  /** leg totals include a clearly-labelled virtual Power Business display volume; official rank state is separate */
-  legs: { total: number; power: number; other: number; count: number; powerMembers?: number; otherMembers?: number };
+  /** Left / Right business (DAO) of the placement tree; members = everyone placed on that side, paid or not */
+  legs: { left: number; right: number; total: number; leftMembers?: number; rightMembers?: number };
   nextRank: { rank: number; name: string; volume: number; rewardUsd: number; countedVolume: number } | null;
   totalEarned: number | string;
   levelIncomeUsd: number;
   rankRewardsUsd: number;
+  /** fast-start bonus paid (Rocket Start $100 / Fast Start $50); counts toward the 25x cap */
+  bonusUsd?: number;
+  /**
+   * Fast-start bonus progress (owner, 2026-10-18): paid directs counted from the member's own
+   * activation; null before activation and for the company root
+   */
+  fastStart?: {
+    /** false for the company root (it earns nothing itself) */
+    eligible: boolean;
+    directsNeeded: number;
+    /** the member's own activation; null = not activated yet (the clock has not started) */
+    joinedAt: string | null;
+    earnedUsd: number;
+    /** 3 = Rocket Start, 7 = Fast Start, null = not earned */
+    earnedDays: number | null;
+    /** deadline null until activation */
+    tiers: Array<{ name: string; days: number; rewardUsd: number; deadline: string | null; directs: number }>;
+  } | null;
   /** virtual Power Business (display only: no income, reward, withdrawal or DV token) */
   powerBusiness?: {
     totalUsd: number | string;
     /** the member's own virtual business in whole DAO (1 DAO = $300) */
     dao: number;
     /** both sides with the virtual business added (official volume included); rank needs the DAO on EACH side */
-    legs: { power: number; other: number; matched: number };
+    legs: { left: number; right: number; matched: number };
     rank: number;
     rankName: string | null;
     nextRank: { rank: number; name: string; volume: number } | null;
@@ -53,7 +74,7 @@ export type DashboardData = {
   /** every package reached its cap: offer a $300 top-up (re-entry) */
   canTopUp: boolean;
   levels: Array<{ level: number; pct: number; reqDirects: number; unlocked: boolean; members: number; earnedUsd: number }>;
-  recentEarnings: Array<{ type: 'LEVEL_COMMISSION' | 'RANK_REWARD'; level: number | null; amountUsd: number; from: string; at: string }>;
+  recentEarnings: Array<{ type: 'LEVEL_COMMISSION' | 'RANK_REWARD' | 'FAST_START_BONUS'; level: number | null; amountUsd: number; from: string; at: string }>;
 };
 
 export type Withdrawal = {
@@ -138,7 +159,11 @@ export type LevelMembers = {
   page: number;
   pageSize: number;
   /** rank = the rank the member's own dashboard shows (0 = none yet) */
-  members: Array<{ referralCode: string; wallet: string; sponsorCode: string | null; joinedAt: string | null; rank: number; rankName: string | null }>;
+  members: Array<{
+    referralCode: string; wallet: string; sponsorCode: string | null; joinedAt: string | null; rank: number; rankName: string | null;
+    /** where the member sits in the placement tree (null = has not joined a side yet) */
+    placement: { side: Side; underCode: string | null } | null;
+  }>;
 };
 
 /** Who joined at one level of the wallet's downline (dashboard level modal), 50 per page. */
@@ -151,9 +176,12 @@ export function registerWallet(walletAddress: string, token: string): Promise<{ 
   return post('/users/register', { walletAddress }, token);
 }
 
-/** Latest invite link wins: saves the code as this unpaid wallet's sponsor (any browser can then pay). */
-export function savePendingSponsor(walletAddress: string, sponsorCode: string, token: string): Promise<{ pendingSponsorCode: string | null; activated: boolean }> {
-  return post('/users/pending-sponsor', { walletAddress, sponsorCode }, token);
+/**
+ * Joins a team once (owner, 2026-10-17): the invite code becomes the sponsor and the member takes
+ * the bottom spot of the chosen side. The spot never changes afterwards.
+ */
+export function joinTeam(walletAddress: string, sponsorCode: string, side: Side, token: string): Promise<{ sponsorCode: string; placement: { side: Side; underCode: string } }> {
+  return post('/users/join', { walletAddress, sponsorCode, side }, token);
 }
 
 /** Invite code -> sponsor wallet (404 when the code is unknown). Any registered wallet can sponsor (owner, 2026-10-13). */
@@ -234,9 +262,19 @@ export type AdminAnalytics = {
   topEarners: Array<{ code: string; earnedUsd: number; rank: number; directs: number; team: number }>;
 };
 export const getAdminAnalytics = (token: string) => request<AdminAnalytics>('/admin/analytics', { token });
-/** admin withdrawal queue, 20 per page */
-export const getAdminWithdrawals = (token: string, status: Withdrawal['status'], page = 1) =>
-  request<{ total: number; page: number; pageSize: number; items: Withdrawal[] }>(`/admin/withdrawals?status=${status}&page=${page}`, { token });
+/** Treasury ledger grouped by day (30), week (12) or month (12), oldest first (GET /admin/ledger). */
+export type LedgerGroup = 'day' | 'week' | 'month';
+export type AdminLedger = {
+  group: LedgerGroup;
+  openingTreasuryUsd: number;
+  periods: Array<{ start: string; activations: number; topups: number; depositsUsd: number; levelUsd: number; rewardsUsd: number; paidOutUsd: number; treasuryUsd: number }>;
+};
+export const getAdminLedger = (token: string, group: LedgerGroup) => request<AdminLedger>(`/admin/ledger?group=${group}`, { token });
+/** admin withdrawal queue, 20 per page; period = requested in the last 7 / 30 days, or all */
+export type WithdrawalPeriod = 'all' | 'week' | 'month';
+export const getAdminWithdrawals = (token: string, status: Withdrawal['status'], page = 1, period: WithdrawalPeriod = 'all') =>
+  request<{ total: number; page: number; pageSize: number; grossUsd: number; netUsd: number; items: Withdrawal[] }>(
+    `/admin/withdrawals?status=${status}&page=${page}&period=${period}`, { token });
 export const approveWithdrawal = (token: string, id: string) => post<Withdrawal>(`/admin/withdrawals/${id}/approve`, {}, token);
 export const rejectWithdrawal = (token: string, id: string, reason: string) => post<Withdrawal>(`/admin/withdrawals/${id}/reject`, { reason }, token);
 export const completeWithdrawal = (token: string, id: string, payoutTxHash: string) =>

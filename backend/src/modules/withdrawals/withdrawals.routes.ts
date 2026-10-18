@@ -5,7 +5,7 @@ import { financialRateLimiter } from "../../middlewares/rateLimiter.js";
 import { validateRequest } from "../../middlewares/validateRequest.js";
 import { requireAdmin, requireAuth } from "../../middlewares/auth.js";
 import { withdrawalsService } from "./withdrawals.service.js";
-import { adminAnalytics } from "./analytics.js";
+import { adminAnalytics, adminLedger, type LedgerGroup } from "./analytics.js";
 
 /** Member side: /withdrawals (signed-in wallet only) */
 export const withdrawalsRouter = Router();
@@ -53,11 +53,27 @@ adminRouter.get("/analytics", async (_req, res, next) => {
   } catch (error) { next(error); }
 });
 
-adminRouter.get("/withdrawals", validateRequest({
-  query: z.object({ status: z.enum(WithdrawalStatus).optional(), page: z.coerce.number().int().min(1).max(100_000).optional() }),
+// treasury ledger grouped by day (30), week (12) or month (12) (owner, 2026-10-18)
+adminRouter.get("/ledger", validateRequest({
+  query: z.object({ group: z.enum(["day", "week", "month"]).optional() }),
 }), async (req, res, next) => {
   try {
-    res.json({ success: true, data: await withdrawalsService.list(req.query.status as WithdrawalStatus | undefined, Number(req.query.page ?? 1)) });
+    res.json({ success: true, data: await adminLedger((req.query.group as LedgerGroup | undefined) ?? "day") });
+  } catch (error) { next(error); }
+});
+
+adminRouter.get("/withdrawals", validateRequest({
+  query: z.object({
+    status: z.enum(WithdrawalStatus).optional(),
+    page: z.coerce.number().int().min(1).max(100_000).optional(),
+    // requested in the last 7 / 30 days, or all (owner, 2026-10-18)
+    period: z.enum(["all", "week", "month"]).optional(),
+  }),
+}), async (req, res, next) => {
+  try {
+    res.json({ success: true, data: await withdrawalsService.list(
+      req.query.status as WithdrawalStatus | undefined, Number(req.query.page ?? 1), (req.query.period as "all" | "week" | "month" | undefined) ?? "all",
+    ) });
   } catch (error) { next(error); }
 });
 

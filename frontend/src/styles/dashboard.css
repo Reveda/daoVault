@@ -1133,7 +1133,7 @@ html.lv-lock, html.lv-lock body { overflow: hidden; }
 .lv-id { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.55rem; min-width: 0; }
 .lv-id > b { color: var(--gold); font-size: 0.92rem; letter-spacing: 0.02em; }
 /* sponsor + status as label / value pairs (owner, 2026-10-16) */
-.lv-facts { grid-column: 2 / -1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 0.6rem; margin: 0; padding-top: 0.55rem; border-top: 1px solid rgba(212, 175, 55, 0.12); }
+.lv-facts { grid-column: 2 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 0.6rem; margin: 0; padding-top: 0.55rem; border-top: 1px solid rgba(212, 175, 55, 0.12); }
 .lv-facts div { display: grid; gap: 0.18rem; min-width: 0; }
 .lv-facts dt { font-size: 0.58rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim); }
 .lv-facts dd { margin: 0; font-size: 0.78rem; font-weight: 600; color: #f3ecd6; overflow-wrap: anywhere; }
@@ -1693,3 +1693,67 @@ html.lite .dv-coin-ring { animation: none; }
 
 /* Power Business cards: shown only to a member who has Power Business (dashboard.ts renderPowerBusiness) */
 .metrics-grid .metric-card[hidden] { display: none !important; }
+
+/* Join gate (binary placement, owner 2026-10-18): first thing after sign-in, cannot be closed
+   (dashboard.ts showJoinGate); opaque, the dashboard opens only after joining */
+.join-gate { background: rgba(3, 3, 3, 0.97); }
+.join-gate-card { width: min(480px, 100%); border-color: rgba(212, 175, 55, 0.55); }
+.join-gate-card p b { color: #f3ecd6; }
+.join-gate-out { margin-top: 1.1rem; background: none; border: 0; color: var(--text-dim); font-size: 0.72rem; cursor: pointer; text-decoration: underline; }
+.join-gate-out:hover { color: var(--gold); }
+.join-side-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; max-width: 26rem; margin: 1.2rem auto 0; }
+.join-side-btn { min-height: 48px; font-weight: 700; border-color: rgba(212, 175, 55, 0.55); color: var(--gold); }
+.join-side-btn:hover:not(:disabled) { background: rgba(212, 175, 55, 0.12); box-shadow: 0 0 18px rgba(212, 175, 55, 0.18); }
+.join-side-btn:disabled { opacity: 0.5; cursor: wait; }
+@media (max-width: 420px) { .join-side-buttons { gap: 0.55rem; } }
+
+/* Fast-start bonus card (owner 2026-10-18; dashboard.ts renderFastStart) */
+.fast-start-card { margin: 0 0 2rem; padding: 1.3rem 1.4rem; border-color: rgba(212, 175, 55, 0.45); }
+.fast-start-card[hidden] { display: none; }
+.fast-start-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.fast-start-kicker { display: block; font-size: 0.64rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.3rem; }
+.fast-start-card h3 { margin: 0 0 0.25rem; font-size: 1.15rem; }
+.fast-start-card p { margin: 0; color: var(--text-muted); font-size: 0.82rem; line-height: 1.5; }
+.fast-start-count { flex: none; font-size: 1.3rem; color: #fff; }
+.fast-start-count[hidden] { display: none; }
+.fast-start-tiers { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; margin-top: 1rem; }
+.fs-tier {
+  display: grid; grid-template-columns: 1fr auto; gap: 0.1rem 0.75rem; align-items: center; padding: 0.7rem 0.85rem;
+  border-radius: 12px; border: 1px solid rgba(212, 175, 55, 0.22); background: rgba(212, 175, 55, 0.05);
+}
+.fs-tier-name { font-weight: 700; color: #f3ecd6; font-size: 0.9rem; }
+.fs-tier-rule { grid-column: 1; color: var(--text-muted); font-size: 0.75rem; }
+.fs-tier > b { grid-column: 2; grid-row: 1 / span 2; color: var(--gold); font-size: 1.15rem; }
+.fs-tier-state { grid-column: 1 / -1; margin-top: 0.3rem; color: var(--text-dim); font-size: 0.68rem; }
+.fs-tier.is-open { border-color: rgba(212, 175, 55, 0.6); box-shadow: 0 0 16px rgba(212, 175, 55, 0.12); }
+.fs-tier.is-open .fs-tier-state { color: var(--gold); }
+.fs-tier.is-earned { border-color: rgba(16, 185, 129, 0.55); background: rgba(16, 185, 129, 0.08); }
+.fs-tier.is-earned .fs-tier-state { color: #34d399; }
+.fs-tier.is-closed { opacity: 0.55; }
+.fast-start-track { height: 8px; margin-top: 0.9rem; border-radius: 999px; background: rgba(255, 255, 255, 0.1); overflow: hidden; }
+.fast-start-track i { display: block; height: 100%; width: var(--fs-fill, 0%); border-radius: inherit; background: linear-gradient(90deg, #b8860b, #ffe58a, #d4af37); box-shadow: 0 0 12px rgba(212, 175, 55, 0.6); transition: width 1s cubic-bezier(0.16, 1, 0.3, 1); }
+.fast-start-card.is-earned { border-color: rgba(16, 185, 129, 0.5); }
+.fast-start-card.is-earned .fast-start-count { color: #34d399; }
+.fast-start-card.is-earned .fast-start-track i { background: linear-gradient(90deg, #059669, #34d399); box-shadow: 0 0 12px rgba(16, 185, 129, 0.6); }
+@media (prefers-reduced-motion: reduce) { .fast-start-track i { transition: none; } }
+
+/* Header in wallet in-app browsers (owner bug 2026-10-18: in Trust Wallet the capsule ran past the right
+   edge). The fixed header is pinned to both screen edges (body already clips any sideways overflow),
+   and everything inside it can shrink (the address ends in "…"), so it always fits and stays at the top. */
+.top-header { left: 0; right: 0; width: auto; max-width: 100vw; box-sizing: border-box; }
+.top-header .wrap { width: 100%; max-width: 100%; box-sizing: border-box; }
+.top-header .top-bar { min-width: 0; max-width: 100%; box-sizing: border-box; flex-wrap: nowrap; }
+.top-header .brand { flex: none; }
+.dash-head-actions { flex: 0 1 auto; min-width: 0; justify-content: flex-end; }
+.dv-menu { flex: none; }
+.wallet-menu { min-width: 0; }
+.wallet-menu-btn { min-width: 0; max-width: 100%; }
+#dashWalletAddr { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wallet-menu-panel { max-width: calc(100vw - 1.2rem); }
+@media (max-width: 430px) {
+  .top-header .wallet-menu-btn { padding: 0.45rem 0.7rem; gap: 0.4rem; font-size: 0.74rem; }
+}
+@media (max-width: 360px) {
+  .top-header .wallet-caret { display: none; }
+  .top-header .wallet-menu-btn { padding: 0.42rem 0.6rem; }
+}

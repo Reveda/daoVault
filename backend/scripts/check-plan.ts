@@ -6,7 +6,7 @@
 import "dotenv/config";
 import { randomBytes } from "node:crypto";
 import { PrismaClient, type Prisma } from "@prisma/client";
-import { linkUpline, processActivation, processPlanEvents, processTopUp, uniqueReferralCode, type ActivationResult } from "../src/modules/activation/activation.engine.js";
+import { linkUpline, placeMember, processActivation, processPlanEvents, processTopUp, uniqueReferralCode, type ActivationResult, type Side } from "../src/modules/activation/activation.engine.js";
 import { rankForLegs, summarizeLegs, withdrawalSplit } from "../src/modules/plan/plan.js";
 import { env } from "../src/config/env.js";
 import { balanceOf, reservedPayout } from "../src/modules/withdrawals/withdrawals.service.js";
@@ -46,10 +46,21 @@ try {
       const mine = batch.events.find((e) => e.wallet === recorded.walletAddress);
       return { ...recorded, commissions: mine?.commissions ?? [], skipped: mine?.skipped ?? [], rankUps: batch.rankUps };
     };
-    const activate = async (w: string, sponsor = ZERO, hash = txHash()) =>
-      withPlan(await processActivation(tx, { walletAddress: w, sponsorAddress: sponsor, transactionHash: hash, amountUsd: 300 }));
     const pkgOf = async (w: string) => (await tx.package.findFirst({ where: { user: { walletAddress: w } } }))!;
     const userOf = async (w: string) => (await tx.user.findUnique({ where: { walletAddress: w } }))!;
+    const register = async (w: string) => tx.user.create({ data: { walletAddress: w, referralCode: await uniqueReferralCode(tx, w) } });
+    // the website's join (users.joinTeam): invite code = sponsor, chosen side = placement spot
+    const join = async (w: string, sponsor: string, side: Side) => {
+      const me = (await tx.user.findUnique({ where: { walletAddress: w } })) ?? await register(w);
+      const sp = await userOf(sponsor);
+      return (await linkUpline(tx, me.id, sp.id)) && Boolean(await placeMember(tx, me.id, sp.id, side));
+    };
+    // pays (on-chain sponsor = `sponsor`); with `side` the member joined on the website first,
+    // without it the engine places it at the bottom of the sponsor's LEFT side
+    const activate = async (w: string, sponsor = ZERO, hash = txHash(), side?: Side) => {
+      if (side && sponsor !== ZERO) await join(w, sponsor, side);
+      return withPlan(await processActivation(tx, { walletAddress: w, sponsorAddress: sponsor, transactionHash: hash, amountUsd: 300 }));
+    };
 
     // A (root) -> B, D ; B -> C
     const A = wallet(), B = wallet(), C = wallet(), D = wallet();
@@ -105,12 +116,13 @@ try {
     // rank: R with two legs of 25 -> Starter + $150 reward, once
     const R = wallet();
     await activate(R);
-    const buildLeg = async (size: number) => {
+    // one leg on each side of R (each next member under the previous one)
+    const buildLeg = async (size: number, side: Side) => {
       let parent = R;
-      for (let i = 0; i < size; i++) { const w = wallet(); await activate(w, parent); parent = w; }
+      for (let i = 0; i < size; i++) { const w = wallet(); await activate(w, parent, txHash(), i === 0 ? side : undefined); parent = w; }
     };
-    await buildLeg(25);
-    await buildLeg(24);
+    await buildLeg(25, "LEFT");
+    await buildLeg(24, "RIGHT");
     check("rank: 25 + 24 is not Starter yet", (await userOf(R)).currentRank === 0);
     const last = wallet();
     const lastLegHead = await tx.user.findMany({ where: { upline: { walletAddress: R } }, orderBy: { teamVolume: "asc" }, take: 1 });
@@ -130,19 +142,19 @@ try {
     const l2After = await tx.earning.findMany({ where: { recipient: { walletAddress: P }, level: 2 } });
     check("no back-pay: only the new L2 member pays $15", l2After.length === 1 && Number(l2After[0].amountUsd) === 15);
 
-    // ── confirmed rule: rank rewards sit outside the 25x cap ──
+    // ── confirmed rule (owner, 2026-10-18): rank rewards count toward the 25x cap too ──
     const Q = wallet(); await activate(Q);
     const pkgQ = await pkgOf(Q);
     await tx.package.update({ where: { id: pkgQ.id }, data: { totalEarned: 7500, status: "CAPPED" } });
-    for (let leg = 0; leg < 2; leg++) {
+    for (const side of ["LEFT", "RIGHT"] as const) {
       let parent = Q;
-      for (let i = 0; i < 25; i++) { const w = wallet(); await activate(w, parent); parent = w; }
+      for (let i = 0; i < 25; i++) { const w = wallet(); await activate(w, parent, txHash(), i === 0 ? side : undefined); parent = w; }
     }
     const qRewards = await tx.earning.findMany({ where: { recipient: { walletAddress: Q }, type: "RANK_REWARD" } });
     const qLevel = await tx.earning.count({ where: { recipient: { walletAddress: Q }, type: "LEVEL_COMMISSION" } });
-    check("outside cap: a CAPPED member still gets the Starter $150 rank reward", qRewards.length === 1 && Number(qRewards[0].amountUsd) === 150);
-    check("outside cap: the capped member gets no more level income", qLevel === 0);
-    check("outside cap: the rank reward does not use up the 25x cap", Number((await pkgOf(Q)).totalEarned) === 7500);
+    check("inside cap: a CAPPED member reaches Starter but gets no rank reward", (await userOf(Q)).currentRank === 1 && qRewards.length === 0);
+    check("inside cap: the capped member gets no more level income", qLevel === 0);
+    check("inside cap: total earnings stay at exactly $7,500", Number((await pkgOf(Q)).totalEarned) === 7500);
 
     // ── every level pays its exact share: L1 $30, L2 $15, L3–4 $9, L5–7 $6, L8–20 $3 = $120 (40%) ──
     const chainUp: string[] = [];
@@ -157,9 +169,9 @@ try {
 
     // ── rank rewards beyond Starter: Builder needs 50 + 50 and pays $300 on top of Starter's $150 ──
     const RB = wallet(); await activate(RB);
-    for (let leg = 0; leg < 2; leg++) {
+    for (const side of ["LEFT", "RIGHT"] as const) {
       let parent = RB;
-      for (let i = 0; i < 50; i++) { const w = wallet(); await activate(w, parent); parent = w; }
+      for (let i = 0; i < 50; i++) { const w = wallet(); await activate(w, parent, txHash(), i === 0 ? side : undefined); parent = w; }
     }
     const rbRewards = (await tx.earning.findMany({ where: { recipient: { walletAddress: RB }, type: "RANK_REWARD" }, orderBy: { level: "asc" } })).map((e) => Number(e.amountUsd));
     check("rank: 50 + 50 reaches Builder and pays Starter $150 + Builder $300, once each", (await userOf(RB)).currentRank === 2 && rbRewards.join(",") === "150,300", rbRewards.join(","));
@@ -217,7 +229,7 @@ try {
     check("root: counts the active direct", root.activeDirectsCount === 1);
     for (let leg = 0; leg < 2; leg++) {
       let parent = leg === 0 ? M1 : ROOT;
-      for (let i = leg === 0 ? 1 : 0; i < 25; i++) { const w = wallet(); await activate(w, parent); parent = w; }
+      for (let i = leg === 0 ? 1 : 0; i < 25; i++) { const w = wallet(); await activate(w, parent, txHash(), leg === 1 && i === 0 ? "RIGHT" : undefined); parent = w; }
     }
     const rootAfter = await userOf(ROOT);
     const rootRewards = await tx.earning.count({ where: { recipientId: root.id } });
@@ -226,12 +238,11 @@ try {
 
     // ── confirmed rule (owner, 2026-10-13): pre-launch teams, unpaid sponsors ──
     // invite links build the tree before anyone pays; an unpaid sponsor's share stays with the company
-    const register = async (w: string) => tx.user.create({ data: { walletAddress: w, referralCode: await uniqueReferralCode(tx, w) } });
     const plP = wallet(), plQ = wallet(), plS = wallet();
     await activate(plP);
     const plq = await register(plQ), pls = await register(plS);
-    check("pre-launch: unpaid Q joins under paid P by invite link", await linkUpline(tx, plq.id, (await userOf(plP)).id));
-    check("pre-launch: unpaid S joins under unpaid Q", await linkUpline(tx, pls.id, plq.id));
+    check("pre-launch: unpaid Q joins under paid P by invite link", await join(plQ, plP, "LEFT"));
+    check("pre-launch: unpaid S joins under unpaid Q", await join(plS, plQ, "LEFT"));
     check("pre-launch: a loop is refused (Q under its own member S)", !(await linkUpline(tx, plq.id, pls.id)) && (await userOf(plQ)).uplineId === (await userOf(plP)).id);
     const rPlS = await activate(plS, plQ);
     check("unpaid sponsor: S pays first and keeps Q as its sponsor", rPlS.sponsorLinked && (await userOf(plS)).uplineId === plq.id);
@@ -290,13 +301,95 @@ try {
     await mk({ status: "COMPLETED", voucherId: txHash(), voucherAmount: "900", voucherDeadline: new Date(now - 3_000_000), reviewedAt: new Date(now - 3_600_000) }); // settled long before: no
     check("withdrawals: a voucher settled after the chain read is still counted", (await reservedPayout(tx, readAt)) - beforeRead === 40n, `${(await reservedPayout(tx, readAt)) - beforeRead}`);
 
-    // a wallet registered with no sponsor whose team already paid: linking it moves that volume up
+    // a wallet registered with no sponsor whose team already paid: joining moves that business up
     const plX = wallet(), plY = wallet();
-    const plx = await register(plX);
+    await register(plX);
     await activate(plY, plX);
     const pVolume = (await userOf(plP)).teamVolume;
-    await linkUpline(tx, plx.id, (await userOf(plP)).id);
-    check("late link: X's team volume (1) moves up to P", (await userOf(plP)).teamVolume === pVolume + 1, `${pVolume} -> ${(await userOf(plP)).teamVolume}`);
+    await join(plX, plP, "LEFT");
+    check("late join: X's team business (1) moves up to P", (await userOf(plP)).teamVolume === pVolume + 1, `${pVolume} -> ${(await userOf(plP)).teamVolume}`);
+
+    // ── binary placement (owner, 2026-10-17): the RAM / ALOK example ──
+    // RAM's Left chain A > B > C > D, Right chain E > F > G > H (each sponsored by the one above)
+    const RAM = wallet(); await activate(RAM);
+    const chainOf = async (side: Side) => {
+      const ids: string[] = [];
+      for (let i = 0; i < 4; i++) { const w = wallet(); await activate(w, ids[i - 1] ?? RAM, txHash(), i === 0 ? side : undefined); ids.push(w); }
+      return ids;
+    };
+    const [bA, bB, bC, bD] = await chainOf("LEFT");
+    const [bE] = await chainOf("RIGHT");
+    const leftOf = async (w: string) => (await userOf(w)).leftVolume;
+    const leftBefore = await Promise.all([bD, bC, bB, bA, RAM].map(leftOf));
+    const eBefore = await userOf(bE);
+    const ALOK = wallet();
+    const rAlok = await activate(ALOK, RAM, txHash(), "LEFT");
+    const alok = await userOf(ALOK);
+    check("binary: ALOK (RAM's link, Left) is placed at the bottom of RAM's Left side, under D",
+      alok.placementId === (await userOf(bD)).id && alok.placementSide === "LEFT" && alok.uplineId === (await userOf(RAM)).id);
+    check("binary: RAM has 3 directs (A, E, ALOK) whatever their placement", (await userOf(RAM)).activeDirectsCount === 3);
+    check("binary: ALOK's level income goes to RAM only (L1 $30), never to A, B, C, D",
+      rAlok.commissions.length === 1 && rAlok.commissions[0].wallet === RAM && rAlok.commissions[0].amountUsd === 30
+        && (await tx.earning.count({ where: { source: { walletAddress: ALOK }, recipient: { walletAddress: { in: [bA, bB, bC, bD] } } } })) === 0);
+    const leftAfter = await Promise.all([bD, bC, bB, bA, RAM].map(leftOf));
+    check("binary: ALOK's business is +1 DAO on the Left of D, C, B, A and RAM",
+      leftAfter.every((v, i) => v === leftBefore[i] + 1), `${leftBefore.join(",")} -> ${leftAfter.join(",")}`);
+    check("binary: the Right side (E) is untouched", (await userOf(bE)).teamVolume === eBefore.teamVolume);
+    // Example 2: NEHA joins with ALOK's link on the Right
+    const NEHA = wallet();
+    const aBefore = await userOf(ALOK);
+    const rNeha = await activate(NEHA, ALOK, txHash(), "RIGHT");
+    check("binary: NEHA sits on ALOK's Right", (await userOf(NEHA)).placementId === alok.id && (await userOf(NEHA)).placementSide === "RIGHT");
+    check("binary: NEHA pays ALOK L1 $30 and RAM L2 $15 (sponsor tree), nothing to A, B, C, D",
+      rNeha.commissions.some((c) => c.wallet === ALOK && c.level === 1 && c.amountUsd === 30)
+        && rNeha.commissions.some((c) => c.wallet === RAM && c.level === 2 && c.amountUsd === 15)
+        && !rNeha.commissions.some((c) => [bA, bB, bC, bD].includes(c.wallet)));
+    check("binary: NEHA counts on ALOK's RIGHT but on the LEFT of D ... RAM",
+      (await userOf(ALOK)).rightVolume === aBefore.rightVolume + 1 && (await leftOf(bD)) === leftAfter[0] + 1 && (await leftOf(RAM)) === leftAfter[4] + 1);
+    // spillover continues below ALOK; a spot is taken once
+    const NEXT = wallet();
+    await activate(NEXT, RAM, txHash(), "LEFT");
+    check("binary: the next Left joiner under RAM goes below ALOK", (await userOf(NEXT)).placementId === alok.id && (await userOf(NEXT)).placementSide === "LEFT");
+    check("binary: a placed member cannot move (the spot is permanent)",
+      (await placeMember(tx, alok.id, (await userOf(RAM)).id, "RIGHT")) === null && (await userOf(ALOK)).placementId === alok.placementId);
+    check("binary: one member per spot (D's Left is ALOK only)", (await tx.user.count({ where: { placementId: (await userOf(bD)).id, placementSide: "LEFT" } })) === 1);
+    // a direct contract payment without joining on the website: bottom of the sponsor's Left
+    const DIRECT = wallet();
+    await activate(DIRECT, bE);
+    check("binary: paying without choosing a side places the member on the sponsor's Left", (await userOf(DIRECT)).placementSide === "LEFT");
+
+    // ── fast-start bonus (owner, 2026-10-18): 10 paid directs within 3 days $100, within 7 days $50 ──
+    const tenDirects = async (sponsor: string) => { for (let i = 0; i < 10; i++) await activate(wallet(), sponsor); };
+    const bonusOf = async (w: string) => tx.earning.findMany({ where: { recipient: { walletAddress: w }, type: "FAST_START_BONUS" } });
+    const backdate = async (w: string, days: number) =>
+      tx.package.update({ where: { id: (await pkgOf(w)).id }, data: { createdAt: new Date(Date.now() - days * 86_400_000) } });
+    const FS3 = wallet(); await activate(FS3);
+    for (let i = 0; i < 9; i++) await activate(wallet(), FS3);
+    check("fast start: 9 directs pay no bonus yet", (await bonusOf(FS3)).length === 0);
+    await activate(wallet(), FS3);
+    const fs3 = await bonusOf(FS3);
+    check("fast start: the 10th direct within 3 days pays the Rocket Start Bonus $100 at once",
+      fs3.length === 1 && fs3[0].level === 3 && Number(fs3[0].amountUsd) === 100);
+    await activate(wallet(), FS3);
+    check("fast start: only one bonus per member ($100, never $100 + $50)", (await bonusOf(FS3)).length === 1);
+    const FS7 = wallet(); await activate(FS7); await backdate(FS7, 5);
+    await tenDirects(FS7);
+    const fs7 = await bonusOf(FS7);
+    check("fast start: 10 directs on day 5 pay the Fast Start Bonus $50", fs7.length === 1 && fs7[0].level === 7 && Number(fs7[0].amountUsd) === 50);
+    const FSL = wallet(); await activate(FSL); await backdate(FSL, 8);
+    await tenDirects(FSL);
+    check("fast start: 10 directs after 7 days pay nothing", (await bonusOf(FSL)).length === 0);
+    // inside the 25x cap: $7,170 + 10 x L1 $30 = $7,470, so only $30 of the $100 fits
+    const FSC = wallet(); await activate(FSC);
+    await tx.package.update({ where: { id: (await pkgOf(FSC)).id }, data: { totalEarned: 7170 } });
+    await tenDirects(FSC);
+    const fsc = await bonusOf(FSC);
+    check("fast start: the bonus fills only what is left of the 25x cap ($30 of $100)",
+      fsc.length === 1 && Number(fsc[0].amountUsd) === 30 && Number((await pkgOf(FSC)).totalEarned) === 7500 && (await pkgOf(FSC)).status === "CAPPED",
+      `${fsc.map((e) => e.amountUsd).join(",")} / ${(await pkgOf(FSC)).totalEarned}`);
+    const fscTotal = await tx.earning.aggregate({ where: { recipient: { walletAddress: FSC } }, _sum: { amountUsd: true } });
+    check("25x cap: only $330 more was credited ($7,170 -> $7,500), never past the cap",
+      Number(fscTotal._sum.amountUsd) === 330, String(fscTotal._sum.amountUsd));
 
     throw new Rollback();
   }, { timeout: 180_000, maxWait: 20_000 });

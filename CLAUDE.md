@@ -13,6 +13,8 @@ withdrawal, keygen what to note, Remix fields not code):** `WITHDRAWAL-FLOW.md`.
 **Launch day (owner, Hinglish): what turns real by itself vs the owner's switches:** `LAUNCH-DAY.md`.
 **Power Business (owner, Hinglish: display-only business for one member ID, one side; table power_businesses,
 dashboard.service powerSides; no script in the code, records go straight into the DB):** `POWER-BUSINESS-POLICY.md`.
+**Binary Left/Right placement (owner 2026-10-17, IN CODE 2026-10-18; Hinglish graphs + RAM/ALOK examples):**
+`PLACEMENT-PLAN.md`.
 **Join / team / activation scenarios for non-technical readers (owner, Hinglish: pre-launch, 10 Nov, A-B-C unpaid
 sponsor example, the sponsor popup):** `ACTIVATION-FLOW.md`.
 GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it private); history had no secrets.
@@ -21,9 +23,21 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
 ## Business rules (summary)
 - $300 fixed package, no passive ROI. 40% ($120) paid across 20 upline levels (L1 10%, L2 5%, L3-4 3%, L5-7 2%, L8-20 1%), levels unlock by direct-referral count (15 directs unlocks all 20).
 - 11 rank tiers (Starter 25 DAO/$150, Builder 50/$300, Leader 100/$500, Elite 200/$1,200, Executive 375/$2,500, Crown Exec 1,000/$7,500,
-  Crown Director 3,000/$15,000, Ambassador 7,000/$30,000, Crown Ambassador 12,000/$50,000, President 20,000/$75,000, Crown President 50,000/$200,000; owner plan 2026-10-09); 1 DAO = 1 activated package. Rank rule (owner, 2026-10-08): the DAO matching is needed on EACH side, power leg (UI: "Strong Leg") AND
-  other legs combined (UI: "Other Leg") (Starter 25 = 25 + 25 = 50 total); matchedVolume = min(power, other). Replaced the old split rule
-  (V/2 + V/2). Single source: backend/src/modules/plan/plan.ts.
+  Crown Director 3,000/$15,000, Ambassador 7,000/$30,000, Crown Ambassador 12,000/$50,000, President 20,000/$75,000, Crown President 50,000/$200,000; owner plan 2026-10-09); 1 DAO = 1 activated package. Rank rule (owner, 2026-10-08): the DAO matching is needed on EACH side; since binary
+  placement (2026-10-17) the sides are the member's LEFT and RIGHT placement team (UI "Left Leg" / "Right Leg"; was Strong /
+  Other leg of the sponsor tree) (Starter 25 = 25 + 25); matchedVolume = min(left, right). Single source: plan.ts.
+- TWO TREES (owner 2026-10-17): SPONSOR tree = users.upline_id (whose invite link): directs, level unlock, 20-level income
+  (ancestorsOf). PLACEMENT tree = users.placement_id + placement_side LEFT/RIGHT (binary, UNIQUE(placement_id, side), CHECK
+  both-or-none): team business left_volume / right_volume (team_volume = sum), ranks + rank rewards (placementAncestorsOf,
+  addSideVolume, recomputeRanks from left/right). Join = POST /users/join {sponsorCode, side} (users.joinTeam: linkUpline +
+  activation.engine placeMember = bottom of the sponsor's chosen side, extreme spillover; ONCE, spot + sponsor never change;
+  pre-launch teams placed before payment; a placed member's team business moves up). Join GATE right after sign-in
+  (dashboard.ts showJoinGate, owner 2026-10-18: full-screen, cannot be closed, only Left / Right or Log out; invite code
+  checked first, unknown codes skipped; Left / Right +
+  confirmNotice "permanent"), Pay off until joined. Paid without joining (direct contract call / indexer) = bottom of the
+  sponsor's LEFT. Server start: usersService.placeUnplacedPaid() (legacy paid members -> Left). Migration
+  20261018090000_binary_placement zeroed team_volume (rebuilt by placement). Level modal/20-level table = sponsor tree, rows
+  show "Placed Left · DVxxxx". Power Business has `side` (LEFT/RIGHT, was leg_user_id). check-plan: 78 checks incl. RAM/ALOK.
 - DV token (owner 2026-10-15): every $300 package (activation or top-up) records 1,500 DAOVAULT (DV) tokens, planned to be
   credited at the DV launch on BSC (planned March 2028). Display only, nothing minted: plan.ts DV_TOKENS_PER_PACKAGE /
   DV_TOKEN_LAUNCH -> GET /dashboard dvToken {perPackage, allocated = packages x 1500 (root 0), launch, network} ->
@@ -32,15 +46,25 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
   date, +1,500, sum) (dashboard.ts initDvToken). Both show the token as a 3D minted coin (dvToken3d.ts mountDvToken3D:
   three.js, logo face via CanvasTexture turned FACE_TURN upright, engraved "DAOVAULT · DV TOKEN" ring on the card coin,
   reeded edge, ~33 fps, only while visible); html.lite / no WebGL / reduced motion = flat logo + CSS coin spin (.is-css).
+  Header pinned to both edges (owner bug 2026-10-18, Trust in-app browser ran the capsule past the right edge): .top-header
+  left/right 0 + max-width 100vw (main.css), dashboard wallet chip shrinks with an ellipsis address (end of dashboard.css);
+  never put overflow on html (body already clips; html overflow would make body a scroll box).
   .dv-token-slot is a fixed round box (overflow hidden, img max 100%): a CSS width:auto once let the 256 px logo stretch
   the header to 290 px (owner bug 2026-10-15). Dashboard header <=430px hides the brand text (logo + DV + wallet fit). Wording: allocation + "planned", never value / profit / guarantee.
-- Earnings cap 25x ($7,500) of level income per package (was 10x; rank rewards outside it); 5% withdrawal fee.
-- Referral: `?ref=CODE` saved to `localStorage['daovault_pending_ref']`; on the next dashboard visit of an unpaid wallet it is saved on the
-  server (POST /users/pending-sponsor -> users.pending_sponsor_code) and the browser copy dropped. LATEST invite link
-  opened before paying wins (owner, 2026-10-09); activation pays with that sponsor from any browser.
+- Earnings cap 25x ($7,500) per package (was 10x). Owner 2026-10-18: EVERY income counts toward it (level income, rank
+  rewards, fast-start bonus): activation.engine creditIntoCap fills ACTIVE packages oldest first, spills to the next, the
+  part over the cap stays with the company (a capped member reaching a rank gets no reward). 5% withdrawal fee.
+- Fast-start bonus (owner 2026-10-18; plan.ts FAST_START): 10 PAID directs (sponsor tree) counted from the member's own
+  activation (joining date): within 3 days = "Rocket Start Bonus" $100, else within 7 days = "Fast Start Bonus" $50. ONE
+  bonus per member (faster wins, never both), paid at once by the plan queue (awardFastStart after the 10th direct or the
+  member's own activation), inside the 25x cap. EarningType FAST_START_BONUS (level = 3 / 7). Dashboard #fastStartCard (under the
+  metric cards, ALWAYS shown: offer before activation, countdown + per-bonus rows, earned / closed; root = info only)
+  GET /dashboard bonusUsd + fastStart (always sent, eligible=false for root); admin "rank rewards" totals include the bonus.
+- Referral: `?ref=CODE` saved to `localStorage['daovault_pending_ref']`; the latest link opened before JOINING is the one the
+  join card offers (2026-10-17; was "latest link wins until payment"); joining saves it (users.pending_sponsor_code) and drops
+  the browser copy; activation pays with that sponsor from any browser.
 - Pre-launch marketing (owner, 2026-10-13; replaces "only an ACTIVATED sponsor"): ANY registered wallet can sponsor, paid or
-  not. savePendingSponsor links users.upline_id at once (activation.engine linkUpline: no loops, moves team volume up;
-  sponsor change only while unpaid AND teamVolume 0). Contract has no sponsor check (only != self). An unpaid upline's
+  not; members join (sponsor + placement) before payment. Contract has no sponsor check (only != self). An unpaid upline's
   commission / rank reward stays with the company (engine skips no_package) and is not paid back later.
   PAYMENTS_OPEN_AT (backend env, ISO; default 2026-11-10T00:00+05:30, owner 2026-10-13; past date = open): dashboard paymentsOpen/paymentsOpenAt -> activation card: only "Activation opens on <date>" + countdown (no other message, owner), button off
   until then (website only, no contract switch; check-plan has the pre-launch checks). Paying under an UNPAID sponsor:
@@ -98,7 +122,7 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
                 withdrawals/voucherSigner.ts via PAYOUT_SIGNER_URL + PAYOUT_SIGNER_TOKEN. Guide: DOCKER.md B12.
   src/modules/plan/plan.ts  LEVELS, RANKS, 50:50 rankForLegs, cents helpers
   src/config/transaction.ts serializable() retry wrapper for money writes
-  scripts/check-plan.ts    npm run check:plan: 66 engine checks (incl. owner-confirmed rules, plan queue, reservations) on the real DB, always rolled back
+  scripts/check-plan.ts    npm run check:plan: 78 engine checks (incl. owner-confirmed rules, plan queue, reservations) on the real DB, always rolled back
   prisma/schema.prisma     User (teamVolume), Package, Earning (LEVEL_COMMISSION|RANK_REWARD), Withdrawal (review fields), AuthNonce
   prisma/seed.ts           local dashboard fixture (SEED_WALLET_ADDRESS)
 frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-web, vanta, ethers 6. Port 3000, proxies /api -> :5000.
@@ -109,6 +133,9 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
                                           (companyOverview.ts, also on the company dashboard), 4 panel charts + 7 charts
                                           (adminCharts.ts, Chart.js, admin bundle only), treasury ledger, "How it works",
                                           withdrawal queue. Data: GET /admin/stats + /admin/analytics (withdrawals/analytics.ts).
+                                          Filters (owner 2026-10-18): ledger Daily / Weekly / Monthly = GET /admin/ledger?group=day|week|month
+                                          (analytics.ts adminLedger: 30 days / 12 ISO weeks / 12 months, running treasury); withdrawals All / 7 / 30 days =
+                                          GET /admin/withdrawals?period=all|week|month (+ count and net total). .ad-seg in admin.css.
                                           Pagination (pager.ts): withdrawals 20/page (server), ledger 10/page, top earners
                                           5/page (top 50). Zeros stay visible (line at $0, bar stubs, grey ring).
                                           Admin wallet login: dashboard.ts sends an isAdmin vault to admin.html (unless
@@ -168,6 +195,11 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   CSS animations of off-screen sections. Revealed [data-reveal] content must end with transform:none (crisp text).
   The hero has no WebGL any more (initHeroCore3D just mounts the dvLogo). Splash: SPLASH_MS 2800.
     dashboardFx.ts    card cascade, rollNumber(), pointer spotlight, 3D metric icons, celebrate() confetti
+    Dashboard particles (owner 2026-10-18): sections carry data-scene dashTop / dashRewards / dashRanks / dashTeam /
+                      dashIncome (particleScene SCENE_STATES): logo, DV mark, dial with lightning beside the cards while scrolling.
+    Tap glow (owner 2026-10-18, like the Arbit landing in gold, SOFT: a gentle 2px lift over 0.6s, no press-jump): core.ts enableTouchPress;
+                      phone: the tapped card STAYS lit (.tap-glow) until another card or outside is tapped; desktop click = brief glow;
+                      last block of main.css = gold border + light halo + faint inner glow, 0.45s fade.
     matrixDial.ts     #matrix "Explore Any Generation" interactive SVG vault dial (drives the hidden level pills;
                       app.ts autoplay steps a level every 2s while .matrix-calc-box is on screen)
     rewardVaults.ts   wallet menu "Go to" shortcuts (data-jump: only Withdraw + Rewards, owner 2026-10-11; was also Rank, Invite,
@@ -266,11 +298,7 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   Admin / company wallet (owner 2026-10-15): the dashboard never shows #activationCard or #withdrawSection to an isAdmin
   wallet, in any view (also ?view=member); .dash-content-grid.is-single; the Withdraw menu shortcut hides with it; the
   server refuses an admin withdrawal (403, withdrawals.service request).
-  Dashboard 20-level rows open the level modal only when unlocked.
-  Wallets that saved an invite code before 2026-10-13 had pending_sponsor_code but no upline_id (missing from the
-  sponsor's downline): usersService.linkSavedSponsors() links them with linkUpline at EVERY API start (server.ts,
-  logs the codes; safe with several copies).
-  Local DB repaired 2026-10-15 (5 linked, incl. DV125A9D -> DV4C851C).
+  Dashboard 20-level rows open the level modal whenever the level has members (locked levels are viewable, owner).
   Phones (owner 2026-10-12): html.lite = no .lvl-row / .reward-box entrance (a row stayed unpainted), finished entrances dropped
   via tbody/.reward-boxes.is-settled, particleScene skips frames while scrolling on LITE. Tap feedback site-wide: core.ts
   enableTouchPress adds .tap-glow only on a real tap (moved < 10px), CSS floats the card 3px (.tap-glow:not(#_) beats sticky
@@ -299,6 +327,8 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   in-app browsers (Android 15 edge-to-edge WebViews report the status bar as safe-area-inset-top: the capsule header slid
   down and the page showed above it); env(safe-area-inset-top) only under display-mode standalone/fullscreen (end of main.css).
   Four pillars (#about) retitled "Four Rules That Keep It Fair & Balanced", gold-only.
+  #bonus (owner 2026-10-18, between #matrix and #about): "Start Fast, Earn Extra" = Rocket Start $100 / Fast Start $50 cards,
+  Day 0-3-7 timeline, rules (one bonus, counted from own activation, inside the 25x cap); data-scene "bonus" (logo); .fsb-* in main.css.
   #matrix level cards (owner 2026-10-11): matrixAutoDeck.ts revealCard on every active-card change (after the deck
   reaches 70% of the screen): .mx-scan light sweeps down, content drops in piece by piece, % and USDT count up; CSS
   `.mx-reveal` block at the end of main.css, removed after 2.4s so the cards' own loops return; off for reduced motion.
@@ -318,7 +348,7 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   Postgres tuned (shared_buffers 1GB, parallel 4), connection_limit=10 per copy. env.ts: empty optional values = unset.
   Owner guide: DOCKER.md. Docker is NOT installed on the dev PC and nothing
   builds the images yet: ci.yml + render.yaml stay Render-only until the owner moves to the VPS (owner 2026-10-11).
-- Git: GitHub Reveda/daoVault, branch main. Tests: backend `npm run check:plan` (66, rolled back), `npm run check:env`
+- Git: GitHub Reveda/daoVault, branch main. Tests: backend `npm run check:plan` (78, rolled back), `npm run check:env`
   (prod settings vs chain), contract tests in contracts/test (24, Hardhat; run in an isolated copy).
 
 ## Not built yet
