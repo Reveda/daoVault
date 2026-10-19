@@ -1,10 +1,9 @@
 /**
  * DAOvault AI — Dashboard rank reward vaults + wallet menu
  *
- * One sealed DAOvault box per rank (11 tiers from project.md). Ranks the member
- * has reached are "ready" and open with the full gift-box sequence; the rest are
- * sealed and only rattle (with a preview). Which boxes were opened is remembered
- * per wallet in this browser only: it is a presentation state, never a payout.
+ * One sealed DAOvault box per rank (11 tiers from project.md). Claim to collect (owner
+ * 2026-10-19): a reached rank's reward waits in its box and reaches the balance only when the
+ * member opens it (server, once); collected boxes never open again.
  */
 
 import { openGiftBox } from './giftBox.ts';
@@ -33,13 +32,6 @@ const REWARD_PREVIEW = import.meta.env.DEV || import.meta.env.VITE_REWARD_PREVIE
 const openedKey = (wallet: string, rank: number) =>
   `daovault_box_opened_${wallet.toLowerCase()}_${rank}`;
 
-function isOpened(wallet: string, rank: number): boolean {
-  try {
-    return localStorage.getItem(openedKey(wallet, rank)) === '1';
-  } catch {
-    return false;
-  }
-}
 function markOpened(wallet: string, rank: number): void {
   try {
     localStorage.setItem(openedKey(wallet, rank), '1');
@@ -48,27 +40,44 @@ function markOpened(wallet: string, rank: number): void {
   }
 }
 
-/** Draws the 11 boxes. `currentRank` is the rank number from the backend (0 = unranked). */
-export function renderRewardVaults(wallet: string, currentRank: number): void {
+/**
+ * Draws the 11 boxes (owner 2026-10-19: claim to collect). A reached rank whose reward is still waiting is
+ * "ready": opening it collects the reward into the balance (server, once). Collected = "Already collected"
+ * with the amount, and it never opens again. Ranks not reached are sealed (preview only off production).
+ */
+export type RankReward = { rank: number; name: string; amountUsd: number; collected: boolean };
+export function renderRewardVaults(
+  wallet: string,
+  currentRank: number,
+  rewards: RankReward[],
+  collect: (rank: number) => Promise<{ collectedUsd: number; alreadyCollected: boolean }>,
+  onCollected?: () => void,
+): void {
   const grid = document.getElementById('rewardBoxes');
   if (!grid) return;
+  const list = rewards.map((r) => ({ ...r }));
 
   const draw = () => {
     grid.innerHTML = '';
-    let opened = 0;
+    let done = 0;
     RANK_TIERS.forEach((tier, i) => {
       const rank = i + 1;
       const reached = currentRank >= rank;
-      const wasOpened = reached && isOpened(wallet, rank);
-      if (wasOpened) opened++;
-      const state = wasOpened ? 'opened' : reached ? 'ready' : 'locked';
+      const info = list.find((r) => r.rank === rank);
+      const state: 'locked' | 'ready' | 'opened' = !reached
+        ? 'locked'
+        : info && !info.collected
+          ? 'ready'
+          : 'opened';
+      if (state === 'opened') done++;
+      const amount = info ? info.amountUsd : tier.reward;
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = `reward-box is-${state}`;
       btn.style.setProperty('--i', String(i));
       btn.setAttribute(
         'aria-label',
-        `${tier.name} box: ${state === 'locked' ? 'sealed' : state === 'ready' ? 'ready to open' : `opened, ${money(tier.reward)}`}`,
+        `${tier.name} box: ${state === 'locked' ? 'sealed' : state === 'ready' ? `${money(amount)} ready to collect` : info ? `already collected, ${money(amount)}` : 'rank reached'}`,
       );
       btn.innerHTML = `
         <span class="rb-art" aria-hidden="true">
@@ -77,21 +86,43 @@ export function renderRewardVaults(wallet: string, currentRank: number): void {
         </span>
         <span class="rb-rank mono"><span class="rb-crest" aria-hidden="true">${getRankCrestSvg(i)}</span>RANK ${String(rank).padStart(2, '0')}</span>
         <span class="rb-name">${tier.name}</span>
-        <span class="rb-reward">${state === 'opened' ? money(tier.reward) : '???'}</span>
-        <span class="rb-state mono">${state === 'locked' ? `${tier.volume.toLocaleString()} DAO matching` : state === 'ready' ? 'Ready to open' : 'Opened'}</span>`;
-      btn.addEventListener('click', () =>
-        openGiftBox({
-          rank: tier.name,
-          reward: tier.reward,
-          requirement: `${tier.volume.toLocaleString()} DAO matching on each side (${tier.name} rank)`,
-          mode: state,
-          allowPreview: REWARD_PREVIEW,
-          onOpened: () => {
-            markOpened(wallet, rank);
-            draw();
-          },
-        }),
-      );
+        <span class="rb-reward">${state === 'opened' ? (info ? money(amount) : '—') : '???'}</span>
+        <span class="rb-state mono">${state === 'locked' ? `${tier.volume.toLocaleString()} DAO matching` : state === 'ready' ? 'Ready to collect' : info ? 'Already collected' : 'Rank reached'}</span>`;
+      // a collected box never opens again (owner 2026-10-19)
+      if (state === 'opened') {
+        btn.disabled = true;
+        btn.title = `${tier.name} reward box: ${info ? 'already collected' : 'rank reached'}`;
+      } else
+        btn.addEventListener('click', () =>
+          openGiftBox({
+            rank: tier.name,
+            reward: amount,
+            requirement: `${tier.volume.toLocaleString()} DAO matching on each side (${tier.name} rank)`,
+            mode: state,
+            allowPreview: REWARD_PREVIEW,
+            openLabel: 'Open & collect',
+            note: 'Added to your balance. You can withdraw it any time.',
+            doneLabel: 'Done',
+            onOpened: () => {
+              // the reward reaches the balance only now, on the server, once
+              collect(rank).then(
+                (result) => {
+                  if (info) info.collected = true;
+                  markOpened(wallet, rank);
+                  if (!result.alreadyCollected)
+                    showToast(`${money(result.collectedUsd)} ${tier.name} reward added to your balance.`);
+                  draw();
+                  onCollected?.();
+                },
+                () =>
+                  showToast(
+                    'We could not collect this reward right now. It is safe in its box: please try again in a minute.',
+                    true,
+                  ),
+              );
+            },
+          }),
+        );
       grid.appendChild(btn);
     });
     // finished entrance animations are dropped (they kept a GPU layer per box on phones)
@@ -105,7 +136,13 @@ export function renderRewardVaults(wallet: string, currentRank: number): void {
     const reachedTier = RANK_TIERS[currentRank - 1];
     const next = RANK_TIERS[currentRank];
     set('rankNow', reachedTier ? reachedTier.name : 'Unranked');
-    set('rankBoxesOpen', `${opened} / ${RANK_TIERS.length} opened`);
+    set('rankBoxesOpen', `${done} / ${RANK_TIERS.length} collected`);
+    const waiting = list.filter((r) => !r.collected).reduce((sum, r) => sum + r.amountUsd, 0);
+    const chip = document.getElementById('rewardsWaiting');
+    if (chip) {
+      chip.hidden = waiting <= 0;
+      chip.textContent = `Ready to collect: ${money(waiting)}`;
+    }
     set(
       'rankNext',
       next

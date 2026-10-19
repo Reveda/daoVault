@@ -53,6 +53,8 @@ export type DashboardData = {
     earnedUsd: number;
     /** 3 = Rocket Start, 7 = Fast Start, null = not earned */
     earnedDays: number | null;
+    /** false = the earned bonus is still waiting in its box (not in the balance yet) */
+    collected?: boolean;
     /** deadline null until activation */
     tiers: Array<{
       name: string;
@@ -94,7 +96,19 @@ export type DashboardData = {
     launch: string;
     launchDate?: string;
     network: string;
+    /** DV already revealed in the pot (server) */
+    opened?: number;
   };
+  /** rank reward boxes opened: bit 0 = rank 1 (server) */
+  rewardBoxesOpened?: number;
+  /** claim to collect (owner 2026-10-19): every rank reward, collected (in the balance) or waiting */
+  rankRewards?: Array<{ rank: number; name: string; amountUsd: number; collected: boolean }>;
+  /** rewards waiting in their boxes (not in the balance until collected) */
+  pendingRewards?: Array<
+    | { kind: 'rank'; rank: number; name: string; amountUsd: number }
+    | { kind: 'bonus'; days: number; name: string; amountUsd: number }
+  >;
+  rewardsWaitingUsd?: number;
   /** every package reached its cap: offer a $300 top-up (re-entry) */
   canTopUp: boolean;
   /** the whole 25x cap: $7,500 per package added up, and what all packages have earned */
@@ -208,6 +222,58 @@ const post = <T>(path: string, body: unknown, token?: string) =>
 /** The member's own vault: needs their sign-in token (session.ts). */
 export function getDashboardData(walletAddress: string, token: string): Promise<DashboardData> {
   return request<DashboardData>(`/dashboard/${encodeURIComponent(walletAddress)}`, { token });
+}
+
+/** collects a rank reward or the fast-start bonus into the balance (owner 2026-10-19: claim to collect) */
+export function collectReward(
+  walletAddress: string,
+  token: string,
+  box: { kind: 'rank'; rank: number } | { kind: 'bonus' },
+): Promise<{ collectedUsd: number; alreadyCollected: boolean }> {
+  return post(`/dashboard/${encodeURIComponent(walletAddress)}/rewards/collect`, box, token);
+}
+
+/** dashboard notifications (owner 2026-10-19) */
+export type AppNotification = {
+  id: string;
+  kind: string;
+  title: string;
+  body: string;
+  link: string | null;
+  read: boolean;
+  createdAt: string;
+};
+export function getNotifications(
+  token: string,
+  opts: { page?: number; limit?: number; filter?: 'all' | 'unread' } = {},
+): Promise<{ items: AppNotification[]; unread: number; total: number; page: number; pageSize: number }> {
+  const q = new URLSearchParams({
+    page: String(opts.page ?? 1),
+    limit: String(opts.limit ?? 20),
+    filter: opts.filter ?? 'all',
+  });
+  return request(`/notifications?${q}`, { token });
+}
+/** removes one notification (id) or every read one */
+export function removeNotifications(token: string, id?: string): Promise<{ unread: number }> {
+  return post('/notifications/remove', id ? { id } : {}, token);
+}
+export function markNotificationsRead(token: string, id?: string): Promise<{ unread: number }> {
+  return post('/notifications/read', id ? { id } : {}, token);
+}
+/** where the socket.io server lives: the API's own origin and prefix */
+export function socketEndpoint(): { origin: string; path: string } {
+  const base = new URL(API_BASE_URL, window.location.origin);
+  return { origin: base.origin, path: `${base.pathname.replace(/\/$/, '')}/socket.io` };
+}
+
+/** a reward box was opened: the server remembers it so it never opens again (owner 2026-10-19) */
+export function markBoxOpened(
+  walletAddress: string,
+  token: string,
+  box: { kind: 'dv'; allocated: number } | { kind: 'rank'; rank: number },
+): Promise<{ dvPotOpened?: number; rewardBoxesOpened?: number }> {
+  return post(`/dashboard/${encodeURIComponent(walletAddress)}/boxes/opened`, box, token);
 }
 
 export type LevelMembers = {

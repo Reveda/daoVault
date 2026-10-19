@@ -6,6 +6,7 @@
  */
 import { getLevelMembers, type LevelMembers } from './api.ts';
 import { signIn } from './session.ts';
+import { getRankCrestSvg } from './rankCrests.ts';
 
 let overlay: HTMLElement | null = null;
 let lastFocus: HTMLElement | null = null;
@@ -31,7 +32,12 @@ function memberRows(members: LevelMembers['members'], startIndex: number): strin
     .map(
       (m, i) => `
     <li class="lv-member" style="--i:${Math.min(startIndex + i, 12)}">
-      <span class="lv-avatar" aria-hidden="true">${MEMBER_ICON}</span>
+      ${
+        // a member with a rank shows that rank's crest (the reward box logo, owner 2026-10-19)
+        m.rank > 0
+          ? `<span class="lv-avatar is-rank" aria-hidden="true">${getRankCrestSvg(m.rank - 1)}</span>`
+          : `<span class="lv-avatar" aria-hidden="true">${MEMBER_ICON}</span>`
+      }
       <span class="lv-who">
         <span class="lv-id">
           <b class="mono">${esc(m.referralCode)}</b>
@@ -72,7 +78,6 @@ export function openLevelModal(wallet: string, level: number): void {
     <div class="lv-card" role="dialog" aria-modal="true" aria-labelledby="lvTitle">
       <header class="lv-head">
         <div class="lv-head-text">
-          <span class="lv-kicker mono">Your downline</span>
           <h3 id="lvTitle">Level ${level} <span class="grad-text">members</span></h3>
           <span class="lv-count mono" id="lvCount">…</span>
         </div>

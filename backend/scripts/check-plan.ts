@@ -359,8 +359,30 @@ try {
         rbRewards.join(","),
       );
 
-      // ── withdrawals use up the balance exactly ──
+      // ── claim to collect (owner, 2026-10-19): a rank reward waits in its box until collected ──
       const rbUser = await userOf(RB);
+      const waiting = await balanceOf(tx, rbUser.id);
+      const rbBoxed = await tx.earning.count({
+        where: { recipientId: rbUser.id, type: "RANK_REWARD", collectedAt: null },
+      });
+      check(
+        "collect: new rank rewards wait in their boxes and are not in the balance yet",
+        rbBoxed === 2 && waiting.earnedCents < 45_000,
+        `${rbBoxed} waiting, earned ${waiting.earnedCents}`,
+      );
+      // the member opens both boxes (collectReward stamps collected_at; same update, inside this test's transaction)
+      await tx.earning.updateMany({
+        where: { recipientId: rbUser.id, type: "RANK_REWARD", collectedAt: null },
+        data: { collectedAt: new Date() },
+      });
+      const collected = await balanceOf(tx, rbUser.id);
+      check(
+        "collect: opening the boxes adds exactly $450 to the balance",
+        collected.availableCents - waiting.availableCents === 45_000,
+        `${waiting.availableCents} -> ${collected.availableCents}`,
+      );
+
+      // ── withdrawals use up the balance exactly ──
       const before = await balanceOf(tx, rbUser.id);
       await tx.withdrawal.create({
         data: {

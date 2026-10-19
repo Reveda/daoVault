@@ -9,6 +9,7 @@
 import { prisma } from "../../config/prisma.js";
 import { alert } from "../../config/alerts.js";
 import { processPlanEvents } from "./activation.engine.js";
+import { pushPending } from "../notifications/notifications.service.js";
 
 const BATCH = 100;
 let running: Promise<number> | null = null;
@@ -23,6 +24,8 @@ async function drain(): Promise<number> {
     });
     if (batch.busy) return total; // another copy is draining: it will finish the queue
     total += batch.processed;
+    // this batch's level income / reward / DV notifications go out at once (not after the 2s sweep)
+    if (batch.processed) void pushPending().catch(() => 0);
     for (const r of batch.rankUps) {
       if (r.rewardUsd > 0)
         console.log(

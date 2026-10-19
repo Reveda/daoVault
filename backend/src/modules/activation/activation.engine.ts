@@ -1,8 +1,10 @@
 import { EarningType, PackageStatus, Prisma } from "@prisma/client";
+import { notify } from "../notifications/notifications.service.js";
 import {
   CAP_MULTIPLIER,
   FAST_START,
   FAST_START_DIRECTS,
+  DV_TOKENS_PER_PACKAGE,
   LEVELS,
   RANKS,
   fromCents,
@@ -268,11 +270,22 @@ export async function recomputeRanks(tx: Tx, ids: string[]): Promise<RankUp[]> {
         select: { id: true },
       });
       if (paid) continue;
-      rewardCents += await creditIntoCap(tx, m.id, m.packages, toCents(RANKS[r - 1].rewardUsd), {
+      const credited = await creditIntoCap(tx, m.id, m.packages, toCents(RANKS[r - 1].rewardUsd), {
         sourceId: m.id,
         type: EarningType.RANK_REWARD,
         level: r,
       });
+      rewardCents += credited;
+      await notify(
+        tx,
+        m.id,
+        "RANK_REWARD",
+        `${RANKS[r - 1].name} rank reached`,
+        credited > 0
+          ? `Congratulations! Your $${fromCents(credited).toLocaleString("en-US")} reward is ready to collect.`
+          : "Congratulations on your new rank.",
+        `rank:${r}`,
+      );
     }
     rankUps.push({
       wallet: m.walletAddress,
@@ -491,6 +504,9 @@ async function creditIntoCap(
         level: earning.level,
         percentage: earning.percentage,
         amountUsd: fromCents(payCents),
+        // claim to collect (owner 2026-10-19): level income reaches the balance at once; rank rewards
+        // and the fast-start bonus wait until the member opens the box (collectReward)
+        collectedAt: earning.type === EarningType.LEVEL_COMMISSION ? new Date() : null,
       },
     });
     const newEarned = earnedCents + payCents;
@@ -553,6 +569,15 @@ async function awardFastStart(
       type: EarningType.FAST_START_BONUS,
       level: tier.days,
     });
+    if (paid > 0)
+      await notify(
+        tx,
+        userId,
+        "BONUS",
+        `${tier.name} earned`,
+        `Your $${fromCents(paid).toLocaleString("en-US")} bonus is ready to collect.`,
+        "bonus",
+      );
     return paid > 0
       ? { wallet: m.walletAddress, days: tier.days, rewardUsd: fromCents(paid) }
       : null;
@@ -573,6 +598,8 @@ async function payCommissions(
   chain: Array<{ id: string; depth: number }>,
 ) {
   const commissions: Commission[] = [];
+  // the paying member's code, for the level income notifications
+  const source = await tx.user.findUnique({ where: { id: sourceUserId }, select: { referralCode: true } });
   const skipped: Skipped[] = [];
   const top = chain.slice(0, LEVELS.length);
   const uplines = await tx.user.findMany({
@@ -610,8 +637,17 @@ async function payCommissions(
       level,
       percentage: LEVELS[level - 1].pct,
     });
-    if (paid > 0)
+    if (paid > 0) {
       commissions.push({ level, wallet: upline.walletAddress, amountUsd: fromCents(paid) });
+      await notify(
+        tx,
+        upline.id,
+        "LEVEL_INCOME",
+        `Level ${level} income`,
+        `+$${fromCents(paid).toLocaleString("en-US", { minimumFractionDigits: 2 })} from ${source?.referralCode ?? "your team"}. Added to your balance.`,
+        "income",
+      );
+    }
     else skipped.push({ level, wallet: upline.walletAddress, reason: "capped" });
   }
   return { commissions, skipped };
@@ -673,6 +709,14 @@ export async function processPlanEvents(
       : { commissions: [], skipped: [] };
     for (const a of await placementAncestorsOf(tx, ev.userId)) addTo(volume, a.id, a.side, 1);
     await tx.package.update({ where: { id: ev.packageId }, data: { countedAt: now } });
+    await notify(
+      tx,
+      ev.userId,
+      "DV_TOKENS",
+      ev.isActivation ? "Your package is active" : "Your new package is active",
+      `${DV_TOKENS_PER_PACKAGE.toLocaleString("en-US")} DV tokens are ready to collect in your DV Token Pot.`,
+      "dv",
+    );
     await tx.planEvent.update({ where: { id: ev.id }, data: { processedAt: now } });
     batch.events.push({ packageId: ev.packageId, wallet: user.walletAddress, ...paid });
     // fast-start bonus: the sponsor may just have reached 10 paid directs; a member activating after

@@ -39,6 +39,8 @@ export default defineConfig({
       '/api': {
         target: API_TARGET,
         changeOrigin: true,
+        // live notifications (socket.io at /api/v1/socket.io)
+        ws: true,
       },
     },
   },

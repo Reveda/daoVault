@@ -11,7 +11,7 @@ export const healthRouter = Router();
  * when a migration creates one. Startup already refuses to run after a failed migration
  * (scripts/start.mjs); this also catches a database swapped or changed under a running API.
  */
-const NEWEST_TABLES = ["plan_events", "chain_cursors", "power_businesses"] as const;
+const NEWEST_TABLES = ["plan_events", "chain_cursors", "power_businesses", "notifications"] as const;
 
 async function readiness(
   _req: Parameters<Parameters<typeof healthRouter.get>[1]>[0],

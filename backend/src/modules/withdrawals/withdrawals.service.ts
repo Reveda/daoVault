@@ -7,6 +7,7 @@ import { alert } from "../../config/alerts.js";
 import { isAdminWallet } from "../auth/auth.service.js";
 import { fromCents, toCents, withdrawalSplit } from "../plan/plan.js";
 import { chainProvider } from "../../config/rpc.js";
+import { notify } from "../notifications/notifications.service.js";
 import {
   canPayInstantly,
   findClaimTx,
@@ -93,7 +94,11 @@ const releaseUnsigned = (where: Prisma.WithdrawalWhereInput = {}) =>
 /** Withdrawable = every earning (level commissions + rank rewards) minus requests not rejected. In cents. */
 export async function balanceOf(db: Tx | typeof prisma, userId: string) {
   const [earned, reserved, paid] = await Promise.all([
-    db.earning.aggregate({ where: { recipientId: userId }, _sum: { amountUsd: true } }),
+    // only collected earnings (owner 2026-10-19): a reward waiting in its box is not withdrawable yet
+    db.earning.aggregate({
+      where: { recipientId: userId, collectedAt: { not: null } },
+      _sum: { amountUsd: true },
+    }),
     db.withdrawal.aggregate({
       where: { userId, status: { in: RESERVED } },
       _sum: { grossAmount: true },
@@ -144,6 +149,17 @@ const view = (w: Withdrawal) => ({
   updatedAt: w.updatedAt,
 });
 
+/** one notification when a withdrawal is paid (whoever settled it: the page, the API or the worker) */
+const notifyPaid = (w: Withdrawal) =>
+  notify(
+    prisma,
+    w.userId,
+    "WITHDRAWAL_PAID",
+    "Withdrawal completed",
+    `$${Number(w.netAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })} USDT has been sent to your wallet.`,
+    "withdraw",
+  ).catch(() => undefined);
+
 export class WithdrawalsService {
   /**
    * Settles this member's open instant vouchers against the chain: claimed ones become
@@ -161,7 +177,7 @@ export class WithdrawalsService {
       try {
         if (await isVoucherUsed(w.voucherId!)) {
           const tx = await findClaimTx(w.voucherId!);
-          await prisma.withdrawal.updateMany({
+          const settled = await prisma.withdrawal.updateMany({
             where: { id: w.id, status: WithdrawalStatus.PROCESSING },
             data: {
               status: WithdrawalStatus.COMPLETED,
@@ -169,11 +185,12 @@ export class WithdrawalsService {
               reviewedAt: new Date(),
             },
           });
+          if (settled.count) await notifyPaid(w);
         } else if (
           w.voucherDeadline &&
           w.voucherDeadline.getTime() + EXPIRY_MARGIN_MS < Date.now()
         ) {
-          await prisma.withdrawal.updateMany({
+          const returned = await prisma.withdrawal.updateMany({
             where: { id: w.id, status: WithdrawalStatus.PROCESSING },
             data: {
               status: WithdrawalStatus.REJECTED,
@@ -181,6 +198,15 @@ export class WithdrawalsService {
               reviewedAt: new Date(),
             },
           });
+          if (returned.count)
+            await notify(
+              prisma,
+              w.userId,
+              "WITHDRAWAL_RETURNED",
+              "Withdrawal returned to your balance",
+              `Your $${Number(w.grossAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })} withdrawal was not completed. The full amount is back in your balance.`,
+              "withdraw",
+            );
         }
       } catch (error) {
         console.warn("[withdrawals] reconcile failed for", w.id, error);
@@ -379,7 +405,7 @@ export class WithdrawalsService {
     }
     try {
       // guarded on PROCESSING: the worker may settle the same claim at the same moment
-      await prisma.withdrawal.updateMany({
+      const settled = await prisma.withdrawal.updateMany({
         where: { id: w.id, status: WithdrawalStatus.PROCESSING },
         data: {
           status: WithdrawalStatus.COMPLETED,
@@ -387,6 +413,7 @@ export class WithdrawalsService {
           reviewedAt: new Date(),
         },
       });
+      if (settled.count) await notifyPaid(w);
       return view(await prisma.withdrawal.findUniqueOrThrow({ where: { id: w.id } }));
     } catch (error) {
       if ((error as { code?: string })?.code === "P2002")

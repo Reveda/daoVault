@@ -9,6 +9,8 @@ import { runWatch } from "./jobs/watch.js";
 import { withdrawalsService } from "./modules/withdrawals/withdrawals.service.js";
 import { redisReady } from "./config/redis.js";
 import { captureConsole } from "./config/logger.js";
+import { closeSocketServer, initSocketServer } from "./modules/notifications/socket.js";
+import { cleanupNotifications, startNotificationPusher } from "./modules/notifications/notifications.service.js";
 
 // every console line of the API becomes one JSON log line (config/logger.ts)
 captureConsole();
@@ -78,11 +80,18 @@ const server = app.listen(env.PORT, () => {
     );
   // plan queue: commissions / volume / ranks for recorded payments (one runner across all copies)
   startPlanQueueTimer();
+  // live notifications (owner 2026-10-19): new rows go out over socket.io every 2 seconds
+  startNotificationPusher();
   // no worker without Redis (Render): this API watches the system itself
   if (!env.REDIS_URL) {
     setInterval(
       () => void runWatch().catch((error) => console.error("[watch]", error)),
       5 * 60_000,
+    ).unref();
+    // the worker's daily clean-up of old notifications (read after 30 days, any after 90)
+    setInterval(
+      () => void cleanupNotifications().catch((error) => console.error("[notify cleanup]", error)),
+      24 * 3_600_000,
     ).unref();
     // the worker's voucher-settle job: claimed vouchers become paid, expired ones free the balance
     setInterval(
@@ -94,10 +103,14 @@ const server = app.listen(env.PORT, () => {
     ).unref();
   }
 });
+// live notifications over socket.io on the same port, at ${API_PREFIX}/socket.io (owner 2026-10-19)
+initSocketServer(server);
+
 
 const shutdown = async (signal: string) => {
   console.log(`${signal} received. Shutting down...`);
   stopPlanQueueTimer();
+  void closeSocketServer().catch(() => undefined);
   const force = setTimeout(() => {
     console.error(
       "[api] graceful shutdown timed out; exiting so the orchestrator can replace this replica",

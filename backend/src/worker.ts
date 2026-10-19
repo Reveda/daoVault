@@ -23,6 +23,8 @@ import { alert } from "./config/alerts.js";
 import { startPlanQueueTimer, stopPlanQueueTimer } from "./modules/activation/planQueue.js";
 import { withdrawalsService } from "./modules/withdrawals/withdrawals.service.js";
 import { captureConsole } from "./config/logger.js";
+import { initSocketEmitter } from "./modules/notifications/socket.js";
+import { startNotificationPusher } from "./modules/notifications/notifications.service.js";
 
 // every console line of the worker becomes one JSON log line (config/logger.ts)
 captureConsole();
@@ -122,6 +124,10 @@ worker.on("error", (error) => {
   );
 });
 startPlanQueueTimer();
+// live notifications: the worker emits through Redis to the API copy holding the member's socket
+void initSocketEmitter()
+  .then(() => startNotificationPusher())
+  .catch((error) => console.error("[worker] notifications:", error));
 
 console.log(
   `[worker] running: chain-indexer every ${env.INDEXER_INTERVAL_SECONDS}s, voucher-settle every 60s, watch every 2 min, auth-cleanup daily, plan queue sweep`,

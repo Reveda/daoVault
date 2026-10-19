@@ -31,6 +31,8 @@ import type { LevelMatrixRow } from './types.ts';
 import {
   ApiError,
   getDashboardData,
+  markBoxOpened,
+  collectReward,
   getSponsorByCode,
   getAdminStats,
   joinTeam,
@@ -63,6 +65,7 @@ import {
   celebrate,
 } from './dashboardFx.ts';
 import { renderRewardVaults, initWalletMenu, RANK_TIERS } from './rewardVaults.ts';
+import { initNotifications } from './notifications.ts';
 import { openGiftBox } from './giftBox.ts';
 import { initDvLogos } from './dvLogo.ts';
 import { openLevelModal } from './levelModal.ts';
@@ -355,6 +358,7 @@ whenReady(async () => {
     pkg?.status,
   );
   renderPowerBusiness(dashboardData);
+  renderMoneyCards(dashboardData);
   initDvToken(dashboardData);
   initDvBox(account, dashboardData);
   updateMemberDetails(dashboardData, Boolean(pkg) || isRoot, capEarned, maxCap);
@@ -363,7 +367,42 @@ whenReady(async () => {
   initCapMeter(capEarned, maxCap);
 
   // 7b. Rank reward vaults (surprise boxes)
-  renderRewardVaults(account, dashboardData?.currentRank ?? 0);
+  // claim to collect (owner 2026-10-19): rewards reach the balance only when the member opens their box;
+  // after a collect (or new income arriving live) the balance-dependent parts are fetched again
+  let refreshing: Promise<void> | null = null;
+  const refreshAfterCollect = () =>
+    (refreshing ??= (async () => {
+      try {
+        const fresh = await getDashboardData(account, await signIn(account));
+        dashboardData = fresh;
+        updateOverviewMetrics(
+          activeDirects,
+          toNumber(fresh.totalEarned, 0),
+          toNumber(fresh.capEarnedUsd, capEarned),
+          maxCap,
+          Math.max(fresh.currentRank ?? 0, fresh.powerBusiness?.rank ?? 0),
+          pkg?.status,
+        );
+        drawVaults(fresh);
+        renderMoneyCards(fresh);
+        renderIncome(fresh);
+        renderFastStart(fresh);
+        document.dispatchEvent(new CustomEvent('dv:balance-changed'));
+      } catch {
+        /* the next visit shows it */
+      } finally {
+        refreshing = null;
+      }
+    })());
+  const drawVaults = (data: DashboardData | null) =>
+    renderRewardVaults(
+      account,
+      data?.currentRank ?? 0,
+      data?.rankRewards ?? [],
+      async (rank) => collectReward(account, await signIn(account), { kind: 'rank', rank }),
+      () => void refreshAfterCollect(),
+    );
+  drawVaults(dashboardData);
   renderRankProgress(dashboardData);
 
   // 8. 20-level table, legs, income
@@ -371,6 +410,56 @@ whenReady(async () => {
   renderLegs(dashboardData);
   renderIncome(dashboardData);
   renderFastStart(dashboardData);
+  // the earned fast-start bonus waits in its box until collected (owner 2026-10-19)
+  document.getElementById('fastStartCollect')?.addEventListener('click', () => {
+    const fs = dashboardData?.fastStart;
+    const tier = fs?.tiers.find((t) => t.days === fs.earnedDays);
+    if (!fs || !tier) return;
+    openGiftBox({
+      rank: tier.name,
+      reward: fs.earnedUsd,
+      requirement: `${fs.directsNeeded} directs within ${tier.days} days`,
+      mode: 'ready',
+      kicker: 'BONUS REWARD BOX',
+      label: tier.name.toUpperCase(),
+      openLabel: 'Open & collect',
+      note: 'Added to your balance. You can withdraw it any time.',
+      doneLabel: 'Done',
+      onOpened: () => {
+        void signIn(account)
+          .then((t) => collectReward(account, t, { kind: 'bonus' }))
+          .then(
+            (r) => {
+              if (!r.alreadyCollected)
+                showToast(`$${r.collectedUsd.toLocaleString()} ${tier.name} added to your balance.`);
+              void refreshAfterCollect();
+            },
+            () =>
+              showToast(
+                'We could not collect this bonus right now. It is safe in its box: please try again in a minute.',
+                true,
+              ),
+          );
+      },
+    });
+  });
+  // rewards waiting in their boxes: a calm reminder once per visit
+  const waiting = dashboardData?.pendingRewards ?? [];
+  if (waiting.length)
+    showToast(
+      waiting.length === 1
+        ? `${waiting[0].name}: $${waiting[0].amountUsd.toLocaleString()} is ready to collect. Open its box to add it to your balance.`
+        : `${waiting.length} rewards ($${(dashboardData?.rewardsWaitingUsd ?? 0).toLocaleString()}) are ready to collect. Open their boxes to add them to your balance.`,
+    );
+  // live notifications (owner 2026-10-19): the bell, and fresh balances when income or rewards arrive
+  if (dashboardData && !dashboardData.isRoot) {
+    initNotifications(account);
+    let pending = 0;
+    document.addEventListener('dv:notification', () => {
+      window.clearTimeout(pending);
+      pending = window.setTimeout(() => void refreshAfterCollect(), 800);
+    });
+  }
 
   // 9. Withdrawals (wallet-signature sign-in)
   if (!adminWallet)
@@ -633,45 +722,60 @@ function initDvBox(account: string, data: DashboardData | null): void {
   if (!btn || !stateEl || !dv || data?.isRoot) return;
   const fmt = (n: number) => `${Math.round(n).toLocaleString('en-US')} DV`;
   const key = `daovault_dv_box_${account.toLowerCase()}`;
+  // opened once (owner 2026-10-19): the server remembers it (dv.opened), this browser too
+  let serverOpened = dv.opened ?? 0;
   const openedAmount = () => {
+    let local = 0;
     try {
-      return Number(localStorage.getItem(key)) || 0;
+      local = Number(localStorage.getItem(key)) || 0;
     } catch {
-      return 0;
+      /* storage blocked */
     }
+    return Math.max(serverOpened, local);
   };
   const draw = () => {
     const mode: 'locked' | 'ready' | 'opened' =
       dv.allocated <= 0 ? 'locked' : openedAmount() >= dv.allocated ? 'opened' : 'ready';
     btn.className = `dv-box is-${mode}`;
+    // an opened pot never opens again: it only shows what was revealed
+    (btn as HTMLButtonElement).disabled = mode === 'opened';
     btn.querySelector('.rb-lock')?.toggleAttribute('hidden', mode !== 'locked');
     stateEl.textContent =
       mode === 'locked'
         ? 'Unlocks with your activation'
         : mode === 'ready'
-          ? 'Ready to open'
-          : `Opened · ${fmt(dv.allocated)} allocated`;
+          ? openedAmount() > 0
+            ? `New: +${fmt(dv.allocated - openedAmount())} · ready to open`
+            : 'Ready to open'
+          : `Already opened · ${fmt(dv.allocated)} allocated`;
     btn.setAttribute(
       'aria-label',
-      `DV token pot: ${mode === 'locked' ? 'sealed until you activate' : mode === 'ready' ? 'ready to open' : `opened, ${fmt(dv.allocated)} allocated`}`,
+      `DV token pot: ${mode === 'locked' ? 'sealed until you activate' : mode === 'ready' ? 'ready to open' : `already opened, ${fmt(dv.allocated)} allocated`}`,
     );
     return mode;
   };
   draw();
   btn.addEventListener('click', () => {
     const mode = draw();
+    if (mode === 'opened') return;
     const launch = `Planned to be credited to this wallet at the DV launch on ${dv.network} (${dv.launch}).`;
+    // a top-up opens the pot once more, for its NEW tokens only (owner 2026-10-19); never changes any balance
+    const before = mode === 'ready' ? openedAmount() : 0;
+    const fresh = Math.max(0, dv.allocated - before);
     openGiftBox({
       rank: 'DV Token Allocation',
-      reward: mode === 'locked' ? dv.perPackage : dv.allocated,
+      reward: mode === 'locked' ? dv.perPackage : before > 0 ? fresh : dv.allocated,
       requirement: 'your $300 package activation',
       mode,
       format: fmt,
       theme: 'pot',
       allowPreview: DV_POT_PREVIEW,
       kicker: mode === 'locked' ? 'SEALED DV TOKEN POT' : 'DV TOKEN POT',
-      label: 'DV TOKENS ALLOCATED',
-      note: `${fmt(dv.allocated)} allocated to your wallet (${fmt(dv.perPackage)} per package). ${launch}`,
+      label: before > 0 ? 'NEW DV TOKENS ALLOCATED' : 'DV TOKENS ALLOCATED',
+      note:
+        before > 0
+          ? `${fmt(fresh)} added for your new package. ${fmt(dv.allocated)} allocated in total. ${launch}`
+          : `${fmt(dv.allocated)} allocated to your wallet (${fmt(dv.perPackage)} per package). ${launch}`,
       lockedNote: `Activate your $300 package and ${fmt(dv.perPackage)} are allocated to you. ${launch}`,
       previewNote: `This was a preview. The pot opens for real once your $300 package is activated: ${fmt(dv.perPackage)} per package.`,
       doneLabel: 'Got it',
@@ -679,8 +783,14 @@ function initDvBox(account: string, data: DashboardData | null): void {
         try {
           localStorage.setItem(key, String(dv.allocated));
         } catch {
-          /* storage blocked: the box simply stays ready */
+          /* storage blocked: the server copy below still remembers it */
         }
+        serverOpened = dv.allocated;
+        void signIn(account)
+          .then((token) => markBoxOpened(account, token, { kind: 'dv', allocated: dv.allocated }))
+          .catch(() => {
+            /* remembered in this browser; the server copy is retried next time */
+          });
         draw();
       },
     });
@@ -701,11 +811,6 @@ function initDvToken(data: DashboardData | null): void {
       ...(text !== undefined ? { textContent: text } : {}),
     });
 
-  // months to the planned launch (from the server's date), shown as "about N months away"
-  const launchAt = dv.launchDate ? new Date(`${dv.launchDate}T00:00:00Z`) : null;
-  const months = launchAt
-    ? Math.max(0, Math.round((launchAt.getTime() - Date.now()) / (30.44 * 86_400_000)))
-    : null;
 
   if (card) {
     card.hidden = false;
@@ -735,12 +840,6 @@ function initDvToken(data: DashboardData | null): void {
     }
     const launch = document.getElementById('dvTokenLaunch');
     if (launch) launch.textContent = `Planned launch \u00b7 ${dv.launch}`;
-    const net = document.getElementById('dvTokenNet');
-    if (net)
-      net.textContent =
-        months !== null && months > 0
-          ? `${dv.network} \u00b7 about ${months} months away`
-          : dv.network;
   }
 
   // the token as a minted 3D coin (falls back to the flat logo + CSS spin on lite phones)
@@ -1083,12 +1182,17 @@ function renderFastStart(data: DashboardData | null): void {
     show(0);
     return;
   }
+  const collectBtn = document.getElementById('fastStartCollect');
+  if (collectBtn) collectBtn.hidden = !(earned && fs.collected === false);
   if (earned) {
     card.classList.add('is-earned');
-    set('fastStartTitle', `${earned.name} earned`);
+    const waiting = fs.collected === false;
+    set('fastStartTitle', waiting ? `${earned.name}: ready to collect` : `${earned.name} earned`);
     set(
       'fastStartText',
-      `${fs.directsNeeded} directs activated within ${earned.days} days: +$${fs.earnedUsd.toLocaleString()} added to your balance.`,
+      waiting
+        ? `${fs.directsNeeded} directs activated within ${earned.days} days. Open your bonus box to add $${fs.earnedUsd.toLocaleString()} to your balance.`
+        : `${fs.directsNeeded} directs activated within ${earned.days} days: +$${fs.earnedUsd.toLocaleString()} added to your balance.`,
     );
     setCount(fs.directsNeeded);
     show(100);
@@ -1160,6 +1264,34 @@ function riseIn(card: HTMLElement, onShow?: () => void): void {
     { threshold: 0.12 },
   );
   io.observe(card);
+}
+
+/**
+ * The two money cards (owner 2026-10-19): "Ready to Collect" = rank rewards and the fast-start bonus still
+ * waiting in their boxes (not withdrawable yet); "Withdrawable Balance" = collected level income, rewards
+ * and bonuses minus withdrawals (what the withdraw form can send).
+ */
+function renderMoneyCards(data: DashboardData | null): void {
+  const usd = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const waiting = data?.pendingRewards ?? [];
+  const waitingUsd = data?.rewardsWaitingUsd ?? 0;
+  rollNumber(document.getElementById('metricWaitingVal'), waitingUsd, usd);
+  const note = document.getElementById('metricWaitingNote');
+  if (note)
+    note.textContent = waiting.length
+      ? `${waiting.length} ${waiting.length === 1 ? 'reward' : 'rewards'} waiting in ${waiting.length === 1 ? 'its box' : 'their boxes'}`
+      : 'No rewards waiting';
+  const link = document.getElementById('metricWaitingLink') as HTMLAnchorElement | null;
+  if (link) {
+    link.hidden = !waiting.length;
+    // straight to the box: the bonus card when only the bonus waits, else the rank boxes
+    link.href = waiting.every((w) => w.kind === 'bonus') ? '#fastStartCard' : '#rewardsSection';
+  }
+  document.getElementById('metricWaitingCard')?.classList.toggle('has-waiting', waiting.length > 0);
+  rollNumber(document.getElementById('metricAvailVal'), data?.availableUsd ?? 0, usd);
+  const avail = document.getElementById('metricAvailNote');
+  if (avail && data)
+    avail.textContent = `Pending ${usd(data.pendingWithdrawalUsd ?? 0)} · Withdrawn ${usd(data.withdrawnUsd ?? 0)}`;
 }
 
 /** Latest level commissions, rank rewards and bonuses. */
@@ -1493,6 +1625,10 @@ function initWithdrawals(
     return;
   }
 
+  document.addEventListener('dv:balance-changed', () => {
+    const session = savedSession(wallet);
+    if (session) void refresh(session).catch(() => undefined);
+  });
   const refresh = async (token: string) => {
     const summary = await getWithdrawals(token);
     available = summary.availableUsd;

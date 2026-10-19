@@ -20,6 +20,7 @@ import {
 } from "../plan/plan.js";
 import { balanceOf } from "../withdrawals/withdrawals.service.js";
 import { dashboardRepository } from "./dashboard.repository.js";
+import { markLinkRead } from "../notifications/notifications.service.js";
 
 type PowerRecord = { amountUsd: { toString(): string }; side: "LEFT" | "RIGHT" };
 type Sides = { left: number; right: number };
@@ -75,6 +76,7 @@ export class DashboardService {
       directsAt,
       fastStartEarned,
       company,
+      rewardRows,
     ] = await Promise.all([
       dashboardRepository.earningsByType(user.id),
       dashboardRepository.earningsByLevel(user.id),
@@ -90,7 +92,40 @@ export class DashboardService {
       root
         ? prisma.user.findUnique({ where: { walletAddress: root }, select: { referralCode: true } })
         : null,
+      dashboardRepository.rewardsByLevel(user.id),
     ]);
+
+    // claim to collect (owner, 2026-10-19): every rank reward / the bonus, collected or waiting in its box.
+    // _count.collectedAt counts the collected rows; fewer than all = something is still to collect.
+    const rewardCents = (r: (typeof rewardRows)[number]) => toCents(String(r._sum.amountUsd ?? 0));
+    const rankRewards = rewardRows
+      .filter((r) => r.type === "RANK_REWARD" && r.level)
+      .map((r) => ({
+        rank: r.level!,
+        name: RANKS[r.level! - 1]?.name ?? `Rank ${r.level}`,
+        amountUsd: fromCents(rewardCents(r)),
+        collected: r._count.collectedAt === r._count._all,
+      }))
+      .sort((a, b) => a.rank - b.rank);
+    const bonusRow = rewardRows.find((r) => r.type === "FAST_START_BONUS");
+    const pendingRewards = [
+      ...rankRewards
+        .filter((r) => !r.collected)
+        .map((r) => ({ kind: "rank" as const, rank: r.rank, name: r.name, amountUsd: r.amountUsd })),
+      ...(bonusRow && bonusRow._count.collectedAt < bonusRow._count._all
+        ? [
+            {
+              kind: "bonus" as const,
+              days: bonusRow.level ?? 0,
+              name: FAST_START.find((t) => t.days === bonusRow.level)?.name ?? "Fast-start bonus",
+              amountUsd: fromCents(rewardCents(bonusRow)),
+            },
+          ]
+        : []),
+    ];
+    const rewardsWaitingUsd = fromCents(
+      pendingRewards.reduce((sum, p) => sum + toCents(p.amountUsd), 0),
+    );
 
     // money: DECIMAL from Postgres -> exact integer cents -> dollars (never a float sum)
     const sumOf = (type: string) =>
@@ -106,8 +141,10 @@ export class DashboardService {
       eligible: !isRootWallet(user.walletAddress),
       directsNeeded: FAST_START_DIRECTS,
       joinedAt: joinedAt?.toISOString() ?? null,
-      earnedUsd: bonusUsd,
+      // the bonus amount whether collected or still in its box; collected = it is in the balance
+      earnedUsd: bonusRow ? fromCents(rewardCents(bonusRow)) : bonusUsd,
       earnedDays: fastStartEarned?.level ?? null,
+      collected: !bonusRow || bonusRow._count.collectedAt === bonusRow._count._all,
       tiers: FAST_START.map((t) => {
         const deadline = joinedAt ? joinedAt.getTime() + t.days * 86_400_000 : null;
         return {
@@ -222,7 +259,15 @@ export class DashboardService {
         launch: DV_TOKEN_LAUNCH,
         launchDate: DV_TOKEN_LAUNCH_DATE,
         network: "BNB Smart Chain",
+        // DV already revealed in the pot (opened once, remembered on the server)
+        opened: user.dvPotOpened,
       },
+      // rank reward boxes already opened: bit 0 = rank 1 ... bit 10 = rank 11
+      rewardBoxesOpened: user.rewardBoxesOpened,
+      // claim to collect (owner 2026-10-19): rewards per rank, what is still waiting, and its total
+      rankRewards,
+      pendingRewards,
+      rewardsWaitingUsd,
       // another $300 package at any time (owner, 2026-10-18): each one adds $7,500 to the cap
       canTopUp: !isRoot && user.packages.length > 0,
       levels: LEVELS.map((l) => {
@@ -298,3 +343,86 @@ export class DashboardService {
 }
 
 export const dashboardService = new DashboardService();
+
+/**
+ * A reward box was opened (owner, 2026-10-19: it opens ONCE, on every device). The server checks it
+ * really is the member's to open: the DV pot only with an allocation (and then remembers that whole
+ * allocation), a rank box only for a rank the member has reached. Nothing here pays anything: the
+ * boxes are a reveal of what the plan already credited / allocated.
+ */
+/**
+ * Collects a reward (owner, 2026-10-19): a rank reward or the fast-start bonus reaches the balance only
+ * when the member opens its box. Server-side and once: the rows still waiting are stamped collected in one
+ * guarded update, so two taps or two devices can never collect twice. Nothing is paid here that the plan
+ * engine did not already credit (amounts and the 25x cap were settled when the reward was earned).
+ */
+export async function collectReward(walletAddress: string, kind: "rank" | "bonus", rank?: number) {
+  const user = await prisma.user.findUnique({
+    where: { walletAddress },
+    select: { id: true, currentRank: true },
+  });
+  if (!user) throw Object.assign(new Error("Account not found."), { statusCode: 404 });
+  if (kind === "rank" && (!rank || rank > user.currentRank))
+    throw Object.assign(new Error("This reward box is not unlocked yet."), { statusCode: 409 });
+  const where = {
+    recipientId: user.id,
+    collectedAt: null,
+    ...(kind === "rank"
+      ? { type: "RANK_REWARD" as const, level: rank }
+      : { type: "FAST_START_BONUS" as const }),
+  };
+  const result = await prisma.$transaction(async (tx) => {
+    const rows = await tx.earning.findMany({ where, select: { id: true, amountUsd: true } });
+    if (!rows.length) return { cents: 0, count: 0 };
+    const done = await tx.earning.updateMany({
+      where: { id: { in: rows.map((r) => r.id) }, collectedAt: null },
+      data: { collectedAt: new Date() },
+    });
+    // another tap collected it at the same moment: report nothing new
+    if (done.count !== rows.length) throw Object.assign(new Error("already"), { already: true });
+    return { cents: rows.reduce((sum, r) => sum + toCents(r.amountUsd.toString()), 0), count: done.count };
+  }).catch((error) => {
+    if ((error as { already?: boolean }).already) return { cents: 0, count: 0 };
+    throw error;
+  });
+  if (kind === "rank" && rank) {
+    // the box is opened too, and its notification is done
+    await prisma.$executeRaw`UPDATE users SET reward_boxes_opened = reward_boxes_opened | ${1 << (rank - 1)} WHERE id = ${user.id}::uuid`;
+    await markLinkRead(user.id, `rank:${rank}`);
+  } else await markLinkRead(user.id, "bonus");
+  return { collectedUsd: fromCents(result.cents), alreadyCollected: result.count === 0 };
+}
+
+export async function markBoxOpened(
+  walletAddress: string,
+  kind: "dv" | "rank",
+  rank?: number,
+  revealed?: number,
+) {
+  const user = await prisma.user.findUnique({
+    where: { walletAddress },
+    select: { id: true, walletAddress: true, currentRank: true, _count: { select: { packages: true } } },
+  });
+  if (!user) throw Object.assign(new Error("Account not found."), { statusCode: 404 });
+  if (kind === "dv") {
+    const allocated = isRootWallet(user.walletAddress) ? 0 : user._count.packages * DV_TOKENS_PER_PACKAGE;
+    if (allocated <= 0)
+      throw Object.assign(new Error("Your DV tokens appear after your first package."), { statusCode: 409 });
+    // only what the page revealed (a top-up after the page loaded stays to be opened), and never less
+    // than before: each new package opens the pot once more, for its new tokens only
+    const value = Math.min(allocated, revealed ?? allocated);
+    const [row] = await prisma.$queryRaw<Array<{ opened: number }>>`
+      UPDATE users SET dv_pot_opened = GREATEST(dv_pot_opened, ${value})
+       WHERE id = ${user.id}::uuid RETURNING dv_pot_opened AS opened`;
+    await markLinkRead(user.id, "dv");
+    return { dvPotOpened: Number(row?.opened ?? value) };
+  }
+  if (!rank || rank > user.currentRank)
+    throw Object.assign(new Error("This reward box is not unlocked yet."), { statusCode: 409 });
+  // a bitwise OR in SQL: two boxes opened at the same moment both stay remembered
+  const bit = 1 << (rank - 1);
+  const [row] = await prisma.$queryRaw<Array<{ opened: number }>>`
+    UPDATE users SET reward_boxes_opened = reward_boxes_opened | ${bit}
+     WHERE id = ${user.id}::uuid RETURNING reward_boxes_opened AS opened`;
+  return { rewardBoxesOpened: Number(row?.opened ?? bit) };
+}

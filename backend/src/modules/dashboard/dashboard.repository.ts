@@ -17,11 +17,23 @@ export const dashboardRepository = {
     });
   },
 
+  /** collected earnings by type (owner 2026-10-19: a reward still in its box is not counted yet) */
   earningsByType(recipientId: string) {
     return prisma.earning.groupBy({
       by: ["type"],
-      where: { recipientId },
+      where: { recipientId, collectedAt: { not: null } },
       _sum: { amountUsd: true },
+    });
+  },
+
+  /** rank rewards and the fast-start bonus per rank / tier, split into collected and waiting */
+  rewardsByLevel(recipientId: string) {
+    return prisma.earning.groupBy({
+      by: ["type", "level"],
+      where: { recipientId, type: { in: ["RANK_REWARD", "FAST_START_BONUS"] } },
+      _sum: { amountUsd: true },
+      _min: { collectedAt: true },
+      _count: { collectedAt: true, _all: true },
     });
   },
 
@@ -36,7 +48,7 @@ export const dashboardRepository = {
 
   recentEarnings(recipientId: string) {
     return prisma.earning.findMany({
-      where: { recipientId },
+      where: { recipientId, collectedAt: { not: null } },
       orderBy: { createdAt: "desc" },
       take: 12,
       select: {

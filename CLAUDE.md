@@ -41,8 +41,8 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
 - DV token (owner 2026-10-15): every $300 package (activation or top-up) records 1,500 DAOVAULT (DV) tokens, planned to be
   credited at the DV launch on BSC (planned March 2028). Display only, nothing minted: plan.ts DV_TOKENS_PER_PACKAGE /
   DV_TOKEN_LAUNCH -> GET /dashboard dvToken {perPackage, allocated = packages x 1500 (root 0), launch, network} ->
-  dashboard #dvTokenCard under the 4 metric cards (calc chips: N packages x 1,500 = total; "about N months away" from
-  DV_TOKEN_LAUNCH_DATE) + header "DV Token" button #dvMenu (total; panel = one line per package: #, Activation/Top-up,
+  dashboard #dvTokenCard under the 4 metric cards (calc chips: N packages x 1,500 = total; the side shows only the "Planned launch" badge: the network / "months away" line and
+  the "Credited to this wallet" note were removed 2026-10-19) + header "DV Token" button #dvMenu (total; panel = one line per package: #, Activation/Top-up,
   date, +1,500, sum) (dashboard.ts initDvToken). DV Token Pot #dvBoxBtn on the card (owner 2026-10-18,
   dashboard.ts initDvBox): a polished GOLD pot, belly wrapped in red cloth (gold hems, DAOvault seal on 6 sides), mouth under a RED CLOTH tied with a gold cord (owner: traditional cloth-covered pot;
   card: SVG pot + bobbing DV coin) that opens the giftBox.ts overlay with theme
@@ -52,7 +52,12 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
   doneLabel, allowPreview). Sealed before the first package; with tokens it opens EVERYWHERE incl.
   production (owner 2026-10-18: show the member his tokens as soon as he buys); "Preview the opening" on the sealed pot only
   with VITE_REWARD_PREVIEW=true / dev server (VITE_DV_BOX_OPEN removed).
-  Opened state per wallet in localStorage only. Rank reward boxes: "Preview the opening" on a sealed box only with VITE_REWARD_PREVIEW=true or the dev
+  OPENS ONCE (owner 2026-10-19): users.dv_pot_opened / users.reward_boxes_opened (bit per rank) remember it on the
+  server (POST /dashboard/:wallet/boxes/opened {kind dv|rank, rank}, self only; dv needs an allocation, rank <= currentRank;
+  migration 20261019090000_reward_boxes_opened); GET /dashboard dvToken.opened + rewardBoxesOpened; an opened pot / box is
+  disabled (no replay), labelled "Already opened". localStorage kept as a second copy. Opening NEVER changes a balance (rewards are
+  credited by the plan engine; DV is an allocation). A top-up opens the pot once more for its NEW tokens only ("New: +1,500 DV";
+  reveal = the new tokens, note = new total); the server stores GREATEST(old, min(server allocation, what the page revealed)). Rank reward boxes: "Preview the opening" on a sealed box only with VITE_REWARD_PREVIEW=true or the dev
   server (rewardVaults.ts REWARD_PREVIEW; render.yaml true; Dockerfile / compose default false = production has no preview). Both show the token as a 3D minted coin (dvToken3d.ts mountDvToken3D:
   three.js, logo face via CanvasTexture turned FACE_TURN upright, engraved "DAOVAULT · DV TOKEN" ring on the card coin,
   reeded edge, ~33 fps, only while visible); html.lite / no WebGL / reduced motion = flat logo + CSS coin spin (.is-css).
@@ -101,6 +106,27 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
   dashboard.ts shows core.ts confirmNotice first ("Your sponsor's ID is not active yet ... they will not receive a reward
   from your activation"; never mentions the company; owner 2026-10-14); resolveSponsor returns activated. Codes are `DV` + first 6 hex chars of wallet (longer if taken; the server value wins).
 
+- Claim to collect + notifications (owner 2026-10-19): earnings.collected_at. LEVEL_COMMISSION is collected at once; RANK_REWARD and
+  FAST_START_BONUS are credited (amount + 25x cap fixed) by the plan engine but reach the balance (withdrawals.service balanceOf,
+  dashboard totals, income list) only after the member opens the box: POST /dashboard/:wallet/rewards/collect {kind rank|bonus}
+  (self only, rank <= currentRank, one guarded update = once). GET /dashboard rankRewards / pendingRewards / rewardsWaitingUsd /
+  fastStart.collected. Rank boxes (rewardVaults.ts renderRewardVaults(wallet, rank, rankRewards, collect)) = Ready to collect /
+  Already collected; fast-start card #fastStartCollect; dashboard refreshAfterCollect re-renders + event dv:balance-changed.
+  Migration 20261019120000_collect_rewards_notifications backfilled every older earning as collected.
+  Metric cards row 2 (owner 2026-10-19): #metricWaitingCard "Ready to Collect" (rewardsWaitingUsd, count, Collect -> link, gold
+  pulse while waiting) + #metricAvailCard "Withdrawable Balance" (availableUsd, pending / withdrawn); dashboard.ts renderMoneyCards
+  (also after a collect); dashboardFx 3D icon from data-icon.
+  Notifications: table notifications (modules/notifications): notify() rows written in the SAME transaction as the event (level income
+  per upline, rank reached / reward ready, bonus ready, DV tokens ready, withdrawal paid / returned); pushPending() claims rows once
+  (pushed_at, FOR UPDATE SKIP LOCKED) and emits over socket.io (socket.ts: path /api/v1/socket.io, JWT handshake, room per wallet,
+  redis adapter with REDIS_URL, worker = redis emitter); pusher every 2s in each API copy + worker, kicked after each plan batch.
+  GET /notifications?page&limit&filter=all|unread (+ unread, total), POST /notifications/read {id?}, POST /notifications/remove {id?}
+  (no id = every read one). Retention (owner 2026-10-19): each member keeps only the newest 30 (KEEP_PER_MEMBER; trimmed right after every
+  delivery in pushPending + daily), read ones go after 30 days, any after 90 (cleanupNotifications: worker auth-cleanup daily;
+  API without Redis daily). Frontend notifications.ts = header bell #notifMenu (count, the 5 newest, × per item,
+  "View all notifications" = full-history window: All / Unread tabs, 20 per page Load more, Mark all as read, Clear read; tap = scroll to the section), socket.io-client websocket first, polling fallback (Render rewrites have no
+  websockets); Nginx location /api/v1/socket.io/ upgrades; Vite dev proxy ws: true. /health NEWEST_TABLES includes notifications.
+
 ## Layout
 ```
 contracts/production/              mainnet copies of DAOvaultActivation.sol + DAOvaultPayout.sol (no TestUSDT) + README
@@ -122,7 +148,7 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
     users       GET  /users/:walletAddress
     dashboard   GET  /dashboard/:walletAddress   (JWT, own wallet or admin: requireSelfOrAdmin; 403 otherwise)
                 GET  /dashboard/:walletAddress/levels/:level?page=  (members exactly N levels down: DV code, short
-                wallet, sponsor code, joined date; 50/page) -> frontend levelModal.ts (tap a 20-Level Downline row)
+                wallet, sponsor code, joined date; 50/page) -> frontend levelModal.ts (tap a 20-Level Downline row; a ranked member shows its rank crest as avatar, 2026-10-19)
     activation  POST /activation/topup/verify (re-entry, owner 2026-10-10: contract topUp() -> ToppedUp; processTopUp adds a
                 package with its own 25x cap, uplines paid the 20 levels again, +1 DAO volume, no new direct. Commissions fill
                 the OLDEST ACTIVE package and spill into the next; dashboard currentPackage/canTopUp -> "Top-up $300" card)
@@ -253,7 +279,7 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
     rewardVaults.ts   wallet menu "Go to" shortcuts (data-jump: only Withdraw + Rewards, owner 2026-10-11; was also Rank, Invite,
                       20 levels, Income; smooth scroll + .jump-flash; hidden sections left out). Owner 2026-10-11.
                       Dashboard: is-offscreen never pauses .lvl-row / .reward-box entrances (rows went blank on fast phone scroll).
-    rewardVaults.ts   dashboard #rewardsSection: 11 rank boxes (locked/ready/opened, opened state in localStorage only,
+    rewardVaults.ts   dashboard #rewardsSection: 11 rank boxes (locked/ready/opened; opened = server mask, opens once,
                       never a payout) + header #walletMenu (copy, BscScan, Log out = #dashLogoutBtn)
     rankProgress.ts   dashboard #rankListSection "All Ranks": per rank a leg tree (owner 2026-10-11): YOU node, flowing
                       arrows, Strong Leg (left) / Other Leg (right) progress rings; hover/tap = member count bubble

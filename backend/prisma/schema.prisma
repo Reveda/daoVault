@@ -47,6 +47,10 @@ model User {
   uplineId           String?        @map("upline_id") @db.Uuid
   activeDirectsCount Int            @default(0) @map("active_directs_count")
   currentRank        Int            @default(0) @map("current_rank")
+  /// reward boxes opened ONCE, remembered on the server (owner 2026-10-19: never again, on any device):
+  /// DV token pot = how many DV were revealed; rank boxes = one bit per rank (bit 0 = rank 1)
+  dvPotOpened        Int            @default(0) @map("dv_pot_opened")
+  rewardBoxesOpened  Int            @default(0) @map("reward_boxes_opened")
   /// PLACEMENT (binary tree, owner 2026-10-17): the member this one sits under and on which side.
   /// Chosen once when joining, never changed. Team business, legs and ranks follow this tree.
   placementId        String?        @map("placement_id") @db.Uuid
@@ -70,6 +74,7 @@ model User {
   sourceEarnings     Earning[]      @relation("EarningSource")
   withdrawals        Withdrawal[]
   powerBusinesses    PowerBusiness[] @relation("PowerBusinessOwner")
+  notifications      Notification[]
 
   @@index([uplineId])
   /// one member per spot: two members can never take the same LEFT / RIGHT place
@@ -145,6 +150,9 @@ model Earning {
   level       Int?
   percentage  Decimal?    @db.Decimal(5, 2)
   amountUsd   Decimal     @map("amount_usd") @db.Decimal(18, 2)
+  /// claim to collect (owner 2026-10-19): rank rewards and the fast-start bonus count toward the balance only
+  /// once the member collects them (opens the box); level income is collected at once. null = waiting
+  collectedAt DateTime?   @map("collected_at")
   createdAt   DateTime    @default(now()) @map("created_at")
   recipient   User        @relation("EarningRecipient", fields: [recipientId], references: [id])
   source      User        @relation("EarningSource", fields: [sourceId], references: [id])
@@ -154,6 +162,26 @@ model Earning {
   @@index([packageId])
   @@index([type, createdAt])
   @@map("earnings")
+}
+
+/// Dashboard notifications (owner 2026-10-19): level income, rewards ready to collect, DV tokens,
+/// withdrawals. Pushed live over socket.io (pushedAt = delivered to the socket layer once).
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  kind      String    @db.VarChar(32)
+  title     String    @db.VarChar(120)
+  body      String    @db.VarChar(300)
+  /// where tapping it goes on the dashboard (e.g. "rewards", "rank:4", "bonus", "dv", "withdraw", "income")
+  link      String?   @db.VarChar(40)
+  readAt    DateTime? @map("read_at")
+  pushedAt  DateTime? @map("pushed_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([pushedAt])
+  @@map("notifications")
 }
 
 model Withdrawal {

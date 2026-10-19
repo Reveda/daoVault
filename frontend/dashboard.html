@@ -66,6 +66,31 @@
         </a>
 
         <div class="dash-head-actions">
+          <!-- notifications (owner 2026-10-19): live over socket.io; notifications.ts -->
+          <div class="notif" id="notifMenu" hidden>
+            <button
+              class="notif-btn"
+              id="notifBtn"
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded="false"
+              aria-controls="notifPanel"
+              aria-label="Notifications"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+              </svg>
+              <span class="notif-count mono" id="notifCount" hidden>0</span>
+            </button>
+            <div class="notif-panel" id="notifPanel" role="dialog" aria-label="Notifications" hidden>
+              <div class="notif-head">
+                <b>Notifications</b>
+                <button type="button" class="notif-readall mono" id="notifReadAll">Mark all as read</button>
+              </div>
+              <ul class="notif-list" id="notifList"></ul>
+            </div>
+          </div>
           <!-- DV token allocation: total + per-package calculation (owner, 2026-10-15; dashboard.ts initDvToken) -->
           <div class="dv-menu" id="dvMenu" hidden>
             <button
@@ -257,6 +282,31 @@
               <span id="metricRankNote">Starter at 25 DAO matching (each side)</span>
             </div>
           </div>
+
+          <!-- claim to collect (owner 2026-10-19): rank rewards + fast-start bonus still in their boxes -->
+          <div class="glass metric-card metric-card--collect" id="metricWaitingCard" data-icon="trophy">
+            <div class="metric-top">
+              <span class="metric-label mono">Ready to Collect</span>
+              <span class="metric-icon">&#10022;</span>
+            </div>
+            <div class="metric-val" id="metricWaitingVal" style="color: var(--gold)">$0.00</div>
+            <div class="metric-footer mono">
+              <span id="metricWaitingNote">No rewards waiting</span>
+              <a href="#rewardsSection" class="metric-link" id="metricWaitingLink" hidden>Collect &rarr;</a>
+            </div>
+          </div>
+
+          <!-- what can be withdrawn now: collected level income + rewards + bonuses, minus withdrawals -->
+          <div class="glass metric-card" id="metricAvailCard" data-icon="coin">
+            <div class="metric-top">
+              <span class="metric-label mono">Withdrawable Balance</span>
+              <span class="metric-icon">$</span>
+            </div>
+            <div class="metric-val" id="metricAvailVal" style="color: var(--gold)">$0.00</div>
+            <div class="metric-footer mono">
+              <span id="metricAvailNote">Pending $0.00 &middot; Withdrawn $0.00</span>
+            </div>
+          </div>
         </div>
 
         <!-- Fast-start bonus (owner 2026-10-18): 10 directs in 3 days $100 / 7 days $50 (dashboard.ts renderFastStart).
@@ -298,6 +348,8 @@
               <small class="mono" id="fastStartOf">of 10</small>
             </div>
           </div>
+          <!-- the earned bonus waits in its box until collected (owner 2026-10-19) -->
+          <button type="button" class="btn btn-grad fs-collect" id="fastStartCollect" hidden>Open &amp; collect</button>
           <div class="fast-start-tiers" id="fastStartTiers">
             <div class="fs-tier">
               <span class="fs-tier-icon" aria-hidden="true"
@@ -437,8 +489,6 @@
               ><span class="dv-badge-dot"></span
               ><span id="dvTokenLaunch">Planned launch &middot; March 2028</span></span
             >
-            <span class="dv-token-net mono" id="dvTokenNet">BNB Smart Chain</span>
-            <p class="dv-token-note">Credited to this wallet at the planned DV launch.</p>
           </div>
         </section>
 
@@ -449,14 +499,15 @@
               <span class="mono rewards-tag">RANK REWARD VAULTS</span>
               <h3>Your <span class="grad-text">Surprise Boxes</span></h3>
               <p>
-                Every rank you reach unlocks a sealed DAOvault box. Open it to reveal your cash
-                reward.
+                Every rank you reach unlocks a sealed DAOvault box. Open it to collect your reward
+                into your balance.
               </p>
+              <span class="mono rewards-waiting" id="rewardsWaiting" hidden></span>
             </div>
             <div class="rank-progress">
               <div class="rank-progress-row mono">
                 <span>Current rank <b id="rankNow">Unranked</b></span>
-                <span id="rankBoxesOpen">0 / 11 opened</span>
+                <span id="rankBoxesOpen">0 / 11 collected</span>
               </div>
               <div class="rank-bar"><i id="rankBar"></i></div>
               <p class="rank-next mono" id="rankNext">

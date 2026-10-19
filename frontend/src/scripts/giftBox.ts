@@ -44,6 +44,8 @@ export interface GiftBoxOptions {
   theme?: 'box' | 'pot';
   /** a sealed box offers "Preview the opening" (default true; the DV pot hides it in production) */
   allowPreview?: boolean;
+  /** the button that opens a ready box (default "Open box"; rewards say "Open & collect") */
+  openLabel?: string;
 }
 
 const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1100,7 +1102,7 @@ export function openGiftBox(opts: GiftBoxOptions): void {
   } else {
     // the button appears once the box is packed
     window.setTimeout(() => {
-      if (alive) button('Open box', 'btn-grad', () => startOpening(false));
+      if (alive) button(opts.openLabel ?? 'Open box', 'btn-grad', () => startOpening(false));
     }, PACK_S * 1000);
   }
 

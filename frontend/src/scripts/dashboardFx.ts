@@ -281,7 +281,8 @@ export function initMetricIcons3D(): void {
 
     const root = new THREE.Group();
     scene.add(root);
-    const update = buildIcon(kinds[idx] ?? 'network', root);
+    // a card can name its own icon (data-icon); otherwise the order of the first four
+    const update = buildIcon((card.dataset.icon as IconKind | undefined) ?? kinds[idx] ?? 'network', root);
 
     let hovered = false;
     let visible = true;
