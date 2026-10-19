@@ -11,8 +11,13 @@ options (KMS / Docker signer / admin review), hardening, backups, emergency plan
 **Withdrawal + money flow for non-technical readers (owner, Hinglish: 45/55 split, one signer vs a voucher per
 withdrawal, keygen what to note, Remix fields not code):** `WITHDRAWAL-FLOW.md`.
 **Launch day (owner, Hinglish): what turns real by itself vs the owner's switches:** `LAUNCH-DAY.md`.
-**Power Business (owner, Hinglish: display-only business for one member ID, one side; table power_businesses,
-dashboard.service powerSides; no script in the code, records go straight into the DB):** `POWER-BUSINESS-POLICY.md`.
+**Power Business (owner, Hinglish: business for one member ID, one side; table power_businesses; no script in the
+code, records go straight into the DB). Owner 2026-10-19: it COUNTS for rank + rank rewards of that member AND
+every PLACEMENT upline, on the side the member sits under each (like real business), NEVER level income. Never
+written into left/right_volume: plan/power.ts powerArriving (recursive CTE up from each record) + legsWithPower
+(power on ONE side only = the side with the most arriving; the other side must be real) used by activation.engine
+recomputeRanks + powerRankCandidates (every plan run, also with no events) and dashboard.service powerSides / level
+modal ranks. Contract unchanged:** `POWER-BUSINESS-POLICY.md`.
 **Binary Left/Right placement (owner 2026-10-17, IN CODE 2026-10-18; Hinglish graphs + RAM/ALOK examples):**
 `PLACEMENT-PLAN.md`.
 **Join / team / activation scenarios for non-technical readers (owner, Hinglish: pre-launch, 10 Nov, A-B-C unpaid
@@ -73,10 +78,10 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
   part over the cap stays with the company (never carried forward). Caps ADD UP: a member can add a $300 package (top-up)
   ANY time (dashboard canTopUp = activated + not root; was "only when every package is capped"), 2 packages = $15,000;
   GET /dashboard capTotalUsd / capEarnedUsd drive the cap meter. 5% withdrawal fee (taken from the amount). Withdrawal
-  per request (owner 2026-10-19): minimum $10 (WITHDRAWAL_MIN_USD), maximum $50,000 (WITHDRAWAL_MAX_USD), never more than the
+  per request (owner 2026-10-19): minimum $10 (WITHDRAWAL_MIN_USD), maximum $5,000 (WITHDRAWAL_MAX_USD, was $50,000), never more than the
   available balance; checked in withdrawals.service request + the dashboard form (GET /dashboard withdrawalMinUsd /
   withdrawalMaxUsd, summary minimumUsd / maximumUsd; Max button = min(balance, max)). Contract maxPerClaim / dailyLimit and
-  signer SIGNER_MAX_PER_CLAIM_USD (1000) compare the NET amount (after the 5% fee) and may be lower (PRODUCTION-REMIX-DEPLOY 5A).
+  signer SIGNER_MAX_PER_CLAIM_USD (5000; contract maxPerClaim $5,000, dailyLimit $250,000) compare the NET amount (after the 5% fee) and may be lower (PRODUCTION-REMIX-DEPLOY 5A).
 - No referral (owner 2026-10-18): nobody stays outside the tree. processActivation without a (known) on-chain sponsor and
   without a recorded one links the member under the company root (rootFallback) and places it on the root's LEFT; the
   join gate falls back to GET /dashboard companyCode ("DAOVAULT (DVxxxx)"); placeUnplacedPaid at start (after the root
@@ -183,7 +188,7 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
                 withdrawals/voucherSigner.ts via PAYOUT_SIGNER_URL + PAYOUT_SIGNER_TOKEN. Guide: DOCKER.md B12.
   src/modules/plan/plan.ts  LEVELS, RANKS, 50:50 rankForLegs, cents helpers
   src/config/transaction.ts serializable() retry wrapper for money writes
-  scripts/check-plan.ts    npm run check:plan: 88 engine checks (incl. owner-confirmed rules, plan queue, reservations) on the real DB, always rolled back
+  scripts/check-plan.ts    npm run check:plan: 99 engine checks (incl. owner-confirmed rules, plan queue, reservations) on the real DB, always rolled back
   prisma/schema.prisma     User (teamVolume), Package, Earning (LEVEL_COMMISSION|RANK_REWARD), Withdrawal (review fields), AuthNonce
   prisma/seed.ts           local dashboard fixture (SEED_WALLET_ADDRESS)
 frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-web, vanta, ethers 6. Port 3000, proxies /api -> :5000.
@@ -447,7 +452,7 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   Postgres tuned (shared_buffers 1GB, parallel 4), connection_limit=10 per copy. env.ts: empty optional values = unset.
   Owner guide: DOCKER.md. Docker is NOT installed on the dev PC and nothing
   builds the images yet: ci.yml + render.yaml stay Render-only until the owner moves to the VPS (owner 2026-10-11).
-- Git: GitHub Reveda/daoVault, branch main. Tests: backend `npm run check:plan` (88, rolled back), `npm run check:env`
+- Git: GitHub Reveda/daoVault, branch main. Tests: backend `npm run check:plan` (99, rolled back), `npm run check:env`
   (prod settings vs chain), contract tests in contracts/test (24, Hardhat; run in an isolated copy).
 
 ## Not built yet

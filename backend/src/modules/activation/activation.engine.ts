@@ -14,6 +14,7 @@ import {
   toCents,
 } from "../plan/plan.js";
 import { isRootWallet, rootWallet } from "../../config/root.js";
+import { legsWithPower, powerArriving } from "../plan/power.js";
 
 type Tx = Prisma.TransactionClient;
 
@@ -239,10 +240,33 @@ export async function placeMember(
 }
 
 /**
+ * Members whose rank would go up with the Power Business arriving at them (plan/power.ts: their own
+ * records + power below them in the placement tree). Checked on every plan run, so a record added
+ * straight into the database (POWER-BUSINESS-POLICY.md) or a power holder placed under a new team
+ * reaches the ranks above without waiting for a payment. Cheap: only power holders and their uplines.
+ */
+async function powerRankCandidates(tx: Tx): Promise<string[]> {
+  const power = await powerArriving(tx);
+  if (!power.size) return [];
+  const members = await tx.user.findMany({
+    where: { id: { in: [...power.keys()] } },
+    select: { id: true, currentRank: true, leftVolume: true, rightVolume: true },
+  });
+  return members
+    .filter(
+      (m) =>
+        rankForLegs(summarizeLegs(legsWithPower(m.leftVolume, m.rightVolume, power.get(m.id)))) >
+        m.currentRank,
+    )
+    .map((m) => m.id);
+}
+
+/**
  * Re-evaluates the rank of each member in `ids` from its Left and Right business (the DAO is
- * needed on EACH side). Ranks only go up. Every newly reached tier pays its one-time reward once,
- * INSIDE the 25x cap (owner, 2026-10-18; creditIntoCap): a member whose packages are full reaches
- * the rank but its reward (or the part over the cap) stays with the company.
+ * needed on EACH side; Power Business arriving at the member counts on one side, plan/power.ts). Ranks only
+ * go up. Every newly reached tier pays its one-time reward once, INSIDE the 25x cap (owner,
+ * 2026-10-18; creditIntoCap): a member whose packages are full reaches the rank but its reward (or the
+ * part over the cap) stays with the company.
  */
 export async function recomputeRanks(tx: Tx, ids: string[]): Promise<RankUp[]> {
   if (!ids.length) return [];
@@ -257,10 +281,13 @@ export async function recomputeRanks(tx: Tx, ids: string[]): Promise<RankUp[]> {
       packages: { where: { status: PackageStatus.ACTIVE }, orderBy: { createdAt: "asc" } },
     },
   });
+  const power = await powerArriving(tx, ids);
 
   const rankUps: RankUp[] = [];
   for (const m of members) {
-    const reached = rankForLegs(summarizeLegs([m.leftVolume, m.rightVolume]));
+    const reached = rankForLegs(
+      summarizeLegs(legsWithPower(m.leftVolume, m.rightVolume, power.get(m.id))),
+    );
     if (reached <= m.currentRank) continue;
     await tx.user.update({ where: { id: m.id }, data: { currentRank: reached } });
     let rewardCents = 0;
@@ -688,7 +715,12 @@ export async function processPlanEvents(
     orderBy: { id: "asc" },
     take: limit,
   });
-  if (!events.length) return batch;
+  // Power Business holders and their uplines whose rank it would raise (powerRankCandidates)
+  const powerRanks = await powerRankCandidates(tx);
+  if (!events.length) {
+    batch.rankUps = await recomputeRanks(tx, powerRanks);
+    return batch;
+  }
 
   const volume: SideVolume = new Map();
   const now = new Date();
@@ -729,7 +761,7 @@ export async function processPlanEvents(
     }
   }
   await addSideVolume(tx, volume);
-  batch.rankUps = await recomputeRanks(tx, [...volume.keys()]);
+  batch.rankUps = await recomputeRanks(tx, [...new Set([...volume.keys(), ...powerRanks])]);
   batch.processed = events.length;
   return batch;
 }

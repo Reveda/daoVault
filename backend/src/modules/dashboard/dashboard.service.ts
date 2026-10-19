@@ -21,38 +21,28 @@ import {
 import { balanceOf } from "../withdrawals/withdrawals.service.js";
 import { dashboardRepository } from "./dashboard.repository.js";
 import { markLinkRead } from "../notifications/notifications.service.js";
+import { legsWithPower, powerArriving, type PowerIn } from "../plan/power.js";
 
-type PowerRecord = { amountUsd: { toString(): string }; side: "LEFT" | "RIGHT" };
 type Sides = { left: number; right: number };
 
 /**
- * Power Business (owner, 2026-10-15) is VIRTUAL business: display only, never income, rank
- * rewards, withdrawals or DV tokens. Its rank uses the SAME rule as the official one (the DAO on
- * EACH side). It counts ONLY for the member it was given to (never in an upline's legs); each
- * record goes WHOLE into the member's LEFT or RIGHT side (binary placement, owner 2026-10-17).
- * 1 DAO = one $300 package. `official` = the member's own Left / Right business.
+ * Power Business (owner, 2026-10-15; rank rewards + uplines 2026-10-19, plan/power.ts): never level
+ * income, withdrawals or DV tokens, but it COUNTS for rank and rank rewards of the member it was given
+ * to AND every member above it in the placement tree (on the side the member sits under them). Power
+ * counts on ONE side only (the side with the most power arriving); the other side must be real
+ * business. The SAME rule as the engine (legsWithPower), so the rank shown is the rank paid.
+ * `official` = the member's real Left / Right business; `power` = power arriving (cents).
  */
-function powerSides(official: Sides, records: PowerRecord[]) {
+function powerSides(official: Sides, power: PowerIn | undefined) {
   const daoCents = toCents(env.ACTIVATION_AMOUNT_USDT);
-  const daoOf = (cents: number) => Math.floor(cents / daoCents);
-  let totalCents = 0,
-    leftCents = 0,
-    rightCents = 0;
-  for (const entry of records) {
-    const cents = toCents(entry.amountUsd.toString());
-    totalCents += cents;
-    if (entry.side === "RIGHT") rightCents += cents;
-    else leftCents += cents;
-  }
-  const sides = {
-    left: official.left + daoOf(leftCents),
-    right: official.right + daoOf(rightCents),
-  };
+  // the power that counts (one side); 0 when none arrives
+  const countedCents = power ? Math.max(power.left, power.right) : 0;
+  const [left, right] = legsWithPower(official.left, official.right, power);
   return {
-    totalCents,
-    dao: daoOf(totalCents),
-    sides,
-    summary: summarizeLegs([sides.left, sides.right]),
+    totalCents: countedCents,
+    dao: Math.floor(countedCents / daoCents),
+    sides: { left, right },
+    summary: summarizeLegs([left, right]),
   };
 }
 
@@ -163,8 +153,8 @@ export class DashboardService {
     // binary placement (owner, 2026-10-17): the member's Left / Right business, official volume only
     const sides = { left: user.leftVolume, right: user.rightVolume };
     const legSummary = summarizeLegs([sides.left, sides.right]);
-    // Power Business: display only, for this member alone (see powerSides)
-    const pb = powerSides(sides, user.powerBusinesses);
+    // Power Business arriving at this member (its own + from below; see powerSides)
+    const pb = powerSides(sides, (await powerArriving(prisma, [user.id])).get(user.id));
     const virtualRank = Math.max(user.currentRank, rankForLegs(pb.summary));
     const nextVirtual = RANKS[virtualRank];
     // the package earning now: the oldest still ACTIVE (top-ups wait in line), else the latest
@@ -230,7 +220,8 @@ export class DashboardService {
       // fast-start bonus (Rocket Start $100 in 3 days / Fast Start $50 in 7 days): paid + progress
       bonusUsd,
       fastStart,
-      // Power Business (see powerSides): display only, never earnings, balance, withdrawals or rank rewards.
+      // Power Business (see powerSides): counts for this member's rank + rank rewards, never level income,
+      // balance or withdrawals.
       // Its internal references / notes are not sent to the browser.
       powerBusiness: {
         totalUsd: fromCents(pb.totalCents),
@@ -309,18 +300,17 @@ export class DashboardService {
       pageSize,
       (page - 1) * pageSize,
     );
-    // rank shown for each member = the same rank their own dashboard shows: the official one, or the
-    // higher one reached with their Power Business (owner, 2026-10-15). Only the few members that hold
-    // Power Business need their legs read.
-    const withPower = await prisma.powerBusiness.findMany({
-      where: { userId: { in: rows.map((r) => r.id) } },
-      select: { userId: true, amountUsd: true, side: true },
-    });
+    // rank shown for each member = the same rank their own dashboard shows (Power Business arriving at
+    // them included, see powerSides; the plan queue stores it within seconds anyway)
+    const power = await powerArriving(
+      prisma,
+      rows.map((r) => r.id),
+    );
     const shownRank = new Map(rows.map((r) => [r.id, r.current_rank]));
     for (const r of rows) {
-      const records = withPower.filter((p) => p.userId === r.id);
-      if (!records.length) continue;
-      const pb = powerSides({ left: r.left_volume, right: r.right_volume }, records);
+      const arriving = power.get(r.id);
+      if (!arriving) continue;
+      const pb = powerSides({ left: r.left_volume, right: r.right_volume }, arriving);
       shownRank.set(r.id, Math.max(r.current_rank, rankForLegs(pb.summary)));
     }
     return {

@@ -10,7 +10,6 @@ export const dashboardRepository = {
       where: { walletAddress },
       include: {
         packages: { orderBy: { createdAt: "asc" } },
-        powerBusinesses: { orderBy: { createdAt: "desc" } },
         upline: { select: { referralCode: true } },
         placement: { select: { referralCode: true } },
       },

@@ -105,7 +105,7 @@ export function renderRankProgress(data: DashboardData | null): void {
   // counted after the Power Business rank is known (below): the cards and the counts must agree
   let achieved = Math.min(current, RANK_TIERS.length);
 
-  // virtual Power Business (owner, 2026-10-15): display only, same both-sides rank rule
+  // Power Business (owner, 2026-10-15; counts for ranks + rank rewards since 2026-10-19): same both-sides rule
   const powerBusiness = data?.powerBusiness;
   const hasVirtual = Boolean(powerBusiness && Number(powerBusiness.totalUsd) > 0);
   const virtualLegs = hasVirtual ? powerBusiness!.legs : null;
@@ -145,7 +145,7 @@ export function renderRankProgress(data: DashboardData | null): void {
   list.innerHTML = RANK_TIERS.map((tier, i) => {
     const rank = i + 1;
     const state = rank <= shownRank ? 'achieved' : rank === shownRank + 1 ? 'current' : 'locked';
-    // reached only with the virtual business (the official rank is lower): shown, never rewarded
+    // reached with Power Business before the plan queue stored it (a few seconds): no reward line yet
     const viaPowerBusiness = state === 'achieved' && rank > officialRank;
     const status =
       state === 'achieved' ? 'Achieved' : state === 'current' ? 'In progress' : 'Locked';

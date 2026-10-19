@@ -897,6 +897,94 @@ try {
         String(fscTotal._sum.amountUsd),
       );
 
+      // ── Power Business in ranks (owner, 2026-10-19): power on ONE side + real business on the other ──
+      const PBL = wallet();
+      await activate(PBL);
+      const pbl = await userOf(PBL);
+      await tx.powerBusiness.create({
+        data: { userId: pbl.id, amountUsd: 7_500, reference: `check-pb-${PBL}`, side: "LEFT" },
+      });
+      await processPlanEvents(tx, { lock: false });
+      check(
+        "power business: 25 DAO power on the Left alone reaches no rank (the Right is still empty)",
+        (await userOf(PBL)).currentRank === 0,
+      );
+      const levelBefore = await tx.earning.count({
+        where: { recipientId: pbl.id, type: "LEVEL_COMMISSION" },
+      });
+      check("power business: power pays no level income", levelBefore === 0);
+      for (let i = 0; i < 25; i++) await activate(wallet(), PBL, txHash(), "RIGHT");
+      const pblReward = await tx.earning.findMany({
+        where: { recipientId: pbl.id, type: "RANK_REWARD" },
+      });
+      check(
+        "power business: 25 power (Left) + 25 real (Right) reaches Starter with its $150 reward, waiting to be collected",
+        (await userOf(PBL)).currentRank === 1 &&
+          pblReward.length === 1 &&
+          Number(pblReward[0].amountUsd) === 150 &&
+          pblReward[0].collectedAt === null,
+        `rank ${(await userOf(PBL)).currentRank}, rewards ${pblReward.map((e) => e.amountUsd).join(",")}`,
+      );
+      // power on BOTH sides never makes a rank out of nothing: only the bigger side counts
+      const PBB = wallet();
+      await activate(PBB);
+      const pbb = await userOf(PBB);
+      await tx.powerBusiness.createMany({
+        data: [
+          { userId: pbb.id, amountUsd: 7_500, reference: `check-pbl-${PBB}`, side: "LEFT" },
+          { userId: pbb.id, amountUsd: 7_500, reference: `check-pbr-${PBB}`, side: "RIGHT" },
+        ],
+      });
+      await processPlanEvents(tx, { lock: false });
+      check(
+        "power business: power on both sides counts on one side only (no rank without real business)",
+        (await userOf(PBB)).currentRank === 0,
+      );
+      // uplines (owner, 2026-10-19): power moves up the placement tree on the side the member sits on,
+      // like real business, for ranks + rank rewards only (never level income)
+      const PBU = wallet();
+      await activate(PBU);
+      const PBX = wallet();
+      await activate(PBX, PBU, txHash(), "RIGHT");
+      for (let i = 0; i < 50; i++) await activate(wallet(), PBU, txHash(), "LEFT");
+      const pbu = await userOf(PBU);
+      check(
+        "power business: upline with 50 real Left and 1 real Right has no rank before the power",
+        pbu.currentRank === 0 && pbu.leftVolume === 50 && pbu.rightVolume === 1,
+        `rank ${pbu.currentRank}, left ${pbu.leftVolume}, right ${pbu.rightVolume}`,
+      );
+      const levelSum = async (id: string) =>
+        Number(
+          (
+            await tx.earning.aggregate({
+              where: { recipientId: id, type: "LEVEL_COMMISSION" },
+              _sum: { amountUsd: true },
+            })
+          )._sum.amountUsd ?? 0,
+        );
+      const pbuLevelBefore = await levelSum(pbu.id);
+      await tx.powerBusiness.create({
+        data: { userId: (await userOf(PBX)).id, amountUsd: 15_000, reference: `check-pbx-${PBX}`, side: "LEFT" },
+      });
+      await processPlanEvents(tx, { lock: false });
+      const pbuAfter = await userOf(PBU);
+      const pbuRewards = await tx.earning.findMany({
+        where: { recipientId: pbu.id, type: "RANK_REWARD" },
+        orderBy: { level: "asc" },
+      });
+      check(
+        "power business: 50 DAO power given to a member on the upline's Right lifts the upline to Builder (Starter $150 + Builder $300, waiting to be collected)",
+        pbuAfter.currentRank === 2 &&
+          pbuAfter.rightVolume === 1 &&
+          pbuRewards.map((e) => Number(e.amountUsd)).join(",") === "150,300" &&
+          pbuRewards.every((e) => e.collectedAt === null),
+        `rank ${pbuAfter.currentRank}, right ${pbuAfter.rightVolume}, rewards ${pbuRewards.map((e) => e.amountUsd).join(",")}`,
+      );
+      check(
+        "power business: the upline gets no level income from power, the member no rank (its own other side is empty)",
+        (await levelSum(pbu.id)) === pbuLevelBefore && (await userOf(PBX)).currentRank === 0,
+      );
+
       // ── caps add up (owner, 2026-10-18): every package adds $7,500; income fills them oldest first ──
       const CU = wallet();
       await activate(CU);

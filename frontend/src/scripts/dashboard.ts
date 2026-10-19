@@ -1516,7 +1516,7 @@ function renderWithdrawalSummary(summary: WithdrawalSummary): void {
   const meta = document.getElementById('withMeta');
   rollNumber(availEl, summary.availableUsd, (n) => `${formatUsd(n)} USDT`);
   if (meta)
-    meta.textContent = `Pending ${formatUsd(summary.pendingUsd)} · Withdrawn ${formatUsd(summary.withdrawnUsd)} · Min ${formatUsd(summary.minimumUsd)} · Max ${formatUsd(summary.maximumUsd ?? 50_000)}`;
+    meta.textContent = `Pending ${formatUsd(summary.pendingUsd)} · Withdrawn ${formatUsd(summary.withdrawnUsd)} · Min ${formatUsd(summary.minimumUsd)} · Max ${formatUsd(summary.maximumUsd ?? 5_000)}`;
   const box = document.getElementById('withHistory');
   const list = document.getElementById('withHistoryList');
   if (!box || !list) return;
@@ -1559,10 +1559,10 @@ function initWithdrawals(
   const feeLbl = document.getElementById('withFeeLbl');
   let available = availableBalance;
   let feePercent = 5;
-  // per request (owner 2026-10-19): minimum $10, maximum $50,000 and never more than the available
+  // per request (owner 2026-10-19): minimum $10, maximum $5,000 and never more than the available
   // balance; the server values win and the server checks them again
   let minimum = data?.withdrawalMinUsd ?? 10;
-  let maximum = data?.withdrawalMaxUsd ?? 50_000;
+  let maximum = data?.withdrawalMaxUsd ?? 5_000;
   if (inputEl) {
     inputEl.min = String(minimum);
     inputEl.max = String(maximum);
