@@ -68,12 +68,14 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
   part over the cap stays with the company (never carried forward). Caps ADD UP: a member can add a $300 package (top-up)
   ANY time (dashboard canTopUp = activated + not root; was "only when every package is capped"), 2 packages = $15,000;
   GET /dashboard capTotalUsd / capEarnedUsd drive the cap meter. 5% withdrawal fee (taken from the amount). Withdrawal
-  minimum $100 (owner 2026-10-18, WITHDRAWAL_MIN_USD default 100, GET /dashboard withdrawalMinUsd), maximum = the whole
-  available balance (Max button); per-claim caps still apply: contract maxPerClaim + signer SIGNER_MAX_PER_CLAIM_USD (1000).
+  per request (owner 2026-10-19): minimum $10 (WITHDRAWAL_MIN_USD), maximum $50,000 (WITHDRAWAL_MAX_USD), never more than the
+  available balance; checked in withdrawals.service request + the dashboard form (GET /dashboard withdrawalMinUsd /
+  withdrawalMaxUsd, summary minimumUsd / maximumUsd; Max button = min(balance, max)). Contract maxPerClaim / dailyLimit and
+  signer SIGNER_MAX_PER_CLAIM_USD (1000) compare the NET amount (after the 5% fee) and may be lower (PRODUCTION-REMIX-DEPLOY 5A).
 - No referral (owner 2026-10-18): nobody stays outside the tree. processActivation without a (known) on-chain sponsor and
   without a recorded one links the member under the company root (rootFallback) and places it on the root's LEFT; the
   join gate falls back to GET /dashboard companyCode ("DAOVAULT (DVxxxx)"); placeUnplacedPaid at start (after the root
-  record exists) also links sponsor-less paid members to the root. check-plan runs under a throw-away TEST_ROOT (88 checks).
+  record exists) also links sponsor-less paid members to the root. check-plan runs under a throw-away TEST_ROOT (90 checks).
 - Fast-start bonus (owner 2026-10-18; plan.ts FAST_START): 10 PAID directs (sponsor tree) counted from the member's own
   activation (joining date): within 3 days = "Rocket Start Bonus" $100, else within 7 days = "Fast Start Bonus" $50. ONE
   bonus per member (faster wins, never both), paid at once by the plan queue (awardFastStart after the 10th direct or the
@@ -83,6 +85,9 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
   both cards; lite / reduced motion static) (under the
   metric cards, ALWAYS shown: offer before activation, countdown + per-bonus rows, earned / closed; root = info only)
   GET /dashboard bonusUsd + fastStart (always sent, eligible=false for root); admin "rank rewards" totals include the bonus.
+  Only directs who paid AT OR AFTER the member's own payment count (owner 2026-10-19: unpaid A, 10 directs pay, A activates
+  -> no bonus); engine + dashboard ring; SQL compares (col AT TIME ZONE 'UTC') since the timestamp columns hold UTC without
+  a zone and a local Postgres on Asia/Calcutta shifted them 5.5h (analytics.ts charts still compare plainly: fine on UTC DBs).
   Clock = ON-CHAIN payment time (owner 2026-10-18): packages.paid_at = the Activated / ToppedUp event timestamp
   (activation.service eventTime; future/unreadable = now); member join + directs use COALESCE(paid_at, created_at).
 - Referral: `?ref=CODE` saved to `localStorage['daovault_pending_ref']`; the latest link opened before JOINING is the one the
@@ -121,7 +126,11 @@ backend/   Node + Express 5 + TypeScript (ESM, .js import suffixes) + Prisma 6 +
     activation  POST /activation/topup/verify (re-entry, owner 2026-10-10: contract topUp() -> ToppedUp; processTopUp adds a
                 package with its own 25x cap, uplines paid the 20 levels again, +1 DAO volume, no new direct. Commissions fill
                 the OLDEST ACTIVE package and spill into the next; dashboard currentPackage/canTopUp -> "Top-up $300" card)
-    activation  POST /activation/verify  (verifies tx + Activated event on-chain, then activation.engine.ts processActivation:
+    activation  POST /activation/verify  (records ONLY a payment in a FINAL block (owner 2026-10-19, reorg safety):
+                activation.service finalReceipt waits up to 25s for BSC "finalized" (1-2 blocks behind head; RPC without the
+                tag = 3 confirmations), re-reads the receipt and checks its block is still canonical, else 503 "still being
+                confirmed"; payment.ts untilRecorded retries 503 3x every 5s, then the pending retry on the next visit;
+                verifies tx + Activated event on-chain, then activation.engine.ts processActivation:
                 directs, 20-level commissions w/ unlock + 25x cap, team volume, 50:50 ranks + rank rewards; serializable tx)
     users       GET  /users/referral/:code  (invite code -> sponsor wallet)
                 POST /users/register  (first dashboard visit: reserves the wallet's permanent code, no package/upline;
@@ -173,7 +182,10 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   CSP: no inline scripts (public/boot.js = html.lite + ?ref capture in <head>). Production CSP in render.yaml headers,
            same string in vite.config.js (preview only) and frontend/nginx/security-headers.conf (Docker); keep all 3 in sync. Checked: zero violations on all pages.
   scripts: core.ts (referral capture, preloader, countUp, reveal stagger, toast), wallet.ts (EIP-6963, BSC switch, reconnect),
-           payment.ts (resolveSponsor, approve + activate + POST verify, retry pending), api.ts (backend calls),
+           payment.ts (resolveSponsor, approve + activate + POST verify, retry pending),
+           (browser closed at any moment, owner 2026-10-19: the tx hash is saved to localStorage the moment the wallet SENDS
+           it, not after mining; settlePreviousPayment blocks a new pay / top-up while an earlier one is still recording; a
+           saved tx the server refuses (4xx) for 10 min is forgotten; dashboard load retries it; the VPS indexer records it too), api.ts (backend calls),
            trophy3d.ts (old Apex trophy: NOT loaded since 2026-10-12, import commented in app.ts),
            giftShowcase.ts (landing #ranks card: the packed reward box from giftBox.ts makeBox/createPortal/makePacker,
            scroll-driven: gold particles (sampleGift + favicon logo points) swirl into the gift as the card scrolls in
@@ -345,6 +357,13 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   until PAYMENTS_OPEN_AT; an open page reloads itself at that moment (clock ahead of server = recheck in 60s; the activation
   countdown no longer reloads); withdrawals.service request refuses (403) before it. render.yaml sets PAYMENTS_OPEN_AT to a
   past date (Render = testing, shows all now; remove before launch there; VPS leaves it unset = 10 Nov). Withdraw box = .wd-* layout (dashboard.css end): Max button #withMaxBtn, fee label #withFeeLbl.
+  Withdrawal flow (owner 2026-10-19): the member pays the network fee and claims with the wallet (claim(); a gas-free relayer
+  was built and REMOVED the same day, contracts unchanged); never mention fees / technical terms. Pressing Withdraw swaps
+  #withForm for #withFlow: 4 pills (Amount, Confirm, Sending, Received) + ONE card at a time (dashboard.ts setStage:
+  verify / preparing / confirm / sending / arriving / done; Sending has a 3-line checklist; done = full success screen with
+  +net USDT, transaction link, Done button); errors return to the form with a toast. ?wdDemo on the dev server walks it
+  without sending. frontend/withdraw-preview.html = owner review page of every screen (dev server only, not built): delete
+  when the owner says.
   Dashboard 20-level rows open the level modal whenever the level has members (locked levels are viewable, owner).
   Phones (owner 2026-10-12): html.lite = no .lvl-row / .reward-box entrance (a row stayed unpainted), finished entrances dropped
   via tbody/.reward-boxes.is-settled, particleScene skips frames while scrolling on LITE. Tap feedback site-wide: core.ts

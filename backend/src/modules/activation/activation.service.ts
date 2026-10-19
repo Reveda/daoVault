@@ -6,6 +6,7 @@ import {
   ZeroAddress,
   type AbstractProvider,
   type LogDescription,
+  type TransactionReceipt,
 } from "ethers";
 import { env } from "../../config/env.js";
 import { serializable } from "../../config/transaction.js";
@@ -50,6 +51,55 @@ const PAYMENT_ABI = [
 
 const fail = (message: string, statusCode = 400) =>
   Object.assign(new Error(message), { statusCode });
+
+/** how long a verify request waits for its payment's block to become final before answering 503 */
+const FINALITY_WAIT_MS = 25_000;
+const FINALITY_POLL_MS = 1_500;
+/** an RPC without the "finalized" block tag: this many blocks on top count as final instead */
+const FALLBACK_CONFIRMATIONS = 3;
+
+/**
+ * The payment's receipt once its block is FINAL on BNB Smart Chain (owner 2026-10-19). Recorded at the
+ * chain head, a reorg could drop a payment after its package and commissions were saved; the member could
+ * even replace the transaction with another one of the same nonce, so no USDT ever arrived. BSC's fast
+ * finality marks blocks "finalized" a few seconds after they are mined; an RPC that does not know the tag
+ * falls back to FALLBACK_CONFIRMATIONS blocks. The receipt is read again on every round and its block must
+ * still be the canonical block at that height. Returns null when there is no receipt (a missing, dropped
+ * or replaced transaction); a failed transaction comes back at once (the caller rejects it); still not
+ * final after FINALITY_WAIT_MS = 503 (the website retries; the chain indexer records it later too).
+ */
+async function finalReceipt(
+  provider: AbstractProvider,
+  transactionHash: string,
+): Promise<TransactionReceipt | null> {
+  const until = Date.now() + FINALITY_WAIT_MS;
+  for (;;) {
+    const receipt = await provider.getTransactionReceipt(transactionHash);
+    if (receipt?.status === 0) return receipt;
+    if (receipt) {
+      let final: boolean;
+      try {
+        const finalized = await provider.getBlock("finalized");
+        if (!finalized) throw new Error("no finalized block");
+        final = receipt.blockNumber <= finalized.number;
+      } catch {
+        final = (await provider.getBlockNumber()) - receipt.blockNumber + 1 >= FALLBACK_CONFIRMATIONS;
+      }
+      if (final) {
+        const block = await provider.getBlock(receipt.blockNumber);
+        if (block?.hash === receipt.blockHash) return receipt;
+      }
+    }
+    if (Date.now() > until) {
+      if (!receipt) return null;
+      throw fail(
+        "Your payment is still being confirmed on BNB Smart Chain. Please wait a minute and refresh this page.",
+        503,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, FINALITY_POLL_MS));
+  }
+}
 
 /** Two requests for the same tx can race on the unique tx hash: the second one reports the stored result. */
 async function once<T>(run: () => Promise<T>): Promise<T> {
@@ -135,9 +185,10 @@ export class ActivationService {
       throw fail("Payments are not open yet. Please try again later.", 503);
     const contractAddress = env.PAYMENT_CONTRACT_ADDRESS.toLowerCase();
     const provider = chainProvider();
+    // only a payment in a FINAL block is recorded (finalReceipt): a reorg can no longer undo it
     const [transaction, receipt] = await Promise.all([
       provider.getTransaction(transactionHash),
-      provider.getTransactionReceipt(transactionHash),
+      finalReceipt(provider, transactionHash),
     ]);
     if (!transaction || !receipt || receipt.status !== 1)
       throw fail("Payment transaction is missing or failed.");

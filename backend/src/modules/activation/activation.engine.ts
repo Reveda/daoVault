@@ -510,9 +510,10 @@ async function creditIntoCap(
 /**
  * Fast-start bonus (owner, 2026-10-18; plan.ts FAST_START): counted from the member's own
  * activation (its joining date). 10 paid directs (sponsor tree) whose activation is within 3 days
- * = Rocket Start Bonus $100, else within 7 days = Fast Start Bonus $50. One bonus per member, paid
- * the moment the 10th direct is counted (or the member's own activation, when its directs paid
- * first), inside the 25x cap. The company root earns nothing.
+ * = Rocket Start Bonus $100, else within 7 days = Fast Start Bonus $50. Only directs who paid AT OR
+ * AFTER the member's own payment count (owner 2026-10-19: a member who stayed unpaid while 10 directs
+ * paid under its link, then activated, got $100 at once). One bonus per member, paid the moment the
+ * 10th direct is counted, inside the 25x cap. The company root earns nothing.
  */
 async function awardFastStart(
   tx: Tx,
@@ -531,13 +532,21 @@ async function awardFastStart(
   )
     return null;
   // the clock starts when the member PAID on-chain (owner, 2026-10-18), not when the server recorded it
-  const joined = (m.packages[0].paidAt ?? m.packages[0].createdAt).getTime();
+  const joinedAt = m.packages[0].paidAt ?? m.packages[0].createdAt;
+  const joined = joinedAt.getTime();
   for (const tier of FAST_START) {
     const deadline = new Date(joined + tier.days * 86_400_000);
     const [row] = await tx.$queryRaw<Array<{ n: number }>>`
       SELECT COUNT(*)::int AS n FROM users d
+       CROSS JOIN LATERAL (
+         SELECT MIN(COALESCE(p.paid_at, p.created_at)) AS at FROM packages p
+          WHERE p.user_id = d.id AND p.counted_at IS NOT NULL
+       ) f
        WHERE d.upline_id = ${userId}::uuid
-         AND (SELECT MIN(COALESCE(p.paid_at, p.created_at)) FROM packages p WHERE p.user_id = d.id AND p.counted_at IS NOT NULL) <= ${deadline}`;
+         -- the columns hold UTC without a zone; AT TIME ZONE 'UTC' compares them right whatever the
+         -- database TimeZone is (a local Postgres on Asia/Calcutta shifted them 5.5 hours)
+         AND (f.at AT TIME ZONE 'UTC') >= ${joinedAt}
+         AND (f.at AT TIME ZONE 'UTC') <= ${deadline}`;
     if (Number(row?.n ?? 0) < FAST_START_DIRECTS) continue;
     const paid = await creditIntoCap(tx, userId, m.packages, toCents(tier.rewardUsd), {
       sourceId: userId,

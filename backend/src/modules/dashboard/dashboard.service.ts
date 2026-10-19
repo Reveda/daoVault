@@ -115,7 +115,11 @@ export class DashboardService {
           days: t.days,
           rewardUsd: t.rewardUsd,
           deadline: deadline ? new Date(deadline).toISOString() : null,
-          directs: deadline ? directsAt.filter((at) => at <= deadline).length : 0,
+          // only directs who paid at or after the member's own payment count (activation.engine awardFastStart)
+          directs:
+            deadline && joinedAt
+              ? directsAt.filter((at) => at >= joinedAt.getTime() && at <= deadline).length
+              : 0,
         };
       }),
     };
@@ -159,6 +163,7 @@ export class DashboardService {
       paymentsOpen: env.PAYMENTS_OPEN_AT.getTime() <= Date.now(),
       // the withdrawal form shows and checks the minimum before sign-in
       withdrawalMinUsd: env.WITHDRAWAL_MIN_USD,
+      withdrawalMaxUsd: env.WITHDRAWAL_MAX_USD,
       activeDirects: user.activeDirectsCount,
       levelsUnlocked: unlockedLevels(user.activeDirectsCount),
       currentRank: user.currentRank,

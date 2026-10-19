@@ -15,6 +15,8 @@ export type DashboardData = {
   paymentsOpen?: boolean;
   /** minimum withdrawal in USD (WITHDRAWAL_MIN_USD) */
   withdrawalMinUsd?: number;
+  /** maximum withdrawal per request in USD (WITHDRAWAL_MAX_USD) */
+  withdrawalMaxUsd?: number;
   /** company root (treasury): active without paying, anyone joins under it, earns nothing itself */
   isRoot?: boolean;
   /** ADMIN_WALLETS (the company wallet): show the company overview */
@@ -144,6 +146,7 @@ export type WithdrawalSummary = {
   withdrawnUsd: number;
   feePercent: number;
   minimumUsd: number;
+  maximumUsd?: number;
   instant: boolean;
   items: Withdrawal[];
 };

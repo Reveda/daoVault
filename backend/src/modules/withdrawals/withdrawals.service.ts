@@ -85,7 +85,7 @@ const releaseUnsigned = (where: Prisma.WithdrawalWhereInput = {}) =>
     },
     data: {
       status: WithdrawalStatus.REJECTED,
-      rejectReason: "Could not prepare the payout. The amount is back in your balance.",
+      rejectReason: "This withdrawal could not be completed. The full amount is back in your balance.",
       reviewedAt: new Date(),
     },
   });
@@ -177,7 +177,7 @@ export class WithdrawalsService {
             where: { id: w.id, status: WithdrawalStatus.PROCESSING },
             data: {
               status: WithdrawalStatus.REJECTED,
-              rejectReason: "Not claimed in time. The amount is back in your balance.",
+              rejectReason: "This withdrawal could not be completed in time. The full amount is back in your balance.",
               reviewedAt: new Date(),
             },
           });
@@ -219,6 +219,7 @@ export class WithdrawalsService {
       withdrawnUsd: fromCents(balance.withdrawnCents),
       feePercent: env.WITHDRAWAL_FEE_PERCENT,
       minimumUsd: env.WITHDRAWAL_MIN_USD,
+      maximumUsd: env.WITHDRAWAL_MAX_USD,
       instant: instantPayoutsEnabled(),
       items: items.map((w) => view(w)),
     };
@@ -238,7 +239,12 @@ export class WithdrawalsService {
     if (env.PAYMENTS_OPEN_AT.getTime() > Date.now())
       throw httpError("Withdrawals open together with activations. Please try again then.", 403);
     if (grossCents < toCents(env.WITHDRAWAL_MIN_USD))
-      throw httpError(`Minimum withdrawal is $${env.WITHDRAWAL_MIN_USD}.`, 400);
+      throw httpError(`The minimum withdrawal is $${env.WITHDRAWAL_MIN_USD.toLocaleString("en-US")}.`, 400);
+    if (grossCents > toCents(env.WITHDRAWAL_MAX_USD))
+      throw httpError(
+        `The maximum withdrawal is $${env.WITHDRAWAL_MAX_USD.toLocaleString("en-US")} at a time.`,
+        400,
+      );
     if (!instantPayoutsEnabled())
       throw httpError("Withdrawals are not open yet. Please try again later.", 503);
     const pre = await prisma.user.findUnique({

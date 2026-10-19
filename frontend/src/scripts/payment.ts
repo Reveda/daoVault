@@ -69,28 +69,97 @@ export async function resolveSponsor(
   }
 }
 
-/** A paid activation whose backend check failed (network etc.) is retried on the next visit. */
-export async function retryPendingActivation(walletAddress: string): Promise<boolean> {
-  let saved: { hash: string; wallet: string; sponsor?: string; kind?: 'topup' } | null = null;
-  try {
-    saved = JSON.parse(localStorage.getItem(PENDING_TX_KEY) || 'null');
-  } catch {
-    /* ignore */
+/**
+ * The server records a payment only once its block is final on BNB Smart Chain (a few seconds); while it
+ * is still confirming it answers 503. Try again a few times before giving up (the payment is then kept as
+ * pending and retried on the next visit).
+ */
+async function untilRecorded<T>(call: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await call();
+    } catch (error) {
+      if (!(error instanceof ApiError && error.status === 503) || attempt >= 3) throw error;
+      showToast('Confirming your payment on BNB Smart Chain...');
+      await new Promise((resolve) => setTimeout(resolve, 5_000));
+    }
   }
-  if (!saved || saved.wallet !== walletAddress.toLowerCase()) return false;
-  if (saved.kind === 'topup') await verifyTopUp({ walletAddress, transactionHash: saved.hash });
-  else
-    await verifyActivation({
-      walletAddress,
-      transactionHash: saved.hash,
-      sponsorAddress: saved.sponsor ?? ZeroAddress,
-    });
+}
+
+/**
+ * A payment the browser has sent but the server has not recorded yet (owner 2026-10-19: the browser may
+ * close at any moment). It is saved the moment the wallet SENDS the transaction, not after it is mined,
+ * so closing the page while it confirms loses nothing: the next visit records it (retryPendingActivation),
+ * and on the VPS the chain indexer records it on its own as well.
+ */
+type PendingPayment = { hash: string; wallet: string; sponsor?: string; kind?: 'topup'; at?: number };
+/** a saved transaction the server keeps refusing (never mined: cancelled or dropped) is forgotten after this */
+const PENDING_GIVE_UP_MS = 10 * 60_000;
+
+function readPending(walletAddress: string): PendingPayment | null {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PENDING_TX_KEY) || 'null') as PendingPayment | null;
+    return saved && saved.wallet === walletAddress.toLowerCase() ? saved : null;
+  } catch {
+    return null;
+  }
+}
+function savePending(record: PendingPayment): void {
+  try {
+    localStorage.setItem(PENDING_TX_KEY, JSON.stringify({ ...record, at: Date.now() }));
+  } catch {
+    /* storage blocked: the chain indexer still records the payment */
+  }
+}
+function clearPending(): void {
   try {
     localStorage.removeItem(PENDING_TX_KEY);
   } catch {
     /* ignore */
   }
+}
+
+/** Does this browser hold a payment that is still waiting to be recorded? */
+export const hasPendingPayment = (walletAddress: string) => Boolean(readPending(walletAddress));
+
+/** A paid activation / top-up whose backend check failed (closed page, network) is retried on the next visit. */
+export async function retryPendingActivation(walletAddress: string): Promise<boolean> {
+  const saved = readPending(walletAddress);
+  if (!saved) return false;
+  try {
+    if (saved.kind === 'topup') await verifyTopUp({ walletAddress, transactionHash: saved.hash });
+    else
+      await verifyActivation({
+        walletAddress,
+        transactionHash: saved.hash,
+        sponsorAddress: saved.sponsor ?? ZeroAddress,
+      });
+  } catch (error) {
+    // refused for good (never mined, or not a payment) and old enough: forget it, so it never blocks
+    const refused = error instanceof ApiError && error.status >= 400 && error.status < 500;
+    if (refused && Date.now() - (saved.at ?? 0) > PENDING_GIVE_UP_MS) clearPending();
+    throw error;
+  }
+  clearPending();
   return true;
+}
+
+/**
+ * Before a new payment: a previous one from this browser that is still being recorded is settled first,
+ * so a member who thinks it failed never pays twice by mistake.
+ */
+async function settlePreviousPayment(walletAddress: string): Promise<void> {
+  if (!readPending(walletAddress)) return;
+  let recorded = false;
+  try {
+    recorded = await retryPendingActivation(walletAddress);
+  } catch {
+    if (readPending(walletAddress))
+      throw new Error('Your previous payment is still being confirmed. Please wait a minute and refresh this page.');
+    return; // it was forgotten (never went through): the new payment can go ahead
+  }
+  if (recorded)
+    throw new Error('Your previous payment has just been confirmed. Please refresh this page to see it.');
 }
 
 /**
@@ -145,35 +214,25 @@ async function approveOnePayment(
 
 export async function activateWallet(sponsorAddress = ZeroAddress): Promise<string> {
   const { walletAddress, token, payment, contractAmount } = await preparePayment();
+  await settlePreviousPayment(walletAddress);
   const alreadyActivated = await payment.isActivated(walletAddress);
   if (alreadyActivated) throw new Error('This wallet is already activated.');
   await approveOnePayment(token, walletAddress, contractAmount);
 
   showToast('Confirm activation payment in your wallet...');
-  const activation = await payment.activate(
-    isAddress(sponsorAddress) ? sponsorAddress : ZeroAddress,
-  );
-  await activation.wait();
-
   const sponsor = isAddress(sponsorAddress) ? sponsorAddress : ZeroAddress;
-  try {
-    localStorage.setItem(
-      PENDING_TX_KEY,
-      JSON.stringify({ hash: activation.hash, wallet: walletAddress.toLowerCase(), sponsor }),
-    );
-  } catch {
-    /* ignore */
-  }
-  await verifyActivation({
-    walletAddress,
-    transactionHash: activation.hash,
-    sponsorAddress: sponsor,
-  });
-  try {
-    localStorage.removeItem(PENDING_TX_KEY);
-  } catch {
-    /* ignore */
-  }
+  const activation = await payment.activate(sponsor);
+  // saved at once: a page closed while it confirms is recorded on the next visit
+  savePending({ hash: activation.hash, wallet: walletAddress.toLowerCase(), sponsor });
+  await activation.wait();
+  await untilRecorded(() =>
+    verifyActivation({
+      walletAddress,
+      transactionHash: activation.hash,
+      sponsorAddress: sponsor,
+    }),
+  );
+  clearPending();
   return activation.hash;
 }
 
@@ -185,25 +244,16 @@ export async function activateWallet(sponsorAddress = ZeroAddress): Promise<stri
  */
 export async function topUpWallet(): Promise<string> {
   const { walletAddress, token, payment, contractAmount } = await preparePayment();
+  await settlePreviousPayment(walletAddress);
   if (!(await payment.isActivated(walletAddress)))
     throw new Error('Activate this wallet before a top-up.');
   await approveOnePayment(token, walletAddress, contractAmount);
   showToast('Confirm the $300 top-up in your wallet...');
   const topUp = await payment.topUp();
+  // saved at once: a page closed while it confirms is recorded on the next visit (never paid twice)
+  savePending({ hash: topUp.hash, wallet: walletAddress.toLowerCase(), kind: 'topup' });
   await topUp.wait();
-  try {
-    localStorage.setItem(
-      PENDING_TX_KEY,
-      JSON.stringify({ hash: topUp.hash, wallet: walletAddress.toLowerCase(), kind: 'topup' }),
-    );
-  } catch {
-    /* ignore */
-  }
-  await verifyTopUp({ walletAddress, transactionHash: topUp.hash });
-  try {
-    localStorage.removeItem(PENDING_TX_KEY);
-  } catch {
-    /* ignore */
-  }
+  await untilRecorded(() => verifyTopUp({ walletAddress, transactionHash: topUp.hash }));
+  clearPending();
   return topUp.hash;
 }

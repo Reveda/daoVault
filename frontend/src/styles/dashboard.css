@@ -3858,7 +3858,12 @@ html.lite .dv-coin-ring {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.75) 50%, transparent 65%);
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.75) 50%,
+    transparent 65%
+  );
   transform: translateX(-120%);
   animation: fsCoinShine 3.4s ease-in-out infinite;
 }
@@ -4242,6 +4247,35 @@ html.lite .fs-badge svg {
   color: #1a1404;
   border-color: transparent;
 }
+.wd-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  margin: 0.75rem 0 1.25rem;
+}
+.wd-preset-btn {
+  padding: 0.5rem 0.2rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: #a8a29e;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+.wd-preset-btn:hover {
+  border-color: rgba(212, 175, 55, 0.4);
+  background: rgba(212, 175, 55, 0.08);
+  color: #f5d76e;
+}
+.wd-preset-btn.is-active {
+  border-color: rgba(212, 175, 55, 0.7);
+  background: rgba(212, 175, 55, 0.18);
+  color: #ffe27a;
+  box-shadow: 0 0 14px rgba(212, 175, 55, 0.2);
+}
 .wd-breakdown {
   margin-bottom: 1.5rem;
 }
@@ -4424,7 +4458,12 @@ html.lite .dv-box.is-ready .dv-pot-coin {
   position: absolute;
   inset: -6px;
   border-radius: 50%;
-  background: radial-gradient(circle at 50% 40%, rgba(255, 140, 90, 0.35), rgba(255, 215, 94, 0.18) 45%, transparent 70%);
+  background: radial-gradient(
+    circle at 50% 40%,
+    rgba(255, 140, 90, 0.35),
+    rgba(255, 215, 94, 0.18) 45%,
+    transparent 70%
+  );
 }
 .dv-box.is-ready .dv-pot::before {
   animation: dvCoinHalo 2.6s ease-in-out infinite;
@@ -4447,6 +4486,372 @@ html.lite .dv-box.is-ready .dv-pot::before {
 }
 @media (prefers-reduced-motion: reduce) {
   .dv-box.is-ready .dv-pot::before {
+    animation: none;
+  }
+}
+
+/* Withdrawal step by step (owner 2026-10-19; dashboard.ts setStage): four pills (Amount, Confirm, Sending,
+   Received), one card per step, and a full success screen at the end. Active pill = gold glow, done = gold
+   check, success = green. Reduced motion: no spinning. */
+.wd-form[hidden],
+.wd-flow[hidden] {
+  display: none;
+}
+.wd-pills {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+.wd-pill {
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  padding: 0.6rem 0.2rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-align: center;
+  transition:
+    border-color 0.3s ease,
+    background 0.3s ease,
+    color 0.3s ease;
+}
+.wd-pill b {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+}
+.wd-pill.is-active {
+  border-color: rgba(212, 175, 55, 0.75);
+  background: linear-gradient(180deg, rgba(212, 175, 55, 0.2), rgba(212, 175, 55, 0.05));
+  color: #ffe58a;
+  box-shadow: 0 0 18px rgba(212, 175, 55, 0.25);
+}
+.wd-pill.is-active b {
+  background: var(--grad-gold);
+  color: #1a1404;
+}
+.wd-pill.is-done {
+  color: #f3ecd6;
+  border-color: rgba(212, 175, 55, 0.3);
+}
+.wd-pill.is-done b {
+  background: rgba(212, 175, 55, 0.22);
+  color: #ffe58a;
+  font-size: 0;
+}
+.wd-pill.is-done b::before {
+  content: '';
+  width: 5px;
+  height: 9px;
+  margin-top: -2px;
+  border: solid #ffe58a;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.wd-flow.is-success .wd-pill.is-done {
+  border-color: rgba(52, 211, 153, 0.35);
+}
+.wd-flow.is-success .wd-pill.is-done b {
+  background: rgba(52, 211, 153, 0.18);
+}
+.wd-flow.is-success .wd-pill.is-done b::before {
+  border-color: #34d399;
+}
+.wd-stage {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 1.3rem 1rem 1.1rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+.wd-stage-icon {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  color: #ffe58a;
+  border: 1px solid rgba(212, 175, 55, 0.45);
+  background: radial-gradient(circle at 50% 35%, rgba(212, 175, 55, 0.22), rgba(212, 175, 55, 0.04));
+  box-shadow: 0 0 22px rgba(212, 175, 55, 0.18);
+}
+.wd-stage-icon svg {
+  width: 24px;
+  height: 24px;
+}
+.wd-spin {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(212, 175, 55, 0.25);
+  border-top-color: #ffe58a;
+  animation: wdSpin 0.9s linear infinite;
+}
+.wd-stage-title {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  color: #fff;
+}
+.wd-stage-text {
+  margin: 0;
+  max-width: 34ch;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.wd-stage-amount {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #34d399;
+  font-variant-numeric: tabular-nums;
+}
+.wd-stage-rows {
+  width: 100%;
+  margin: 0.4rem 0 0;
+  padding: 0.3rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+}
+.wd-stage-rows:empty {
+  display: none;
+}
+.wd-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  font-size: 0.76rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.wd-row:last-child {
+  border-bottom: 0;
+}
+.wd-row dt {
+  color: var(--text-muted);
+}
+.wd-row dd {
+  margin: 0;
+  color: #fff;
+  font-weight: 700;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.wd-row dd small {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.wd-row.is-gold dd,
+.wd-row.is-gold dd a {
+  color: #ffd75e;
+}
+.wd-row.is-ok dd {
+  color: #34d399;
+}
+.wd-row dd a {
+  text-decoration: none;
+}
+.wd-stage-hint {
+  width: 100%;
+  margin: 0.3rem 0 0;
+  padding: 0.65rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  background: rgba(212, 175, 55, 0.07);
+  color: #f3ecd6;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+.wd-done {
+  width: 100%;
+  margin-top: 0.5rem;
+  padding: 0.85rem;
+}
+/* the "Sending" checklist: approved, confirming on the chain, arriving */
+.wd-checks {
+  list-style: none;
+  width: 100%;
+  margin: 0.4rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+.wd-checks[hidden] {
+  display: none;
+}
+.wd-check {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 11px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  font-size: 0.78rem;
+  text-align: left;
+  color: var(--text-dim);
+}
+.wd-check i {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+.wd-check em {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+.wd-check.is-done {
+  color: #f3ecd6;
+}
+.wd-check.is-done i {
+  border-color: #34d399;
+  background: #34d399;
+}
+.wd-check.is-done i::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0;
+  width: 3px;
+  height: 7px;
+  border: solid #04130d;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.wd-check.is-done em {
+  color: #34d399;
+}
+.wd-check.is-active {
+  color: #fff;
+  border-color: rgba(212, 175, 55, 0.35);
+  background: rgba(212, 175, 55, 0.06);
+}
+.wd-check.is-active i {
+  border-color: rgba(212, 175, 55, 0.25);
+  border-top-color: #ffe58a;
+  animation: wdSpin 0.9s linear infinite;
+}
+.wd-check.is-active em {
+  color: #ffd75e;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wd-check.is-active i {
+    animation: none;
+    border-color: #ffe58a;
+  }
+}
+/* the full transaction hash on the success screen */
+.wd-hash {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 0.6rem;
+  align-items: center;
+  margin-top: 0.2rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.02);
+  text-align: left;
+}
+.wd-hash[hidden] {
+  display: none;
+}
+.wd-hash-label {
+  grid-column: 1 / -1;
+  font-size: 0.64rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.wd-hash-value {
+  min-width: 0;
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: #f3ecd6;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.wd-hash-copy {
+  align-self: start;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(212, 175, 55, 0.5);
+  background: rgba(212, 175, 55, 0.12);
+  color: #ffd75e;
+  font-size: 0.66rem;
+  cursor: pointer;
+}
+.wd-hash-copy:hover,
+.wd-hash-copy:focus-visible {
+  background: var(--grad-gold);
+  color: #1a1404;
+  border-color: transparent;
+}
+/* the success screen */
+.wd-flow.is-success .wd-stage {
+  border-color: rgba(52, 211, 153, 0.3);
+  background: radial-gradient(120% 90% at 50% 0%, rgba(52, 211, 153, 0.1), transparent 60%), rgba(0, 0, 0, 0.3);
+}
+.wd-flow.is-success .wd-stage-icon {
+  width: 64px;
+  height: 64px;
+  color: #34d399;
+  border: 2px solid rgba(52, 211, 153, 0.7);
+  background: radial-gradient(circle at 50% 35%, rgba(52, 211, 153, 0.25), rgba(52, 211, 153, 0.06));
+  box-shadow: 0 0 28px rgba(52, 211, 153, 0.3);
+  animation: wdPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.wd-flow.is-success .wd-stage-icon svg {
+  width: 30px;
+  height: 30px;
+}
+.wd-flow.is-success .wd-stage-title {
+  font-size: 1.2rem;
+}
+@keyframes wdPop {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes wdSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (max-width: 380px) {
+  .wd-pill span {
+    font-size: 0.62rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wd-spin,
+  .wd-flow.is-success .wd-stage-icon {
     animation: none;
   }
 }

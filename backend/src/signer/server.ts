@@ -45,8 +45,8 @@ function setting(name: string, fallback?: string): string {
 const CHAIN_ID = Number(setting("SIGNER_CHAIN_ID"));
 const CONTRACT = getAddress(setting("SIGNER_PAYOUT_CONTRACT"));
 const DECIMALS = Number(setting("SIGNER_TOKEN_DECIMALS", "18"));
-const MAX_PER_CLAIM = parseUnits(setting("SIGNER_MAX_PER_CLAIM_USD", "1000"), DECIMALS);
-const MAX_PER_DAY = parseUnits(setting("SIGNER_MAX_PER_DAY_USD", "10000"), DECIMALS);
+const MAX_PER_CLAIM = parseUnits(setting("SIGNER_MAX_PER_CLAIM_USD", "50000"), DECIMALS);
+const MAX_PER_DAY = parseUnits(setting("SIGNER_MAX_PER_DAY_USD", "250000"), DECIMALS);
 const MAX_DEADLINE_S = Number(setting("SIGNER_MAX_DEADLINE_MINUTES", "60")) * 60;
 const TOKEN = Buffer.from(setting("PAYOUT_SIGNER_TOKEN"));
 const PORT = Number(setting("SIGNER_PORT", "7000"));

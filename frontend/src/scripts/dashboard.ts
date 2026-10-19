@@ -49,6 +49,7 @@ import {
   isPaymentConfigured,
   resolveSponsor,
   retryPendingActivation,
+  hasPendingPayment,
   topUpWallet,
   REAL_PAYMENTS_LOCKED,
   REAL_PAYMENTS_LOCKED_MSG,
@@ -163,9 +164,11 @@ whenReady(async () => {
   initWalletMenu(account);
   initDashboardNavigation();
 
-  // 5. A paid activation whose backend check failed last time is re-checked first
+  // 5. A payment sent last time but not recorded yet (page closed, network) is re-checked first
   if (await retryPendingActivation(account).catch(() => false))
-    showToast('Your activation was confirmed.');
+    showToast('Your payment has been confirmed.');
+  else if (hasPendingPayment(account))
+    showToast('Your last payment is still being confirmed. It will appear here shortly.');
 
   // 6. Load live dashboard data from the backend. There is no demo fallback:
   // an unknown wallet must be activated before it can show account data.
@@ -396,13 +399,13 @@ function initDashboardNavigation(): void {
 /**
  * Launch gate (owner 2026-10-18): Pay & Activate (#activationCard), Recent Income (#incomeCard) and the USDT
  * withdrawal (#withdrawSection) stay hidden until payments open (PAYMENTS_OPEN_AT, server clock: 10 Nov 00:00
- * IST; Render sets a past date so they show there now). At that moment an open dashboard reloads by itself
- * and everything appears with fresh data. If this device's clock runs ahead of the server, it checks again
- * a minute later instead of reloading in a loop. Display only: the server refuses payments-side actions
- * (withdrawals) before the date on its own.
+ * IST; Render sets a past date so they show there now). Vite development always keeps the cards visible
+ * for local UI testing; the server still refuses payments-side actions before the date. At launch an open
+ * dashboard reloads itself with fresh data. If this device's clock runs ahead of the server, it checks
+ * again a minute later instead of reloading in a loop.
  */
 function gateLaunch(open: boolean, openAt: string | null): void {
-  if (open) return;
+  if (open || import.meta.env.DEV) return;
   for (const id of ['activationCard', 'incomeCard', 'withdrawSection'])
     document.getElementById(id)?.setAttribute('hidden', '');
   document.querySelector('.dash-content-grid')?.classList.add('is-single');
@@ -639,11 +642,7 @@ function initDvBox(account: string, data: DashboardData | null): void {
   };
   const draw = () => {
     const mode: 'locked' | 'ready' | 'opened' =
-      dv.allocated <= 0
-        ? 'locked'
-        : openedAmount() >= dv.allocated
-          ? 'opened'
-          : 'ready';
+      dv.allocated <= 0 ? 'locked' : openedAmount() >= dv.allocated ? 'opened' : 'ready';
     btn.className = `dv-box is-${mode}`;
     btn.querySelector('.rb-lock')?.toggleAttribute('hidden', mode !== 'locked');
     stateEl.textContent =
@@ -1042,8 +1041,10 @@ function renderFastStart(data: DashboardData | null): void {
     ring?.setAttribute('aria-label', `${n} of ${fs.directsNeeded} directs activated`);
   };
   // one row per bonus, with its own state; rocket = the 3-day bonus, bolt = the 7-day one
-  const ICON_ROCKET = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>';
-  const ICON_BOLT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>';
+  const ICON_ROCKET =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>';
+  const ICON_BOLT =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>';
   tiersEl.innerHTML = fs.tiers
     .map((t) => {
       const state = !fs.eligible
@@ -1137,7 +1138,10 @@ function riseIn(card: HTMLElement, onShow?: () => void): void {
     return;
   }
   card.dataset.risen = '1';
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
+  if (
+    matchMedia('(prefers-reduced-motion: reduce)').matches ||
+    !('IntersectionObserver' in window)
+  ) {
     onShow?.();
     return;
   }
@@ -1327,16 +1331,18 @@ function renderLevelTable(data: DashboardData | null): void {
 // ── Withdrawals: wallet-signature session, request, history ─────────────
 
 const STATUS_LABEL: Record<string, string> = {
-  // every new withdrawal is instant (owner, 2026-10-13); these two only show on older requests
   PENDING: 'Processing',
-  PROCESSING: 'Paying out',
-  COMPLETED: 'Paid',
-  REJECTED: 'Rejected',
+  PROCESSING: 'Processing',
+  COMPLETED: 'Completed',
+  REJECTED: 'Returned to balance',
 };
 
 const PAYOUT_ABI = [
   'function claim(bytes32 id, uint256 amount, uint256 deadline, bytes signature)',
 ];
+/** withdrawal preview (owner 2026-10-19): on the dev server, open the dashboard with ?wdDemo to walk through
+ *  every withdrawal step without sending anything. Never on the live site, never on a real error. */
+const WD_DEMO = import.meta.env.DEV && new URLSearchParams(window.location.search).has('wdDemo');
 const scanTx = (hash: string) =>
   `https://${BSC_CHAIN_ID === 97 ? 'testnet.' : ''}bscscan.com/tx/${hash}`;
 
@@ -1344,11 +1350,15 @@ const scanTx = (hash: string) =>
  * Instant payout: the member's wallet submits the signed voucher to the payout contract,
  * which sends the USDT in the same transaction; then the backend verifies and marks it paid.
  */
-async function claimVoucher(token: string, w: Withdrawal): Promise<Withdrawal> {
-  if (!w.voucher) throw new Error('This withdrawal has no open payout.');
+async function claimVoucher(
+  token: string,
+  w: Withdrawal,
+  onStage: (stage: 'confirm' | 'sending' | 'arriving') => void = () => {},
+): Promise<Withdrawal> {
+  if (!w.voucher) throw new Error('This withdrawal is no longer open.');
   if (REAL_PAYMENTS_LOCKED) throw new Error(REAL_PAYMENTS_LOCKED_MSG);
   const provider = getActiveProvider();
-  if (!provider) throw new Error('Reconnect your wallet to receive the payout.');
+  if (!provider) throw new Error('Please reconnect your wallet to receive this withdrawal.');
   await requireBSCNetwork(provider);
   // the voucher pays msg.sender, so it must be the member's own account
   const payout = new Contract(
@@ -1356,15 +1366,16 @@ async function claimVoucher(token: string, w: Withdrawal): Promise<Withdrawal> {
     PAYOUT_ABI,
     await getSignerFor(provider, w.destinationWallet),
   );
-  showToast('Confirm in your wallet to receive your USDT...');
+  onStage('confirm');
   const tx = await payout.claim(
     w.voucher.id,
     w.voucher.amount,
     w.voucher.deadline,
     w.voucher.signature,
   );
-  showToast('Sending your USDT...');
+  onStage('sending');
   await tx.wait();
+  onStage('arriving');
   return confirmWithdrawal(token, w.id, tx.hash);
 }
 
@@ -1373,7 +1384,7 @@ function renderWithdrawalSummary(summary: WithdrawalSummary): void {
   const meta = document.getElementById('withMeta');
   rollNumber(availEl, summary.availableUsd, (n) => `${formatUsd(n)} USDT`);
   if (meta)
-    meta.textContent = `Pending ${formatUsd(summary.pendingUsd)} · Withdrawn ${formatUsd(summary.withdrawnUsd)} · Minimum ${formatUsd(summary.minimumUsd)}`;
+    meta.textContent = `Pending ${formatUsd(summary.pendingUsd)} · Withdrawn ${formatUsd(summary.withdrawnUsd)} · Min ${formatUsd(summary.minimumUsd)} · Max ${formatUsd(summary.maximumUsd ?? 50_000)}`;
   const box = document.getElementById('withHistory');
   const list = document.getElementById('withHistoryList');
   if (!box || !list) return;
@@ -1384,17 +1395,14 @@ function renderWithdrawalSummary(summary: WithdrawalSummary): void {
         day: 'numeric',
         month: 'short',
       });
-      const tx = w.payoutTxHash
-        ? ` <a href="${scanTx(w.payoutTxHash)}" target="_blank" rel="noopener">tx&nearr;</a>`
-        : '';
+      const tx =
+        w.payoutTxHash && w.status === 'COMPLETED'
+          ? ` <a href="${scanTx(w.payoutTxHash)}" target="_blank" rel="noopener">View transfer &nearr;</a>`
+          : '';
       const reason = w.rejectReason
         ? `<small>${w.rejectReason.replace(/[<>&"]/g, '')}</small>`
         : '';
-      const label = w.voucher
-        ? 'Ready to receive'
-        : w.status === 'COMPLETED' && w.instant
-          ? 'Paid instantly'
-          : (STATUS_LABEL[w.status] ?? w.status);
+      const label = w.voucher ? 'Ready to receive' : (STATUS_LABEL[w.status] ?? 'Processing');
       const claim = w.voucher
         ? `<button type="button" class="with-claim" data-claim="${w.id}">Receive now &rarr;</button>`
         : '';
@@ -1419,14 +1427,20 @@ function initWithdrawals(
   const feeLbl = document.getElementById('withFeeLbl');
   let available = availableBalance;
   let feePercent = 5;
-  // minimum $100 (owner 2026-10-18; the server value wins), maximum = the whole available balance
-  let minimum = data?.withdrawalMinUsd ?? 100;
+  // per request (owner 2026-10-19): minimum $10, maximum $50,000 and never more than the available
+  // balance; the server values win and the server checks them again
+  let minimum = data?.withdrawalMinUsd ?? 10;
+  let maximum = data?.withdrawalMaxUsd ?? 50_000;
+  if (inputEl) {
+    inputEl.min = String(minimum);
+    inputEl.max = String(maximum);
+  }
   let items: Withdrawal[] = [];
 
   rollNumber(availEl, available, (n) => `${formatUsd(n)} USDT`);
   const meta = document.getElementById('withMeta');
   if (meta && data)
-    meta.textContent = `Pending ${formatUsd(data.pendingWithdrawalUsd)} · Withdrawn ${formatUsd(data.withdrawnUsd)} · Minimum ${formatUsd(minimum)}`;
+    meta.textContent = `Pending ${formatUsd(data.pendingWithdrawalUsd)} · Withdrawn ${formatUsd(data.withdrawnUsd)} · Min ${formatUsd(minimum)} · Max ${formatUsd(maximum)}`;
 
   const updateMath = (): void => {
     const amount = Math.max(0, parseFloat(inputEl?.value || '0') || 0);
@@ -1436,12 +1450,38 @@ function initWithdrawals(
     if (feeLbl) feeLbl.textContent = `Withdrawal fee (${feePercent}%)`;
     if (netEl) netEl.textContent = `${formatUsd(Math.max(0, amount - fee))} USDT`;
   };
-  inputEl?.addEventListener('input', updateMath);
-  // Max = the whole available balance (whole cents, never more than the server reports)
+
+  const presetBtns = document.querySelectorAll<HTMLButtonElement>('.wd-preset-btn');
+  const syncPresets = (currentVal: number): void => {
+    presetBtns.forEach((btn) => {
+      const presetVal = Number(btn.dataset.preset);
+      btn.classList.toggle('is-active', Math.abs(presetVal - currentVal) < 0.01);
+    });
+  };
+
+  inputEl?.addEventListener('input', () => {
+    updateMath();
+    syncPresets(parseFloat(inputEl?.value || '0') || 0);
+  });
+
+  presetBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!inputEl) return;
+      const targetAmount = Number(btn.dataset.preset);
+      inputEl.value = String(targetAmount);
+      updateMath();
+      syncPresets(targetAmount);
+      inputEl.focus();
+    });
+  });
+
+  // Max = the whole available balance, capped at the per-request maximum (whole cents)
   document.getElementById('withMaxBtn')?.addEventListener('click', () => {
     if (!inputEl) return;
-    inputEl.value = String(Math.floor(Math.max(0, available) * 100) / 100);
+    const maxVal = Math.floor(Math.max(0, Math.min(available, maximum)) * 100) / 100;
+    inputEl.value = String(maxVal);
     updateMath();
+    syncPresets(maxVal);
     inputEl.focus();
   });
   updateMath();
@@ -1449,6 +1489,7 @@ function initWithdrawals(
   if (!data || !submitBtn) {
     if (submitBtn) submitBtn.disabled = true;
     if (label) label.textContent = 'Activate your ID to withdraw';
+    if (note) note.textContent = 'Withdrawals become available once your ID is activated.';
     return;
   }
 
@@ -1457,32 +1498,179 @@ function initWithdrawals(
     available = summary.availableUsd;
     feePercent = summary.feePercent;
     minimum = summary.minimumUsd;
+    maximum = summary.maximumUsd ?? maximum;
     items = summary.items;
     if (note)
       note.textContent = summary.instant
-        ? 'Confirm once in your wallet and the USDT is sent to you on BNB Smart Chain, usually within seconds. A small BNB network fee applies.'
-        : 'Withdrawals are not available right now. Your balance stays recorded here until they open.';
+        ? 'Confirm once in your wallet and the USDT is sent to you, usually within seconds.'
+        : WD_DEMO
+          ? 'Preview mode: tap "Withdraw now" to see every step. Nothing is sent.'
+          : 'Withdrawals are not available right now. Your balance stays safely recorded here.';
     renderWithdrawalSummary(summary);
     updateMath();
   };
 
+  // member-facing texts only: server messages are already written for members; anything else
+  // (network, wallet library) becomes one calm sentence, never a technical error
   const failMessage = (error: unknown) => {
     if (error instanceof ApiError && error.status === 401) {
       clearSession(wallet);
-      return 'Session expired. Tap again to sign in.';
+      return 'Your session has ended. Please tap again to sign in.';
     }
+    if (error instanceof ApiError) return error.message;
     const code = (error as { code?: string | number })?.code;
     if (code === 'ACTION_REJECTED' || code === 4001)
       return 'Cancelled in your wallet. You can receive it from "Your withdrawals" before it expires.';
-    return error instanceof Error ? error.message : 'Withdrawal failed.';
+    return 'We could not complete your withdrawal right now. Please try again in a few minutes.';
   };
 
-  /** claims an open voucher and shows the result */
-  const receive = async (token: string, w: Withdrawal, button: HTMLElement) => {
-    const paid = await claimVoucher(token, w);
-    showToast(`Paid! ${formatUsd(paid.netUsd)} USDT is in your wallet.`);
-    celebrate(button, 30);
+  // ── the withdrawal, step by step (owner 2026-10-19): Amount → Confirm → Sending → Received ──
+  // While it runs, the form is swapped for a stepper and one clear card per step; the last step is a
+  // full success screen. Plain words only: no fees, no technical terms (the wallet shows its own fee).
+  const formEl = document.getElementById('withForm');
+  const flowEl = document.getElementById('withFlow');
+  const stageIcon = document.getElementById('withStageIcon');
+  const stageTitle = document.getElementById('withStageTitle');
+  const stageAmount = document.getElementById('withStageAmount');
+  const stageText = document.getElementById('withStageText');
+  const stageRows = document.getElementById('withStageRows');
+  const stageHint = document.getElementById('withStageHint');
+  const doneBtn = document.getElementById('withDoneBtn') as HTMLButtonElement | null;
+  const SVG = (path: string) =>
+    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</svg>`;
+  const STAGE_ICON = {
+    verify: SVG('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>'),
+    wallet: SVG('<path d="M20 7H5a2 2 0 0 1 0-4h13v4"/><path d="M3 5v14a2 2 0 0 0 2 2h15V7"/><circle cx="16" cy="14" r="1.4"/>'),
+    working: '<span class="wd-spin"></span>',
+    done: SVG('<path d="M5 12.5 10 17 19 7.5"/>'),
+  };
+  type Stage = 'verify' | 'preparing' | 'confirm' | 'sending' | 'arriving' | 'done';
+  // the "Sending" card's own checklist (owner 2026-10-19): approved, confirming on the chain, arriving
+  const sendChecklist = (stage: 'sending' | 'arriving') => {
+    const item = (label: string, state: 'done' | 'active' | 'wait') =>
+      `<li class="wd-check is-${state}"><i aria-hidden="true"></i><span>${label}</span><em>${state === 'done' ? 'Done' : state === 'active' ? 'In progress' : 'Waiting'}</em></li>`;
+    return (
+      item('Withdrawal approved', 'done') +
+      item('Confirming on BNB Smart Chain', stage === 'sending' ? 'active' : 'done') +
+      item('USDT arriving in your wallet', stage === 'sending' ? 'wait' : 'active')
+    );
+  };
+  type FlowInfo = { grossUsd: number; netUsd: number; txHash?: string | null };
+  const shortHash = (h: string) => `${h.slice(0, 6)}…${h.slice(-4)}`;
+  const row = (k: string, v: string, cls = '') =>
+    `<div class="wd-row${cls}"><dt>${k}</dt><dd>${v}</dd></div>`;
+  const stageDetail = (info: FlowInfo) =>
+    row('Wallet', formatAddress(wallet)) +
+    row('Amount', `${formatUsd(info.grossUsd)} <small>(you receive ${formatUsd(info.netUsd)})</small>`, ' is-gold') +
+    row('Network', 'BNB Smart Chain', ' is-ok');
+  const setStage = (stage: Stage, info: FlowInfo) => {
+    if (!flowEl || !formEl) return;
+    formEl.hidden = true;
+    flowEl.hidden = false;
+    const step = stage === 'sending' || stage === 'arriving' ? 3 : stage === 'done' ? 4 : 2;
+    flowEl.querySelectorAll<HTMLElement>('.wd-pill').forEach((pill) => {
+      const n = Number(pill.dataset.step);
+      pill.classList.toggle('is-done', n < step || (stage === 'done' && n === 4));
+      pill.classList.toggle('is-active', n === step && stage !== 'done');
+    });
+    flowEl.classList.toggle('is-success', stage === 'done');
+    const text = {
+      verify: ['Verify your wallet', 'Approve the sign-in request in your wallet. It only confirms that this wallet is yours.'],
+      preparing: ['Preparing your withdrawal', 'Checking your balance. This takes a moment.'],
+      confirm: ['Confirm in your wallet', 'Approve the withdrawal in your wallet. Your USDT is sent right after.'],
+      sending: ['Sending your USDT', 'This usually takes a few seconds. Please keep this page open.'],
+      arriving: ['Sending your USDT', 'Almost done. Your USDT is arriving in your wallet.'],
+      done: ['Withdrawal successful!', 'The USDT is in your wallet.'],
+    }[stage];
+    if (stageIcon)
+      stageIcon.innerHTML =
+        stage === 'verify' ? STAGE_ICON.verify : stage === 'confirm' ? STAGE_ICON.wallet : stage === 'done' ? STAGE_ICON.done : STAGE_ICON.working;
+    if (stageTitle) stageTitle.textContent = text[0];
+    if (stageText) stageText.textContent = text[1];
+    if (stageAmount) {
+      stageAmount.hidden = stage !== 'done';
+      stageAmount.textContent = `+${formatUsd(info.netUsd)} USDT`;
+    }
+    if (stageRows)
+      stageRows.innerHTML =
+        stage === 'done'
+          ? (info.txHash
+              ? row('Transaction', `<a href="${scanTx(info.txHash)}" target="_blank" rel="noopener">${shortHash(info.txHash)} &nearr;</a>`, ' is-gold')
+              : '') + row('Status', '&check; Confirmed', ' is-ok')
+          : stage === 'sending' || stage === 'arriving'
+            ? row('You receive', `${formatUsd(info.netUsd)} USDT`, ' is-gold')
+            : stage === 'preparing'
+              ? row('You receive', `${formatUsd(info.netUsd)} USDT`, ' is-gold')
+              : stageDetail(info);
+    const checks = document.getElementById('withStageChecks');
+    if (checks) {
+      checks.hidden = !(stage === 'sending' || stage === 'arriving');
+      if (!checks.hidden) checks.innerHTML = sendChecklist(stage as 'sending' | 'arriving');
+    }
+    if (stageHint) {
+      stageHint.hidden = !(stage === 'verify' || stage === 'confirm');
+      stageHint.textContent = 'A pop-up opens in your wallet app. Tap "Confirm" there.';
+    }
+    if (doneBtn) doneBtn.hidden = stage !== 'done';
+    const hashBox = document.getElementById('withStageHash');
+    const hashValue = document.getElementById('withStageHashValue');
+    if (hashBox) hashBox.hidden = !(stage === 'done' && info.txHash);
+    if (hashValue) hashValue.textContent = info.txHash ?? '';
+  };
+  // copy the full transaction hash (selects the text when the clipboard is not allowed)
+  document.getElementById('withStageHashCopy')?.addEventListener('click', async (e) => {
+    const button = e.currentTarget as HTMLButtonElement;
+    const value = document.getElementById('withStageHashValue');
+    const hash = value?.textContent ?? '';
+    if (!hash) return;
+    try {
+      await navigator.clipboard.writeText(hash);
+      button.textContent = 'Copied';
+      window.setTimeout(() => (button.textContent = 'Copy'), 1_800);
+    } catch {
+      if (value) {
+        const range = document.createRange();
+        range.selectNodeContents(value);
+        window.getSelection()?.removeAllRanges();
+        window.getSelection()?.addRange(range);
+      }
+    }
+  });
+  const closeFlow = () => {
+    if (flowEl) flowEl.hidden = true;
+    if (formEl) formEl.hidden = false;
+  };
+  doneBtn?.addEventListener('click', closeFlow);
+
+  /** the member's wallet receives the voucher and sends the USDT to itself */
+  const receive = async (token: string, w: Withdrawal) => {
+    const info: FlowInfo = { grossUsd: w.grossUsd, netUsd: w.netUsd };
+    setStage('confirm', info);
+    const paid = await claimVoucher(token, w, (stage) => setStage(stage, info));
+    setStage('done', { ...info, txHash: paid.payoutTxHash });
+    if (stageIcon) celebrate(stageIcon, 30);
     await refresh(token);
+  };
+
+  /** preview of every step without sending anything (dev server + ?wdDemo only) */
+  const demo = async (amount: number) => {
+    const info: FlowInfo = {
+      grossUsd: amount,
+      netUsd: Math.round(amount * (1 - feePercent / 100) * 100) / 100,
+    };
+    const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    setStage('verify', info);
+    await pause(1_600);
+    setStage('preparing', info);
+    await pause(1_000);
+    setStage('confirm', info);
+    await pause(2_000);
+    setStage('sending', info);
+    await pause(2_200);
+    setStage('arriving', info);
+    await pause(1_400);
+    setStage('done', { ...info, txHash: '0x8a1f3c5e7b9d0f2a4c6e8a0b2d4f6a8c0e2a4c6e8a0b2d4f6a8c0e2a4c6e9c4b' });
+    if (stageIcon) celebrate(stageIcon, 35);
   };
 
   // signed in earlier on this device: show history straight away
@@ -1503,30 +1691,52 @@ function initWithdrawals(
       showToast(`The minimum withdrawal is ${formatUsd(minimum)}.`, true);
       return;
     }
+    if (amount > maximum) {
+      showToast(`The maximum withdrawal is ${formatUsd(maximum)} at a time.`, true);
+      return;
+    }
     if (amount > available) {
       showToast(`You can withdraw up to ${formatUsd(available)}, your available balance.`, true);
       return;
     }
     submitBtn.disabled = true;
+    const idleLabel = label?.textContent ?? '';
+    if (WD_DEMO) {
+      if (label) label.textContent = 'Processing…';
+      await demo(amount);
+      submitBtn.disabled = false;
+      if (label) label.textContent = idleLabel;
+      return;
+    }
+    const info: FlowInfo = {
+      grossUsd: amount,
+      netUsd: Math.round(amount * (1 - feePercent / 100) * 100) / 100,
+    };
     try {
+      // a saved session needs no new signature: straight to "Preparing"
+      setStage(savedSession(wallet) ? 'preparing' : 'verify', info);
       const session = await signIn(wallet);
-      if (label) label.textContent = 'Withdraw now →';
+      if (label) label.textContent = 'Processing…';
+      setStage('preparing', info);
       const created = await requestWithdrawal(session, amount);
       if (inputEl) inputEl.value = '0';
+      updateMath();
       if (created.voucher) {
         await refresh(session);
-        await receive(session, created, submitBtn);
+        await receive(session, created);
       } else {
-        // the server always returns a voucher (no review queue); refresh to show what it recorded
-        showToast('Withdrawal recorded. Open "Your withdrawals" below to receive it.');
+        closeFlow();
+        showToast('Your withdrawal has been recorded and is being processed.');
         await refresh(session);
       }
     } catch (error) {
+      closeFlow();
       showToast(failMessage(error), true);
       const session = savedSession(wallet);
       if (session) refresh(session).catch(() => {});
     } finally {
       submitBtn.disabled = false;
+      if (label) label.textContent = savedSession(wallet) ? 'Withdraw now →' : idleLabel;
     }
   });
 
@@ -1537,13 +1747,14 @@ function initWithdrawals(
     const w = items.find((x) => x.id === button.dataset.claim);
     const session = savedSession(wallet);
     if (!w || !session) {
-      showToast('Sign in again to receive this payout.', true);
+      showToast('Please sign in again to receive this withdrawal.', true);
       return;
     }
     button.disabled = true;
     try {
-      await receive(session, w, button);
+      await receive(session, w);
     } catch (error) {
+      closeFlow();
       showToast(failMessage(error), true);
       button.disabled = false;
     }

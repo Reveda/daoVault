@@ -87,8 +87,10 @@ const envSchema = z
           .filter((w) => /^0x[a-f0-9]{40}$/.test(w)),
       ),
     // withdrawals
-    // minimum withdrawal (owner 2026-10-18: $100; the maximum is the whole available balance)
-    WITHDRAWAL_MIN_USD: z.coerce.number().positive().default(100),
+    // withdrawal limits per request, the amount the member asks for (before the 5% fee)
+    // (owner 2026-10-19: minimum $10, maximum $50,000; never more than the available balance either)
+    WITHDRAWAL_MIN_USD: z.coerce.number().positive().default(10),
+    WITHDRAWAL_MAX_USD: z.coerce.number().positive().default(50_000),
     WITHDRAWAL_FEE_PERCENT: z.coerce.number().min(0).max(50).default(5),
     // instant withdrawals (contracts/DAOvaultPayout.sol). There is no admin review (owner, 2026-10-13):
     // without a contract + signer, members get "Withdrawals are not open yet".

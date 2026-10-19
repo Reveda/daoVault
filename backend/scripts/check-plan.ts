@@ -823,6 +823,31 @@ try {
       const fso = await bonusOf(FSO);
       check("fast start: counted from the on-chain payment time (paid 4 days ago, recorded late) = $50, not $100",
         fso.length === 1 && fso[0].level === 7 && Number(fso[0].amountUsd) === 50);
+      // only directs who paid AFTER the member's own payment count (owner 2026-10-19): A stays unpaid
+      // while 10 directs pay under its link, then A activates -> no bonus; 10 new directs -> $100
+      const FSE = wallet();
+      await register(FSE);
+      const early: string[] = [];
+      for (let i = 0; i < 10; i++) {
+        const d = wallet();
+        early.push(d);
+        await activate(d, FSE);
+      }
+      await tx.package.updateMany({
+        where: { user: { walletAddress: { in: early } } },
+        data: { paidAt: new Date(Date.now() - 3_600_000) },
+      });
+      await activate(FSE);
+      check(
+        "fast start: 10 directs who paid BEFORE the member activated do not count (no bonus)",
+        (await bonusOf(FSE)).length === 0,
+      );
+      await tenDirects(FSE);
+      const fse = await bonusOf(FSE);
+      check(
+        "fast start: 10 directs paying after the member activated pay the Rocket Start Bonus $100",
+        fse.length === 1 && fse[0].level === 3 && Number(fse[0].amountUsd) === 100,
+      );
       // inside the 25x cap: $7,170 + 10 x L1 $30 = $7,470, so only $30 of the $100 fits
       const FSC = wallet();
       await activate(FSC);

@@ -1,8 +1,10 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { Prisma } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import { getAddress, verifyMessage } from "ethers";
 import { env } from "../../config/env.js";
 import { prisma } from "../../config/prisma.js";
+import { serializable } from "../../config/transaction.js";
 import { alert, shortWallet } from "../../config/alerts.js";
 
 const NONCE_TTL_MS = 5 * 60_000;
@@ -50,6 +52,8 @@ async function sessionVersion(walletAddress: string): Promise<number> {
   const row = await prisma.authSession.findUnique({ where: { walletAddress } });
   return row?.version ?? 0;
 }
+
+type Tx = Prisma.TransactionClient;
 
 export class AuthService {
   /**
@@ -116,10 +120,10 @@ export class AuthService {
   }
 
   /** Short-lived access token (the browser keeps it in memory only). Role is re-read each time. */
-  private async issueAccess(walletAddress: string): Promise<AccessSession> {
+  private async issueAccess(walletAddress: string, version?: number): Promise<AccessSession> {
     const role: AuthClaims["role"] = isAdminWallet(walletAddress) ? "admin" : "member";
     const expiresInSec = env.ACCESS_TOKEN_MINUTES * 60;
-    const token = jwt.sign({ role, ver: await sessionVersion(walletAddress) }, env.JWT_SECRET, {
+    const token = jwt.sign({ role, ver: version ?? (await sessionVersion(walletAddress)) }, env.JWT_SECRET, {
       subject: walletAddress,
       expiresIn: expiresInSec,
       algorithm: "HS256",
@@ -129,14 +133,22 @@ export class AuthService {
 
   /** New refresh token in a family; only its hash is stored. Old expired rows of the wallet are swept. */
   private async issueRefresh(walletAddress: string, familyId: string): Promise<RefreshCookie> {
+    return prisma.$transaction((tx) => this.issueRefreshInTx(tx, walletAddress, familyId));
+  }
+
+  /**
+   * Creates the replacement refresh token inside the SAME transaction that claimed the old one.
+   * This is essential: if logout/theft-revoke deletes a family while a refresh is in flight, the
+   * database serializes one operation and the loser retries against the new state. A late request
+   * can therefore never recreate a family after it was revoked.
+   */
+  private async issueRefreshInTx(tx: Tx, walletAddress: string, familyId: string): Promise<RefreshCookie> {
     const value = randomBytes(32).toString("base64url");
     const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_DAYS * 86_400_000);
-    await prisma.$transaction([
-      prisma.refreshToken.deleteMany({ where: { walletAddress, expiresAt: { lt: new Date() } } }),
-      prisma.refreshToken.create({
-        data: { walletAddress, tokenHash: sha256(value), familyId, expiresAt },
-      }),
-    ]);
+    await tx.refreshToken.deleteMany({ where: { walletAddress, expiresAt: { lt: new Date() } } });
+    await tx.refreshToken.create({
+      data: { walletAddress, tokenHash: sha256(value), familyId, expiresAt },
+    });
     return { value, expiresAt };
   }
 
@@ -150,34 +162,50 @@ export class AuthService {
     cookieValue: string | undefined,
   ): Promise<{ access: AccessSession; refresh: RefreshCookie | null }> {
     if (!cookieValue) throw httpError("Not signed in.", 401);
-    const row = await prisma.refreshToken.findUnique({ where: { tokenHash: sha256(cookieValue) } });
-    if (!row || row.expiresAt.getTime() < Date.now())
-      throw httpError("Session expired. Sign in again.", 401);
+    const tokenHash = sha256(cookieValue);
+    const outcome = await serializable(async (tx) => {
+      const row = await tx.refreshToken.findUnique({ where: { tokenHash } });
+      if (!row || row.expiresAt.getTime() < Date.now())
+        return { kind: "expired" as const };
 
-    // claim the token: only one request can turn usedAt from null to now
-    const claimed = row.usedAt
-      ? 0
-      : (
-          await prisma.refreshToken.updateMany({
-            where: { id: row.id, usedAt: null },
-            data: { usedAt: new Date() },
-          })
-        ).count;
-    if (claimed === 1) {
-      return {
-        access: await this.issueAccess(row.walletAddress),
-        refresh: await this.issueRefresh(row.walletAddress, row.familyId),
-      };
-    }
-    const fresh = await prisma.refreshToken.findUnique({ where: { id: row.id } });
-    if (fresh?.usedAt && Date.now() - fresh.usedAt.getTime() < REUSE_GRACE_MS) {
-      return { access: await this.issueAccess(row.walletAddress), refresh: null };
-    }
-    await this.revokeAllSessions(row.walletAddress);
+      // Claim plus replacement creation live in this serializable transaction. Do not move the
+      // replacement write after commit: that was the logout/revoke race.
+      const claimed = row.usedAt
+        ? 0
+        : (
+            await tx.refreshToken.updateMany({
+              where: { id: row.id, usedAt: null },
+              data: { usedAt: new Date() },
+            })
+          ).count;
+      const version = (await tx.authSession.findUnique({ where: { walletAddress: row.walletAddress } }))?.version ?? 0;
+      if (claimed === 1) {
+        return {
+          kind: "rotated" as const,
+          access: await this.issueAccess(row.walletAddress, version),
+          refresh: await this.issueRefreshInTx(tx, row.walletAddress, row.familyId),
+        };
+      }
+      const fresh = await tx.refreshToken.findUnique({ where: { id: row.id } });
+      if (fresh?.usedAt && Date.now() - fresh.usedAt.getTime() < REUSE_GRACE_MS) {
+        return {
+          kind: "grace" as const,
+          access: await this.issueAccess(row.walletAddress, version),
+          refresh: null,
+        };
+      }
+      await this.revokeAllSessionsInTx(tx, row.walletAddress);
+      return { kind: "theft" as const, walletAddress: row.walletAddress };
+    });
+
+    if (outcome.kind === "rotated" || outcome.kind === "grace") return outcome;
+    if (outcome.kind === "expired") throw httpError("Session expired. Sign in again.", 401);
+
+    const walletAddress = outcome.walletAddress;
     alert(
-      isAdminWallet(row.walletAddress) ? "critical" : "warning",
-      `session-theft-${row.walletAddress}`,
-      `A copied sign-in token was used for ${shortWallet(row.walletAddress)}${isAdminWallet(row.walletAddress) ? " (ADMIN)" : ""}: every session of that wallet was ended.`,
+      isAdminWallet(walletAddress) ? "critical" : "warning",
+      `session-theft-${walletAddress}`,
+      `A copied sign-in token was used for ${shortWallet(walletAddress)}${isAdminWallet(walletAddress) ? " (ADMIN)" : ""}: every session of that wallet was ended.`,
     );
     throw httpError("Session ended for safety. Sign in again.", 401);
   }
@@ -185,8 +213,11 @@ export class AuthService {
   /** Log out this device: its refresh token family is deleted. */
   async logout(cookieValue: string | undefined) {
     if (!cookieValue) return;
-    const row = await prisma.refreshToken.findUnique({ where: { tokenHash: sha256(cookieValue) } });
-    if (row) await prisma.refreshToken.deleteMany({ where: { familyId: row.familyId } });
+    const tokenHash = sha256(cookieValue);
+    await serializable(async (tx) => {
+      const row = await tx.refreshToken.findUnique({ where: { tokenHash } });
+      if (row) await tx.refreshToken.deleteMany({ where: { familyId: row.familyId } });
+    });
   }
 
   /** Valid signature + not expired + not voided by a stolen-token alarm. */
@@ -247,14 +278,16 @@ export class AuthService {
 
   /** Ends every session of a wallet: refresh tokens deleted, access tokens voided. */
   async revokeAllSessions(walletAddress: string) {
-    await prisma.$transaction([
-      prisma.refreshToken.deleteMany({ where: { walletAddress } }),
-      prisma.authSession.upsert({
-        where: { walletAddress },
-        update: { version: { increment: 1 } },
-        create: { walletAddress, version: 1 },
-      }),
-    ]);
+    await serializable((tx) => this.revokeAllSessionsInTx(tx, walletAddress));
+  }
+
+  private async revokeAllSessionsInTx(tx: Tx, walletAddress: string) {
+    await tx.refreshToken.deleteMany({ where: { walletAddress } });
+    await tx.authSession.upsert({
+      where: { walletAddress },
+      update: { version: { increment: 1 } },
+      create: { walletAddress, version: 1 },
+    });
   }
 }
 
