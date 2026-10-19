@@ -19,6 +19,17 @@ export type NotificationKind =
   | "WITHDRAWAL_PAID"
   | "WITHDRAWAL_RETURNED";
 
+/** column sizes (schema.prisma Notification): every value is cut to fit, never an insert error */
+const TITLE_MAX = 120;
+const BODY_MAX = 300;
+const LINK_MAX = 40;
+const KIND_MAX = 32;
+
+/**
+ * Writes one notification. It often runs inside the plan engine's money transaction (commissions,
+ * volume, ranks), so it must never fail on length: a too-long title / body / link / kind would roll the
+ * whole payment back. Every field is cut to its column size first.
+ */
 export async function notify(
   db: Db,
   userId: string,
@@ -28,7 +39,13 @@ export async function notify(
   link?: string,
 ): Promise<void> {
   await db.notification.create({
-    data: { userId, kind, title: title.slice(0, 120), body: body.slice(0, 300), link: link ?? null },
+    data: {
+      userId,
+      kind: kind.slice(0, KIND_MAX),
+      title: title.slice(0, TITLE_MAX),
+      body: body.slice(0, BODY_MAX),
+      link: link ? link.slice(0, LINK_MAX) : null,
+    },
   });
 }
 
@@ -50,6 +67,10 @@ const view = (n: {
   createdAt: n.createdAt,
 });
 
+/** a member by wallet; addresses are stored lowercase, so any casing finds them (checksummed or not) */
+const findMember = (walletAddress: string) =>
+  prisma.user.findUnique({ where: { walletAddress: walletAddress.toLowerCase() }, select: { id: true } });
+
 /**
  * A member's notifications, newest first: the bell shows 5, "View all" pages through the rest
  * (owner 2026-10-19). unreadOnly = the Unread tab.
@@ -58,7 +79,7 @@ export async function listNotifications(
   walletAddress: string,
   { page = 1, limit = 20, unreadOnly = false }: { page?: number; limit?: number; unreadOnly?: boolean } = {},
 ) {
-  const user = await prisma.user.findUnique({ where: { walletAddress }, select: { id: true } });
+  const user = await findMember(walletAddress);
   if (!user) return { items: [], unread: 0, total: 0, page, pageSize: limit };
   const where = { userId: user.id, ...(unreadOnly ? { readAt: null } : {}) };
   const [items, unread, total] = await Promise.all([
@@ -76,7 +97,7 @@ export async function listNotifications(
 
 /** removes one notification (×) or every read one ("Clear read"); returns the unread count */
 export async function removeNotifications(walletAddress: string, id?: string) {
-  const user = await prisma.user.findUnique({ where: { walletAddress }, select: { id: true } });
+  const user = await findMember(walletAddress);
   if (!user) return { unread: 0 };
   await prisma.notification.deleteMany({
     where: id ? { userId: user.id, id } : { userId: user.id, readAt: { not: null } },
@@ -121,7 +142,7 @@ export async function cleanupNotifications(): Promise<number> {
 
 /** marks one notification (id) or all of them read */
 export async function markRead(walletAddress: string, id?: string) {
-  const user = await prisma.user.findUnique({ where: { walletAddress }, select: { id: true } });
+  const user = await findMember(walletAddress);
   if (!user) return { unread: 0 };
   await prisma.notification.updateMany({
     where: { userId: user.id, readAt: null, ...(id ? { id } : {}) },
