@@ -6,6 +6,7 @@
  * Payouts are sent by the admin from the treasury wallet; the backend accepts "paid" only
  * after it finds that USDT transfer on-chain. Background: the landing particle scene.
  */
+import { whenReady } from './core.ts';
 import { BSC_CHAIN_ID, formatAddress, showToast } from './core.ts';
 import { signIn as sessionFor, silentSession } from './session.ts';
 import {
@@ -83,7 +84,7 @@ function showNotFound(): void {
 function revealAdmin(): void {
   $('notFound')!.hidden = true;
   $('adminRoot')!.hidden = false;
-  document.title = 'Admin | DAOVAULT';
+  document.title = 'DAOvault';
   initDvLogos(); // animated DAOVAULT logo: header, footer
   init3DScene('admin'); // gold particles + lightning, like the landing page
   const badge = $('adminWallet');
@@ -237,7 +238,7 @@ async function act(item: HTMLElement, action: string, button: HTMLButtonElement)
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+whenReady(() => {
   openIfAdmin().catch(() => showNotFound());
   $('adminRefresh')?.addEventListener('click', async (e) => {
     const button = e.currentTarget as HTMLButtonElement;

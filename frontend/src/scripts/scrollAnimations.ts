@@ -394,7 +394,113 @@ export function initScrollAnimations(): void {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // 5. #COMPARE – Architectural Pillars & Comparison Matrix Section
+  // 5. #BONUS – Fast-Start Bonus Section (Kinetic 3D Card Rotation on Scroll)
+  // ─────────────────────────────────────────────────────────────────────────
+  const bonusSection = document.querySelector('#bonus');
+  if (bonusSection) {
+    const fsbGrid = bonusSection.querySelector('.fsb-grid');
+    const fsbCards = bonusSection.querySelectorAll<HTMLElement>('.fsb-card');
+
+    if (fsbCards.length) {
+      // 3D rotation entrance for Rocket Start ($100) & Fast Start ($50) cards
+      // Desktop: tilts gracefully inwards from opposing 3D angles
+      // Mobile: tilts along X axis (rotateX 25deg) as if rotating up toward user on scroll
+      const startRotations = isMobile
+        ? [
+            { rotateX: 25, rotateY: -7, y: 45, scale: 0.93 },
+            { rotateX: 25, rotateY: 7, y: 45, scale: 0.93 },
+          ]
+        : [
+            { rotateY: -22, rotateX: 12, y: 50, scale: 0.92 },
+            { rotateY: 22, rotateX: 12, y: 50, scale: 0.92 },
+          ];
+
+      fsbCards.forEach((card, idx) => {
+        const initTransform = startRotations[idx] || startRotations[0];
+        gsap.fromTo(
+          card,
+          {
+            opacity: 0,
+            y: initTransform.y,
+            rotateX: initTransform.rotateX,
+            rotateY: initTransform.rotateY,
+            scale: initTransform.scale,
+            transformPerspective: isMobile ? 900 : 1200,
+            transformOrigin: isMobile
+              ? 'center bottom'
+              : idx === 0
+                ? 'right center'
+                : 'left center',
+          },
+          {
+            scrollTrigger: {
+              trigger: fsbGrid || card,
+              start: isMobile ? 'top 82%' : 'top 85%',
+              once: true,
+            },
+            opacity: 1,
+            y: 0,
+            rotateX: 0,
+            rotateY: 0,
+            scale: 1,
+            duration: isMobile ? 0.85 : 1.0,
+            delay: idx * 0.18,
+            ease: 'back.out(1.25)',
+            clearProps: ANIMATED_PROPS,
+          },
+        );
+      });
+    }
+
+    // Timeline track and steps animation
+    const timeline = bonusSection.querySelector('.fsb-timeline');
+    const trackFill = bonusSection.querySelector('.fsb-track-fill') as HTMLElement | null;
+    const steps = bonusSection.querySelectorAll('.fsb-steps li');
+    if (timeline && trackFill) {
+      const tl = gsap.timeline({
+        scrollTrigger: {
+          trigger: timeline,
+          start: isMobile ? 'top 85%' : 'top 88%',
+          once: true,
+        },
+      });
+
+      tl.fromTo(
+        timeline,
+        { opacity: 0, y: 30, scale: 0.96 },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.65,
+          ease: 'power3.out',
+          clearProps: ANIMATED_PROPS,
+        },
+      )
+        .fromTo(
+          trackFill,
+          { width: '0%' },
+          { width: '100%', duration: 1.1, ease: 'power2.inOut' },
+          '-=0.25',
+        )
+        .fromTo(
+          steps,
+          { opacity: 0, y: 16 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: 0.45,
+            stagger: 0.12,
+            ease: 'power2.out',
+            clearProps: ANIMATED_PROPS,
+          },
+          '-=0.75',
+        );
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // 6. #COMPARE – Architectural Pillars & Comparison Matrix Section
   // ─────────────────────────────────────────────────────────────────────────
   const compareSection = document.querySelector('#compare');
   if (compareSection) {

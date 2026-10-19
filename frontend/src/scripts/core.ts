@@ -58,15 +58,36 @@ export function hasWebGL(): boolean {
 /**
  * Preloader Progress Easing
  */
+/** Runs fn once the document is parsed. The page bundles load after their tiny *.entry.ts (dynamic
+ *  import), often after DOMContentLoaded has fired, so a plain listener would never run. When the document
+ *  is already parsed, fn still waits until the calling module has finished evaluating (a microtask), like a
+ *  DOMContentLoaded handler did: it may use top-level consts declared further down that module (app.ts
+ *  launchDate threw "cannot access before initialization" and froze the splash at 1%). */
+export function whenReady(fn: () => void): void {
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn, { once: true });
+  else queueMicrotask(fn);
+}
+
 /** How long the splash counts 1% -> 100%; the splash logo's key-turn and door-open fit inside it. */
 export const SPLASH_MS = 2800;
+/** Repeat visits (splash seen on this device in the last 24h) count up quickly (owner 2026-10-19: the full
+ *  2.8s on every reload / page change felt slow). */
+export const SPLASH_REPEAT_MS = 1100;
+const SPLASH_SEEN_KEY = 'dv_splash_seen';
 
 export function bootPreloader(onComplete?: () => void): void {
   const loader = document.getElementById('preloader');
   const bar = document.getElementById('loaderBar') as HTMLElement | null;
   const num = document.getElementById('loaderNum') as HTMLElement | null;
   const quick = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const duration = quick ? 900 : SPLASH_MS;
+  let repeat = false;
+  try {
+    repeat = Date.now() - Number(localStorage.getItem(SPLASH_SEEN_KEY) || 0) < 86_400_000;
+    localStorage.setItem(SPLASH_SEEN_KEY, String(Date.now()));
+  } catch {
+    /* storage blocked: the full splash */
+  }
+  const duration = quick ? 900 : repeat ? SPLASH_REPEAT_MS : SPLASH_MS;
   const t0 = performance.now();
 
   // the page must also be loaded; never wait longer than 3s extra for slow assets

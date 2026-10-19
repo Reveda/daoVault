@@ -65,7 +65,8 @@ function syncMatrixMoney(deck: HTMLElement): void {
 const REDUCED_MOTION =
   typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const REVEAL_MS = 2400;
-let deckSeen = false;
+/** the deck is on screen: arrivals only play while it is (owner 2026-10-19: replay after scrolling away and back) */
+let deckOnScreen = false;
 let revealedTier = -1;
 const revealTimers = new WeakMap<HTMLElement, number>();
 
@@ -115,7 +116,7 @@ function revealCard(card: HTMLElement): void {
 }
 
 function revealActive(cards: NodeListOf<HTMLElement>): void {
-  if (!deckSeen || revealedTier === currentActiveTier) return;
+  if (!deckOnScreen || revealedTier === currentActiveTier) return;
   revealedTier = currentActiveTier;
   const card = cards[currentActiveTier];
   if (card) revealCard(card);
@@ -180,14 +181,20 @@ export function initMatrixAutoDeck(): void {
   // Initial state: Tier 1 active
   setActiveTier(0, false);
 
-  // the first card plays its arrival animation when the deck comes on screen (not at page load)
+  // the active card plays its arrival animation when the deck comes on screen (not at page load), and
+  // again every time the deck comes back after the visitor scrolled away (owner 2026-10-19: before, it
+  // played once per visit and a returning visitor saw the card already settled)
   if ('IntersectionObserver' in window) {
     const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768;
     const seen = new IntersectionObserver(
       (entries) => {
-        if (!entries.some((e) => e.isIntersecting)) return;
-        seen.disconnect();
-        deckSeen = true;
+        if (!entries.some((e) => e.isIntersecting)) {
+          // left the screen: forget the last arrival so the active card replays it on the way back
+          deckOnScreen = false;
+          revealedTier = -1;
+          return;
+        }
+        deckOnScreen = true;
         revealActive(document.querySelectorAll<HTMLElement>('.matrix-stack-card'));
         // the deck is very tall (spread cards + reserved space): watch its top reaching 70% of
         // the screen, where the scroll deck starts (scrollAnimations 'top 72%'), not a share of it

@@ -13,12 +13,12 @@
       }
     </style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Page not found | DAOVAULT</title>
+    <title>DAOvault</title>
     <meta name="theme-color" content="#050505" />
     <!-- lite mode (phones / low-power devices): lighter effects, set before first paint -->
     <script src="/boot.js"></script>
     <meta name="robots" content="noindex, nofollow" />
-    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="224x224" href="/favicon-tab.png?v=3" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -26,8 +26,8 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/src/styles/main.css" />
-    <link rel="stylesheet" href="/src/styles/dashboard.css" />
-    <link rel="stylesheet" href="/src/styles/admin.css" />
+    <!-- dashboard.css + admin.css in one file, so the build keeps admin rules last -->
+    <link rel="stylesheet" href="/src/styles/admin-page.css" />
   </head>
   <body class="dash-page admin-page">
     <!-- Everyone who is not signed in as an admin wallet gets this (admin.ts decides; on the VPS
@@ -389,6 +389,6 @@
         </div>
       </main>
     </div>
-    <script type="module" src="/src/scripts/admin.ts"></script>
+    <script type="module" src="/src/scripts/admin.entry.ts"></script>
   </body>
 </html>

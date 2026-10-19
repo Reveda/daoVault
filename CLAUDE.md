@@ -215,13 +215,21 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   #how stage has electric arcs (landingFx electrifyStage); signal cards rise in ONCE on phones and stay (initSignalCardFlips, owner 2026-10-18: no flip-away, threshold 0.08; id-level CSS so the tap-glow transition cannot drop the fade);
   countdown digits drop in; gold buttons sheen; on phones the compare table and dashboard 20-level table become cards.
   Hero kicker pill (owner 2026-10-18): .kicker-seg spans; <=600px two centred lines + dot beside, font min(0.64rem, 2.75vw).
+  Browser tab (owner 2026-10-19): every page <title> is just "DAOvault" (admin.ts too); tab icon = /favicon-tab.png?v=3 (owner 2026-10-19:
+  the black square looked heavy on light tabs: transparent, trimmed gold DV made from favicon.png; bump v= on change);
+  apple-touch-icon stays /favicon.png?v=2 (opaque for home screens). favicon.png itself unchanged (header, seals, coins use it).
   Brand copy: "DAOVAULT — Where Communities Build Wealth Together" (hero, #vision, CTA, footer, meta).
   Mobile: audited at 360/390/768/1024 with no horizontal overflow; see "Mobile hardening" block at end of main.css.
   GSAP cleanup must clear only animated props (ANIMATED_PROPS in scrollAnimations.ts), never clearProps 'all'.
   Performance: html.lite (inline <head> script: <=900px / <=4 cores / <=4GB) read via perf.ts LITE: particles 1300 @1x 30fps,
   no backdrop-filter / permanent will-change, static small logos, no dashboard 3D icons. core.ts initOffscreenPause pauses
   CSS animations of off-screen sections. Revealed [data-reveal] content must end with transform:none (crisp text).
-  The hero has no WebGL any more (initHeroCore3D just mounts the dvLogo). Splash: SPLASH_MS 2800.
+  The hero has no WebGL any more (initHeroCore3D just mounts the dvLogo). Splash: SPLASH_MS 2800; repeat visits
+  (dv_splash_seen < 24h) SPLASH_REPEAT_MS 1100. Page entries (owner 2026-10-19, black JPEG then logo pop): the HTML loads a
+  tiny landing/dashboard/admin.entry.ts that mounts every [data-dv-logo] at once and then import()s app/dashboard/admin.ts;
+  those start with core.ts whenReady (never a bare DOMContentLoaded listener: it has already fired). dvlogo.css keeps a
+  logo's fallback <img> invisible until mounted (shown after 2.5s only without JS). CSS stays in HTML <link>s; admin links
+  main.css + admin-page.css (@import dashboard.css + admin.css: imported apart, the build put dashboard.css after admin.css).
     dashboardFx.ts    card cascade, rollNumber(), pointer spotlight, 3D metric icons, celebrate() confetti
     Dashboard particles (owner 2026-10-18): sections carry data-scene dashTop / dashRewards / dashRanks / dashTeam /
                       dashIncome (particleScene SCENE_STATES): logo, DV mark, dial with lightning beside the cards while scrolling.
@@ -304,8 +312,8 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   600/15min, financial 200/min; Nginx api 100r/s, auth 20r/s) + per-wallet sign-in limiter (authWalletRateLimiter,
   AUTH_WALLET_RATE_LIMIT_MAX 20), also in render.yaml (owner asked, 2026-10-13). VPS env (owner 2026-10-18): ONE file, root .env.prod
   (git-ignored; every key, secrets filled, contract addresses / tunnel token / INDEXER_START_BLOCK empty until known); compose
-  reads it as --env-file AND env_file of backend + worker. All *.example templates and the old .env.prod /
-  .env.prod were removed; local dev keeps backend/.env + frontend/.env. activation.service caches the payment contract's immutable config per address.
+  reads it as --env-file AND env_file of backend + worker. All *.example templates and the old root .env.production /
+  backend/.env.prd were removed; local dev keeps backend/.env + frontend/.env. activation.service caches the payment contract's immutable config per address.
   Render backend is the free plan: not for launch traffic (VPS / paid plan + paid RPC).
   Review fixes (2026-10-14): withdrawals reserve payout capacity (reservedPayout: open unexpired vouchers + requests being
   signed, checked inside the serializable create; voucherAmount set at create; unsigned >5 min released); on-chain sponsor
@@ -375,6 +383,9 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   #matrix level cards (owner 2026-10-11): matrixAutoDeck.ts revealCard on every active-card change (after the deck
   reaches 70% of the screen): .mx-scan light sweeps down, content drops in piece by piece, % and USDT count up; CSS
   `.mx-reveal` block at the end of main.css, removed after 2.4s so the cards' own loops return; off for reduced motion.
+  The deck observer stays on (owner 2026-10-19): leaving the screen resets revealedTier, so the active card replays its
+  arrival every time the deck comes back. .meter-info wraps (label shrinks, value margin-left:auto) so meter lines never
+  run past a card on phones.
   Landing launch notice shows on every visit until VITE_LAUNCH_DATE ("We go live on 22 October"); dashboard one stays once.
   CSS for the motion layer is the last block of main.css and dashboard.css ("TPR motion layer").
   styles: src/styles/main.css (large, ~4.7k lines), dashboard.css

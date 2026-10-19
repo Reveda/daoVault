@@ -1,0 +1,5 @@
+/* Admin page CSS in cascade order (owner 2026-10-19): dashboard.css, then admin.css, inlined into ONE file
+   (admin.entry.ts). Imported separately, the build put the shared dashboard.css AFTER admin.css on the admin
+   page, so dashboard rules could override admin ones. */
+@import './dashboard.css';
+@import './admin.css';

@@ -12593,6 +12593,7 @@ a.lp-item[href]:hover .lp-text b {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 1.4rem;
   margin-top: 2rem;
+  perspective: 1200px;
 }
 .fsb-card {
   position: relative;
@@ -12602,6 +12603,19 @@ a.lp-item[href]:hover .lp-text b {
   border-radius: 22px;
   border: 1px solid rgba(212, 175, 55, 0.35);
   overflow: hidden;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+  transition:
+    border-color 0.35s ease,
+    box-shadow 0.35s ease,
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.fsb-card:hover {
+  transform: translateY(-4px) scale(1.015);
+  border-color: rgba(245, 215, 110, 0.7);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.45),
+    0 0 28px rgba(212, 175, 55, 0.2);
 }
 .fsb-card::before {
   content: '';
@@ -12754,15 +12768,23 @@ a.lp-item[href]:hover .lp-text b {
    And no page can be wider than the screen: overflow-x: clip cuts anything that sticks out WITHOUT making
    html or body a scroll box (that would break page scrolling and sticky parts); a browser that does not
    know `clip` keeps the old body `hidden` rule. */
-html { overflow-x: clip; }
-body { overflow-x: hidden; overflow-x: clip; }
+html {
+  overflow-x: clip;
+}
+body {
+  overflow-x: hidden;
+  overflow-x: clip;
+}
 @media (max-width: 960px) {
   .top-header .top-bar {
     width: calc(100% - 2rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
     margin-left: auto;
     margin-right: auto;
   }
-  .top-header .brand, .top-header .top-actions { min-width: 0; }
+  .top-header .brand,
+  .top-header .top-actions {
+    min-width: 0;
+  }
 }
 
 /* Hero logo caption on ONE line on phones (owner 2026-10-18: "YOUR ASSETS · YOUR COMMUNITY · YOUR DECISIONS"
@@ -12815,7 +12837,12 @@ body { overflow-x: hidden; overflow-x: clip; }
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(110deg, transparent 35%, rgba(255, 236, 160, 0.38) 50%, transparent 65%);
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgba(255, 236, 160, 0.38) 50%,
+    transparent 65%
+  );
   transform: translateX(-120%);
   animation: legShine 3.6s ease-in-out 0.8s infinite;
 }
@@ -12882,7 +12909,12 @@ body { overflow-x: hidden; overflow-x: clip; }
   position: relative;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(255, 236, 160, 0.09), rgba(212, 175, 55, 0.02) 45%, rgba(0, 0, 0, 0.25)),
+    linear-gradient(
+      180deg,
+      rgba(255, 236, 160, 0.09),
+      rgba(212, 175, 55, 0.02) 45%,
+      rgba(0, 0, 0, 0.25)
+    ),
     linear-gradient(180deg, rgba(26, 22, 11, 0.9), rgba(10, 9, 6, 0.9)) !important;
   border: 1px solid rgba(212, 175, 55, 0.36) !important;
   box-shadow:
@@ -12945,7 +12977,8 @@ body { overflow-x: hidden; overflow-x: clip; }
 #rankCalcCard .rcalc-slider {
   height: 10px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 55%) 0 0 / var(--fill, 0%) 100% no-repeat,
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 55%) 0 0 / var(--fill, 0%) 100%
+      no-repeat,
     linear-gradient(90deg, #8a6510, #d4af37 60%, #ffe58a) 0 0 / var(--fill, 0%) 100% no-repeat,
     rgba(255, 255, 255, 0.08) !important;
   box-shadow:
@@ -13046,4 +13079,19 @@ html.lite #rankCalcCard .rcalc-stat::after {
   #bonus.fsb-section {
     padding-bottom: 1.6rem;
   }
+}
+
+/* #matrix level cards on phones (owner 2026-10-19): "INSTANT COMMISSION STREAM ✓ 100% UNLOCKED" ran past the
+   card edge (the label could not shrink, the value could not wrap). The meter line now wraps: the value
+   moves under the label, still right-aligned, and never leaves the card. */
+.meter-info {
+  flex-wrap: wrap;
+  row-gap: 0.25rem;
+}
+.meter-lbl {
+  flex-shrink: 1;
+  min-width: 0;
+}
+.meter-val {
+  margin-left: auto;
 }

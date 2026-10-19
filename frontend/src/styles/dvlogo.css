@@ -260,3 +260,16 @@
 .dvl-static .dvl-key {
   opacity: 0;
 }
+
+/* Fallback images inside [data-dv-logo] (owner 2026-10-19: the splash showed the black DAOlogo.jpg for a few
+   seconds, then the animated logo popped in). splash.ts mounts the animated logo first; until then the
+   fallback stays invisible, and it fades in only if the logo never mounts (no JavaScript) after 2.5s. */
+[data-dv-logo]:not([data-dv-mounted]) > img {
+  opacity: 0;
+  animation: dvlFallbackIn 0.4s ease 2.5s forwards;
+}
+@keyframes dvlFallbackIn {
+  to {
+    opacity: 1;
+  }
+}

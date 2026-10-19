@@ -3,6 +3,7 @@
  * 11-Tier Rank Showcase, 3D Tilt Physics, Countdown, Modal Controller, and 20-Level Matrix Simulator
  */
 
+import { whenReady } from './core.ts';
 import { init3DScene, initHeroCore3D } from './scene.ts';
 // Apex trophy replaced by the packed reward box (owner, 2026-10-12):
 // import { initApexTrophy } from './trophy3d.ts';
@@ -62,7 +63,7 @@ import {
   initMobileNav,
 } from './landingFx.ts';
 
-document.addEventListener('DOMContentLoaded', async () => {
+whenReady(async () => {
   initDvLogos(); // animated DAOVAULT logo: preloader, header, footer
   initOffscreenPause(); // looping CSS animations pause off screen
   enableTouchPress(); // smooth card press feedback on phones (iOS needs a touch listener)

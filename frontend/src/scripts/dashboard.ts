@@ -3,6 +3,7 @@
  * 25x Capping Meter, 20-Level Matrix Explorer, 50% Leg Breakdown, and 5% Withdrawal Portal
  */
 
+import { whenReady } from './core.ts';
 import { init3DScene } from './scene.ts';
 import {
   initReferralCapture,
@@ -92,7 +93,7 @@ const LEVEL_MATRIX: LevelMatrixRow[] = [
   { level: 20, pct: 1, usd: 3, reqDirects: 15 },
 ];
 
-document.addEventListener('DOMContentLoaded', async () => {
+whenReady(async () => {
   initDvLogos(); // animated DAOVAULT logo: preloader, header, footer
   initOffscreenPause(); // looping CSS animations pause off screen
   enableTouchPress(); // smooth card press feedback on phones (iOS needs a touch listener)
