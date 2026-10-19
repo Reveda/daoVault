@@ -19,13 +19,29 @@ let emitter: Emitter | null = null;
 
 const room = (wallet: string) => `w:${wallet.toLowerCase()}`;
 
+const allowedOrigins = new Set(
+  env.FRONTEND_URL.split(",")
+    .map((origin) => origin.trim().replace(/\/$/, ""))
+    .filter(Boolean),
+);
+/** our own website (FRONTEND_URL); any origin in development; no Origin header = same-origin, allowed */
+const originAllowed = (origin: string | undefined) =>
+  env.NODE_ENV === "development" || !origin || allowedOrigins.has(origin);
+
 /** the API: socket.io server on the HTTP server */
 export function initSocketServer(server: HttpServer): Server {
   io = new Server(server, {
     path: `${env.API_PREFIX}/socket.io`,
     serveClient: false,
-    // same-origin only: the site and the API share one origin (Render rewrite, Nginx, Vite proxy)
-    cors: { origin: false },
+    // our own website only, the same rule as the REST API (app.ts): FRONTEND_URL origins (any origin in
+    // development; no Origin header = same-origin / server-to-server, allowed). The site normally reaches
+    // the API on its own origin (Render rewrite, Nginx, Vite proxy); this also covers a separate API host.
+    cors: {
+      origin: (origin, callback) => callback(null, originAllowed(origin)),
+      methods: ["GET", "POST"],
+    },
+    // browsers do not apply CORS to websockets: the same origin check guards the upgrade too
+    allowRequest: (req, callback) => callback(null, originAllowed(req.headers.origin)),
     pingInterval: 25_000,
     pingTimeout: 20_000,
   });

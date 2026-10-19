@@ -118,7 +118,8 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
   (also after a collect); dashboardFx 3D icon from data-icon.
   Notifications: table notifications (modules/notifications): notify() rows written in the SAME transaction as the event (level income
   per upline, rank reached / reward ready, bonus ready, DV tokens ready, withdrawal paid / returned); pushPending() claims rows once
-  (pushed_at, FOR UPDATE SKIP LOCKED) and emits over socket.io (socket.ts: path /api/v1/socket.io, JWT handshake, room per wallet,
+  (pushed_at, FOR UPDATE SKIP LOCKED) and emits over socket.io (socket.ts: path /api/v1/socket.io, CORS + allowRequest = FRONTEND_URL
+  origins like app.ts (any in development, no Origin allowed), JWT handshake, room per wallet,
   redis adapter with REDIS_URL, worker = redis emitter); pusher every 2s in each API copy + worker, kicked after each plan batch.
   GET /notifications?page&limit&filter=all|unread (+ unread, total), POST /notifications/read {id?}, POST /notifications/remove {id?}
   (no id = every read one). Retention (owner 2026-10-19): each member keeps only the newest 30 (KEEP_PER_MEMBER; trimmed right after every
