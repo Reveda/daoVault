@@ -362,8 +362,7 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   #withForm for #withFlow: 4 pills (Amount, Confirm, Sending, Received) + ONE card at a time (dashboard.ts setStage:
   verify / preparing / confirm / sending / arriving / done; Sending has a 3-line checklist; done = full success screen with
   +net USDT, transaction link, Done button); errors return to the form with a toast. ?wdDemo on the dev server walks it
-  without sending. frontend/withdraw-preview.html = owner review page of every screen (dev server only, not built): delete
-  when the owner says.
+  without sending. (The withdraw-preview.html review page was deleted 2026-10-19.)
   Dashboard 20-level rows open the level modal whenever the level has members (locked levels are viewable, owner).
   Phones (owner 2026-10-12): html.lite = no .lvl-row / .reward-box entrance (a row stayed unpainted), finished entrances dropped
   via tbody/.reward-boxes.is-settled, particleScene skips frames while scrolling on LITE. Tap feedback site-wide: core.ts
