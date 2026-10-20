@@ -588,3 +588,33 @@ export function formatAddress(address: string | null | undefined): string {
   if (!address) return '';
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
+
+/**
+ * Robust clipboard copy with textarea fallback for all mobile browsers & WebViews
+ */
+export async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (typeof navigator !== 'undefined' && navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      /* fallback below */
+    }
+  }
+  try {
+    const el = document.createElement('textarea');
+    el.value = text;
+    el.style.position = 'fixed';
+    el.style.left = '-9999px';
+    el.style.top = '0';
+    el.style.opacity = '0';
+    el.setAttribute('readonly', '');
+    document.body.appendChild(el);
+    el.select();
+    const ok = document.execCommand('copy');
+    document.body.removeChild(el);
+    return ok;
+  } catch {
+    return false;
+  }
+}

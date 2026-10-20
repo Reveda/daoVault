@@ -24,6 +24,7 @@ import {
   countUp,
   formatAddress,
   showToast,
+  copyTextToClipboard,
   showLaunchNotice,
   confirmNotice,
   getPendingReferral,
@@ -635,11 +636,17 @@ function renderWalletList(): void {
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="#F0B90B"><path d="M12 2.5l3.2 3.2-3.2 3.2-3.2-3.2L12 2.5zm6.8 6.8l3.2 3.2-3.2 3.2-3.2-3.2 3.2-3.2zm-13.6 0l3.2 3.2-3.2 3.2-3.2-3.2 3.2-3.2zM12 9.5l3.2 3.2-3.2 3.2-3.2-3.2L12 9.5zm0 7l3.2 3.2-3.2 3.2-3.2-3.2L12 16.5z"/></svg>`,
       // official format from @binance/w3w-utils getDeeplink(): opens the app's dapp browser
       appLink: (url) => {
-        const bnc =
-          `bnc://app.binance.com/mp/app?appId=yFK5FCqYprrXDiVFbhyRx7` +
-          `&startPagePath=${btoa('/pages/browser/index')}` +
-          `&startPageQuery=${btoa(`url=${url}&defaultChainId=${BSC_CHAIN_ID}`)}`;
-        return `https://app.binance.com/en/download?_dp=${btoa(bnc)}`;
+        const safeB64 = (s: string) => {
+          try {
+            return btoa(unescape(encodeURIComponent(s)));
+          } catch {
+            return btoa(s);
+          }
+        };
+        const query = safeB64(`url=${encodeURIComponent(url)}&defaultChainId=${BSC_CHAIN_ID}`);
+        const path = safeB64('/pages/browser/index');
+        const bnc = `bnc://app.binance.com/mp/app?appId=yFK5FCqYprrXDiVFbhyRx7&startPagePath=${path}&startPageQuery=${query}`;
+        return isAndroid() ? bnc : `https://app.binance.com/en/download?_dp=${safeB64(bnc)}`;
       },
       webLink: 'https://www.binance.com/en/web3wallet',
       store: { android: 'com.binance.dev', ios: '1436799971' },
@@ -670,10 +677,11 @@ function renderWalletList(): void {
       store: { android: 'vip.mytokenpocket', ios: '6444625622' },
     },
     {
-      // SafePal documents no deeplink: on a phone the link is copied for its Browser tab
       id: 'safepal',
       name: 'SafePal',
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="#4A21EF"/><path d="M15.8 6.5H9.6L7 10.2h6.2l-2.6 3.6h-3.4L5.6 16.5h6.2l2.6-3.7H8.2l2.6-3.6h3.4l1.6-2.7z" fill="#FFFFFF"/></svg>`,
+      appLink: (url) =>
+        `https://link.safepal.io/wallet/openurl?url=${encodeURIComponent(url)}`,
       webLink: 'https://www.safepal.com/download',
       store: { android: 'io.safepal.wallet', ios: '1548297139' },
     },
@@ -742,6 +750,9 @@ function renderWalletList(): void {
           if (download) openStore(opt);
         } else {
           showToast(`Please install ${opt.name} or open inside wallet app browser.`, true);
+          if (opt.webLink) {
+            window.open(opt.webLink, '_blank', 'noopener,noreferrer');
+          }
         }
       } catch {
         // connectWithProvider already shows the user-facing error toast.
@@ -783,17 +794,18 @@ function renderWalletList(): void {
     }
     // with the referral and the auto-connect flag, so pasting it in the wallet app just works
     const link = withConnectFlag(window.location.href);
-    try {
-      await navigator.clipboard.writeText(link);
-    } catch {
-      /* clipboard blocked */
+    await copyTextToClipboard(link);
+    if (mobile) {
+      showToast(
+        'Link copied! Open your wallet app, go to its Browser / DApps tab and paste the link.',
+        false,
+      );
+    } else {
+      showToast(
+        'No wallet extension found. Install MetaMask, Trust Wallet or another EVM wallet.',
+        true,
+      );
     }
-    showToast(
-      mobile
-        ? 'Link copied. Open your wallet app, go to its Browser / DApps tab and paste the link.'
-        : 'No wallet extension found. Install MetaMask, Trust Wallet or another EVM wallet.',
-      true,
-    );
   });
   listEl.appendChild(wcBtn);
 }

@@ -78,9 +78,9 @@ export function getInstalledWallets(): WalletOption[] {
       // isMetaMask for compatibility, so checking MetaMask first mislabelled them
       let name = 'Browser Wallet';
       if (p.isTrust || p.isTrustWallet) name = 'Trust Wallet';
-      else if (p.isSafePal) name = 'SafePal';
+      else if (p.isSafePal || p._isSafePal) name = 'SafePal';
       else if (p.isTokenPocket) name = 'TokenPocket';
-      else if (p.isBinance || p.isBinanceChain) name = 'Binance Wallet';
+      else if (p.isBinance || p.isBinanceChain || p.isBinanceW3W || p.isBscWallet) name = 'Binance Web3 Wallet';
       else if (p.isOkxWallet || p.isOKExWallet) name = 'OKX Wallet';
       else if (p.isCoinbaseWallet) name = 'Coinbase Wallet';
       else if (p.isMetaMask) name = 'MetaMask';
@@ -105,9 +105,9 @@ function injectedProviders(): any[] {
   return [
     ...(eth?.providers?.length ? eth.providers : [eth]),
     asProvider(w.trustwallet) || asProvider(w.trustwallet?.ethereum),
-    asProvider(w.binancew3w?.ethereum),
+    asProvider(w.binancew3w?.ethereum) || asProvider(w.binancew3w) || asProvider(w.BinanceChain) || asProvider(w.binance),
     asProvider(w.okxwallet),
-    asProvider(w.safepalProvider), // SafePal's documented EVM provider
+    asProvider(w.safepalProvider) || asProvider(w.safepal?.ethereum) || asProvider(w.safepal),
   ].filter(asProvider);
 }
 
