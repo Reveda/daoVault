@@ -113,9 +113,7 @@ export function renderRankProgress(data: DashboardData | null): void {
       state === 'achieved'
         ? collected.get(rank) === false
           ? 'Rank reached &middot; reward ready to collect in its box'
-          : collected.get(rank)
-            ? 'Rank reached &middot; reward collected to your balance'
-            : 'Rank reached'
+          : 'Rank reached &middot; reward collected to your balance'
         : moreLeft || moreRight
           ? `Still needed: <b>${num(moreLeft)}</b> Left Leg &middot; <b>${num(moreRight)}</b> Right Leg`
           : 'Both sides matched &middot; unlocks with your next activation';

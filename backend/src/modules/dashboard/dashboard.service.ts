@@ -91,6 +91,20 @@ export class DashboardService {
         collected: r._count.collectedAt === r._count._all,
       }))
       .sort((a, b) => a.rank - b.rank);
+
+    // ensure every reached rank has an entry (owner 2026-10-20): so production users always see
+    // the reward amount and "Already collected" rather than a dash or missing state
+    for (let r = 1; r <= user.currentRank; r++) {
+      if (!rankRewards.some((x) => x.rank === r)) {
+        rankRewards.push({
+          rank: r,
+          name: RANKS[r - 1]?.name ?? `Rank ${r}`,
+          amountUsd: RANKS[r - 1]?.rewardUsd ?? 0,
+          collected: true,
+        });
+      }
+    }
+    rankRewards.sort((a, b) => a.rank - b.rank);
     const bonusRow = rewardRows.find((r) => r.type === "FAST_START_BONUS");
     const pendingRewards = [
       ...rankRewards

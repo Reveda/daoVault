@@ -77,7 +77,7 @@ export function renderRewardVaults(
       btn.style.setProperty('--i', String(i));
       btn.setAttribute(
         'aria-label',
-        `${tier.name} box: ${state === 'locked' ? 'sealed' : state === 'ready' ? `${money(amount)} ready to collect` : info ? `already collected, ${money(amount)}` : 'rank reached'}`,
+        `${tier.name} box: ${state === 'locked' ? 'sealed' : state === 'ready' ? `${money(amount)} ready to collect` : `already collected, ${money(amount)}`}`,
       );
       btn.innerHTML = `
         <span class="rb-art" aria-hidden="true">
@@ -86,12 +86,12 @@ export function renderRewardVaults(
         </span>
         <span class="rb-rank mono"><span class="rb-crest" aria-hidden="true">${getRankCrestSvg(i)}</span>RANK ${String(rank).padStart(2, '0')}</span>
         <span class="rb-name">${tier.name}</span>
-        <span class="rb-reward">${state === 'opened' ? (info ? money(amount) : '—') : '???'}</span>
-        <span class="rb-state mono">${state === 'locked' ? `${tier.volume.toLocaleString()} DAO matching` : state === 'ready' ? 'Ready to collect' : info ? 'Already collected' : 'Rank reached'}</span>`;
+        <span class="rb-reward">${state === 'opened' ? money(amount) : '???'}</span>
+        <span class="rb-state mono">${state === 'locked' ? `${tier.volume.toLocaleString()} DAO matching` : state === 'ready' ? 'Ready to collect' : 'Already collected'}</span>`;
       // a collected box never opens again (owner 2026-10-19)
       if (state === 'opened') {
         btn.disabled = true;
-        btn.title = `${tier.name} reward box: ${info ? 'already collected' : 'rank reached'}`;
+        btn.title = `${tier.name} reward box: already collected`;
       } else
         btn.addEventListener('click', () =>
           openGiftBox({
