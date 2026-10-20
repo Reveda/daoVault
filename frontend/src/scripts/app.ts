@@ -645,8 +645,13 @@ function renderWalletList(): void {
         };
         const query = safeB64(`url=${encodeURIComponent(url)}&defaultChainId=${BSC_CHAIN_ID}`);
         const path = safeB64('/pages/browser/index');
-        const bnc = `bnc://app.binance.com/mp/app?appId=yFK5FCqYprrXDiVFbhyRx7&startPagePath=${path}&startPageQuery=${query}`;
-        return isAndroid() ? bnc : `https://app.binance.com/en/download?_dp=${safeB64(bnc)}`;
+        const target = `app.binance.com/mp/app?appId=yFK5FCqYprrXDiVFbhyRx7&startPagePath=${path}&startPageQuery=${query}`;
+        // Android (owner 2026-10-20): a bare bnc:// link is often ignored by Chrome, so the "did not open"
+        // notice popped up; as an intent link Chrome opens the Binance app, or its Play Store page when it
+        // is not installed (like TokenPocket)
+        return isAndroid()
+          ? `intent://${target}#Intent;scheme=bnc;package=com.binance.dev;S.browser_fallback_url=${encodeURIComponent(PLAY_STORE + 'com.binance.dev')};end`
+          : `https://app.binance.com/en/download?_dp=${safeB64(`bnc://${target}`)}`;
       },
       webLink: 'https://www.binance.com/en/web3wallet',
       store: { android: 'com.binance.dev', ios: '1436799971' },
@@ -680,8 +685,15 @@ function renderWalletList(): void {
       id: 'safepal',
       name: 'SafePal',
       icon: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="2" width="20" height="20" rx="5" fill="#4A21EF"/><path d="M15.8 6.5H9.6L7 10.2h6.2l-2.6 3.6h-3.4L5.6 16.5h6.2l2.6-3.7H8.2l2.6-3.6h3.4l1.6-2.7z" fill="#FFFFFF"/></svg>`,
-      appLink: (url) =>
-        `https://link.safepal.io/wallet/openurl?url=${encodeURIComponent(url)}`,
+      // link.safepal.io is SafePal's verified app link (io.safepal.wallet). Android (owner 2026-10-20): sent
+      // as an intent for that package, so Chrome always hands it to the SafePal app (or its Play Store page)
+      // instead of loading SafePal's download site over ours
+      appLink: (url) => {
+        const target = `link.safepal.io/wallet/openurl?url=${encodeURIComponent(url)}`;
+        return isAndroid()
+          ? `intent://${target}#Intent;scheme=https;package=io.safepal.wallet;S.browser_fallback_url=${encodeURIComponent(PLAY_STORE + 'io.safepal.wallet')};end`
+          : `https://${target}`;
+      },
       webLink: 'https://www.safepal.com/download',
       store: { android: 'io.safepal.wallet', ios: '1548297139' },
     },
@@ -734,7 +746,7 @@ function renderWalletList(): void {
           // the visitor gets a hint and stays on this page.
           openWalletApp(opt, withConnectFlag(window.location.href));
         } else if (mobile) {
-          // no app link (SafePal): copy the link for the wallet app's own browser
+          // a wallet without an app link: copy the link for the wallet app's own browser
           try {
             await navigator.clipboard.writeText(withConnectFlag(window.location.href));
           } catch {
@@ -866,7 +878,15 @@ function openWalletApp(wallet: WalletOption, currentUrl: string): void {
   };
   document.addEventListener('visibilitychange', onVisibility);
 
-  window.location.href = wallet.appLink(currentUrl);
+  const link = wallet.appLink(currentUrl);
+  window.location.href = link;
+  // an Android intent link opens the app or, when it is missing, its Play Store page by itself:
+  // no "did not open" notice for it (owner 2026-10-20: Binance showed one)
+  if (link.startsWith('intent://')) {
+    window.removeEventListener('pagehide', markPageLeft);
+    document.removeEventListener('visibilitychange', onVisibility);
+    return;
+  }
 
   // Our page is never replaced by the wallet's own website any more: on many phones the
   // app opens later than any timer here (or Chrome first asks "Open in app?"), and the

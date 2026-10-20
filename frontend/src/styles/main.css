@@ -10881,13 +10881,14 @@ html.lite .hw-wallet {
 
 .retopup-manual-prompt {
   display: none;
-  align-items: center;
-  gap: 0.8rem;
-  flex-wrap: wrap;
-  padding: 0.6rem 1rem;
-  border-radius: 12px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
   background: rgba(16, 185, 129, 0.12);
   border: 1px solid #10b981;
+  box-sizing: border-box;
   animation: promptGlow 1.5s infinite alternate ease-in-out;
 }
 @keyframes promptGlow {
@@ -10902,24 +10903,38 @@ html.lite .hw-wallet {
   display: flex;
 }
 .prompt-text {
-  font-size: 0.78rem;
+  display: block;
+  width: 100%;
+  font-size: clamp(0.78rem, 2.6vw, 0.84rem);
+  line-height: 1.45;
   color: #a7f3d0;
   font-weight: 700;
+  text-align: center;
+  margin: 0;
+  box-sizing: border-box;
 }
 .btn-gold-sm {
   background: var(--grad-gold);
   color: #050410;
-  font-size: 0.82rem;
+  font-size: clamp(0.78rem, 3vw, 0.88rem);
+  line-height: 1.35;
   font-weight: 800;
-  padding: 0.5rem 1rem;
-  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
   border: none;
   cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: normal;
   transition: all 0.2s ease;
   box-shadow: 0 4px 16px rgba(255, 184, 0, 0.4);
 }
 .btn-gold-sm:hover {
-  transform: scale(1.05);
+  transform: translateY(-2px);
   box-shadow: 0 6px 24px rgba(255, 184, 0, 0.65);
 }
 

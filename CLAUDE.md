@@ -319,8 +319,11 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   phones; only a real switch reloads the dashboard. Dashboard data retries network/5xx ~1 min (Render waking).
   App links carry ?ref (wallet browsers have their own storage); Binance/OKX links use their official formats. Dashboard: header = logo + wallet menu only (owner removed the navbar); no link back to the landing page (only Log out); metric captions are data-driven.
   Preloader/footer use --bg-dark (#050505) like the landing page. The wallet modal card never tilts.
-  Wallet modal (owner 2026-10-10): MetaMask, Binance, Trust, TokenPocket (tpdapp:// deeplink), SafePal (no deeplink:
-  copies the link on phones; window.safepalProvider), Other; dark-gold lifted theme (#walletModal block, end of main.css).
+  Wallet modal (owner 2026-10-10): MetaMask, Binance, Trust, TokenPocket (tpdapp:// deeplink), SafePal (link.safepal.io app link,
+  window.safepalProvider), Other; dark-gold lifted theme (#walletModal block, end of main.css).
+  Android (owner 2026-10-20): Binance, SafePal and TokenPocket open through intent:// links for their package (bnc scheme /
+  link.safepal.io verified app link / tpdapp) with a Play Store fallback, so no "did not open" notice (openWalletApp skips it
+  for intent links); MetaMask / Trust keep their https universal links. iOS: Binance http link, SafePal https link.
   Wallet modal footer (owner 2026-10-12): "Joining under DV…" replaces "Earnings Cap 25×" (app.ts showJoiningUnder: ?ref or
   saved code, checked with GET /users/referral/:code; amber "Invite DV… not found"; no code = "DAOVAULT"). The bigger
   "You're joining under" strip with a Change form was removed (owner). Short screens: same single column, tighter spacing.
