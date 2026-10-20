@@ -151,12 +151,12 @@ export async function markRead(walletAddress: string, id?: string) {
   return { unread: await prisma.notification.count({ where: { userId: user.id, readAt: null } }) };
 }
 
-/** marks read every notification that pointed at something now done (e.g. a reward just collected) */
-export async function markLinkRead(userId: string, link: string) {
-  await prisma.notification.updateMany({
-    where: { userId, link, readAt: null },
-    data: { readAt: new Date() },
-  });
+/**
+ * Removes every notification that pointed at something now done (owner 2026-10-20): a reward box or
+ * the DV pot opened straight from the dashboard takes its notification out of the bell too.
+ */
+export async function removeLinked(userId: string, link: string) {
+  await prisma.notification.deleteMany({ where: { userId, link } });
 }
 
 /**

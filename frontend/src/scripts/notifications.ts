@@ -358,4 +358,6 @@ export function initNotifications(account: string): void {
   });
   // back online after a gap: catch up on what arrived meanwhile
   socket.io.on('reconnect', () => void loadBell().catch(() => undefined));
+  // a reward box / the DV pot was opened on the page: its notification left the server, the bell follows
+  document.addEventListener('dv:notifications-changed', () => void loadBell().catch(() => undefined));
 }

@@ -20,7 +20,7 @@ import {
 } from "../plan/plan.js";
 import { balanceOf } from "../withdrawals/withdrawals.service.js";
 import { dashboardRepository } from "./dashboard.repository.js";
-import { markLinkRead } from "../notifications/notifications.service.js";
+import { removeLinked } from "../notifications/notifications.service.js";
 import { legsWithPower, powerArriving, type PowerIn } from "../plan/power.js";
 
 type Sides = { left: number; right: number };
@@ -355,10 +355,10 @@ export async function collectReward(walletAddress: string, kind: "rank" | "bonus
     throw error;
   });
   if (kind === "rank" && rank) {
-    // the box is opened too, and its notification is done
+    // the box is opened too, and its notification leaves the bell
     await prisma.$executeRaw`UPDATE users SET reward_boxes_opened = reward_boxes_opened | ${1 << (rank - 1)} WHERE id = ${user.id}::uuid`;
-    await markLinkRead(user.id, `rank:${rank}`);
-  } else await markLinkRead(user.id, "bonus");
+    await removeLinked(user.id, `rank:${rank}`);
+  } else await removeLinked(user.id, "bonus");
   return { collectedUsd: fromCents(result.cents), alreadyCollected: result.count === 0 };
 }
 
@@ -383,7 +383,8 @@ export async function markBoxOpened(
     const [row] = await prisma.$queryRaw<Array<{ opened: number }>>`
       UPDATE users SET dv_pot_opened = GREATEST(dv_pot_opened, ${value})
        WHERE id = ${user.id}::uuid RETURNING dv_pot_opened AS opened`;
-    await markLinkRead(user.id, "dv");
+    // every token revealed: the DV notifications leave the bell (a newer package still waiting keeps them)
+    if (Number(row?.opened ?? value) >= allocated) await removeLinked(user.id, "dv");
     return { dvPotOpened: Number(row?.opened ?? value) };
   }
   if (!rank || rank > user.currentRank)
@@ -393,5 +394,6 @@ export async function markBoxOpened(
   const [row] = await prisma.$queryRaw<Array<{ opened: number }>>`
     UPDATE users SET reward_boxes_opened = reward_boxes_opened | ${bit}
      WHERE id = ${user.id}::uuid RETURNING reward_boxes_opened AS opened`;
+  await removeLinked(user.id, `rank:${rank}`);
   return { rewardBoxesOpened: Number(row?.opened ?? bit) };
 }

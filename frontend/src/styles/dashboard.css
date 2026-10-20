@@ -5368,3 +5368,136 @@ html.lite .metric-card--collect.has-waiting {
     animation: none;
   }
 }
+
+/* Ready to open (owner 2026-10-20): a rank reward box or the DV pot with something waiting calls the member to
+   open it: a light sweep across the card, a breathing gold glow, embers rising from the box / pot and a pulsing
+   "ready" label. Gone the moment it is opened (the state class changes). Lite / reduced motion: static glow. */
+.reward-box.is-ready::before,
+.dv-box.is-ready::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 35%,
+    rgba(255, 236, 170, 0.2) 47%,
+    rgba(255, 250, 225, 0.32) 50%,
+    rgba(255, 236, 170, 0.2) 53%,
+    transparent 65%
+  );
+  background-size: 260% 100%;
+  background-position: 120% 0;
+  animation: readySweep 3.2s ease-in-out infinite;
+}
+.reward-box.is-ready::after,
+.dv-box.is-ready::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  border: 1px solid rgba(255, 215, 94, 0.75);
+  animation: readyGlow 2.2s ease-in-out infinite;
+}
+.dv-box.is-ready {
+  position: relative;
+}
+/* embers: small fire-coloured sparks rising out of the box / pot */
+.reward-box.is-ready .rb-art::before,
+.dv-box.is-ready .dv-pot::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  bottom: 45%;
+  height: 46px;
+  pointer-events: none;
+  background:
+    radial-gradient(circle, #fff1b0 0 1.4px, transparent 2.4px) 18% 100% / 12px 12px no-repeat,
+    radial-gradient(circle, #ffb347 0 1.6px, transparent 2.6px) 46% 100% / 12px 12px no-repeat,
+    radial-gradient(circle, #ff7a3d 0 1.3px, transparent 2.3px) 72% 100% / 12px 12px no-repeat,
+    radial-gradient(circle, #ffd75e 0 1.5px, transparent 2.5px) 88% 100% / 12px 12px no-repeat;
+  filter: drop-shadow(0 0 3px rgba(255, 150, 60, 0.9));
+  animation: readyEmbers 1.9s ease-out infinite;
+}
+.reward-box.is-ready .rb-state,
+.dv-box.is-ready .dv-box-state {
+  animation: readyLabel 1.6s ease-in-out infinite;
+}
+@keyframes readySweep {
+  0% {
+    background-position: 120% 0;
+  }
+  55%,
+  100% {
+    background-position: -20% 0;
+  }
+}
+@keyframes readyGlow {
+  0%,
+  100% {
+    opacity: 0.35;
+    box-shadow:
+      0 0 10px rgba(212, 175, 55, 0.25),
+      inset 0 0 8px rgba(212, 175, 55, 0.08);
+  }
+  50% {
+    opacity: 1;
+    box-shadow:
+      0 0 28px rgba(255, 190, 70, 0.55),
+      inset 0 0 14px rgba(255, 200, 90, 0.18);
+  }
+}
+@keyframes readyEmbers {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.8);
+  }
+  25% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-26px) scale(1.15);
+  }
+}
+@keyframes readyLabel {
+  0%,
+  100% {
+    opacity: 0.75;
+    text-shadow: none;
+  }
+  50% {
+    opacity: 1;
+    text-shadow: 0 0 10px rgba(255, 200, 80, 0.8);
+  }
+}
+html.lite .reward-box.is-ready::before,
+html.lite .dv-box.is-ready::before,
+html.lite .reward-box.is-ready .rb-art::before,
+html.lite .dv-box.is-ready .dv-pot::after {
+  display: none;
+}
+html.lite .reward-box.is-ready::after,
+html.lite .dv-box.is-ready::after {
+  animation: none;
+  opacity: 1;
+  box-shadow: 0 0 18px rgba(255, 190, 70, 0.4);
+}
+@media (prefers-reduced-motion: reduce) {
+  .reward-box.is-ready::before,
+  .dv-box.is-ready::before,
+  .reward-box.is-ready .rb-art::before,
+  .dv-box.is-ready .dv-pot::after {
+    display: none;
+  }
+  .reward-box.is-ready::after,
+  .dv-box.is-ready::after,
+  .reward-box.is-ready .rb-state,
+  .dv-box.is-ready .dv-box-state {
+    animation: none;
+    opacity: 1;
+  }
+}

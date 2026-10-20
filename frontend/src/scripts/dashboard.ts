@@ -371,6 +371,8 @@ whenReady(async () => {
   let refreshing: Promise<void> | null = null;
   const refreshAfterCollect = () =>
     (refreshing ??= (async () => {
+      // the opened box's notification is gone on the server: the bell reloads
+      document.dispatchEvent(new CustomEvent('dv:notifications-changed'));
       try {
         const fresh = await getDashboardData(account, await signIn(account));
         dashboardData = fresh;
@@ -787,6 +789,7 @@ function initDvBox(account: string, data: DashboardData | null): void {
         serverOpened = dv.allocated;
         void signIn(account)
           .then((token) => markBoxOpened(account, token, { kind: 'dv', allocated: dv.allocated }))
+          .then(() => document.dispatchEvent(new CustomEvent('dv:notifications-changed')))
           .catch(() => {
             /* remembered in this browser; the server copy is retried next time */
           });

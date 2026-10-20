@@ -119,6 +119,10 @@ GitHub repo Reveda/daoVault was PUBLIC on 2026-10-10 (owner told to make it priv
   fastStart.collected. Rank boxes (rewardVaults.ts renderRewardVaults(wallet, rank, rankRewards, collect)) = Ready to collect /
   Already collected; fast-start card #fastStartCollect; dashboard refreshAfterCollect re-renders + event dv:balance-changed.
   Migration 20261019120000_collect_rewards_notifications backfilled every older earning as collected.
+  Owner 2026-10-20: opening a rank box / the bonus / the DV pot on the page DELETES its notifications (notifications.service
+  removeLinked by link rank:N / bonus / dv; dv only once every token is revealed); dashboard.ts dispatches
+  dv:notifications-changed and the bell reloads. A ready box / pot calls to be opened: light sweep, breathing gold glow,
+  rising embers, pulsing label (last block of dashboard.css "Ready to open"; lite / reduced motion = static glow).
   Metric cards row 2 (owner 2026-10-19): #metricWaitingCard "Ready to Collect" (rewardsWaitingUsd, count, Collect -> link, gold
   pulse while waiting) + #metricAvailCard "Withdrawable Balance" (availableUsd, pending / withdrawn); dashboard.ts renderMoneyCards
   (also after a collect); dashboardFx 3D icon from data-icon.
