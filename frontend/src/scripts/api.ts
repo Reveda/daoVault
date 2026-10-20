@@ -64,17 +64,6 @@ export type DashboardData = {
       directs: number;
     }>;
   } | null;
-  /** virtual Power Business (display only: no income, reward, withdrawal or DV token) */
-  powerBusiness?: {
-    totalUsd: number | string;
-    /** the member's own virtual business in whole DAO (1 DAO = $300) */
-    dao: number;
-    /** both sides with the virtual business added (official volume included); rank needs the DAO on EACH side */
-    legs: { left: number; right: number; matched: number };
-    rank: number;
-    rankName: string | null;
-    nextRank: { rank: number; name: string; volume: number } | null;
-  };
   availableUsd: number;
   pendingWithdrawalUsd: number;
   withdrawnUsd: number;

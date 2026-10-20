@@ -17,7 +17,8 @@ every PLACEMENT upline, on the side the member sits under each (like real busine
 written into left/right_volume: plan/power.ts powerArriving (recursive CTE up from each record) + legsWithPower
 (power on ONE side only = the side with the most arriving; the other side must be real) used by activation.engine
 recomputeRanks + powerRankCandidates (every plan run, also with no events) and dashboard.service powerSides / level
-modal ranks. Contract unchanged:** `POWER-BUSINESS-POLICY.md`.
+modal ranks. NEVER shown apart (owner 2026-10-20): GET /dashboard legs / teamVolume / nextRank include it as normal
+business, no powerBusiness field, no Power cards / DAO progress strip; leg card + rings capped at the target. Contract unchanged:** `POWER-BUSINESS-POLICY.md`.
 **Binary Left/Right placement (owner 2026-10-17, IN CODE 2026-10-18; Hinglish graphs + RAM/ALOK examples):**
 `PLACEMENT-PLAN.md`.
 **Join / team / activation scenarios for non-technical readers (owner, Hinglish: pre-launch, 10 Nov, A-B-C unpaid

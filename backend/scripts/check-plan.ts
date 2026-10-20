@@ -1013,7 +1013,7 @@ try {
 
       throw new Rollback();
     },
-    { timeout: 600_000, maxWait: 20_000 },
+    { timeout: 1_200_000, maxWait: 30_000 },
   );
 } catch (error) {
   if (!(error instanceof Rollback)) {

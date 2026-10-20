@@ -30,20 +30,14 @@ type Sides = { left: number; right: number };
  * income, withdrawals or DV tokens, but it COUNTS for rank and rank rewards of the member it was given
  * to AND every member above it in the placement tree (on the side the member sits under them). Power
  * counts on ONE side only (the side with the most power arriving); the other side must be real
- * business. The SAME rule as the engine (legsWithPower), so the rank shown is the rank paid.
+ * business. The SAME rule as the engine (legsWithPower), so the rank shown is the rank paid. Never
+ * shown apart (owner 2026-10-20): the member sees it only inside its Left / Right business, like any
+ * other business; no power amount or record reaches the browser.
  * `official` = the member's real Left / Right business; `power` = power arriving (cents).
  */
 function powerSides(official: Sides, power: PowerIn | undefined) {
-  const daoCents = toCents(env.ACTIVATION_AMOUNT_USDT);
-  // the power that counts (one side); 0 when none arrives
-  const countedCents = power ? Math.max(power.left, power.right) : 0;
   const [left, right] = legsWithPower(official.left, official.right, power);
-  return {
-    totalCents: countedCents,
-    dao: Math.floor(countedCents / daoCents),
-    sides: { left, right },
-    summary: summarizeLegs([left, right]),
-  };
+  return { sides: { left, right }, summary: summarizeLegs([left, right]) };
 }
 
 export class DashboardService {
@@ -152,17 +146,15 @@ export class DashboardService {
     };
     // binary placement (owner, 2026-10-17): the member's Left / Right business, official volume only
     const sides = { left: user.leftVolume, right: user.rightVolume };
-    const legSummary = summarizeLegs([sides.left, sides.right]);
     // Power Business arriving at this member (its own + from below; see powerSides)
     const pb = powerSides(sides, (await powerArriving(prisma, [user.id])).get(user.id));
-    const virtualRank = Math.max(user.currentRank, rankForLegs(pb.summary));
-    const nextVirtual = RANKS[virtualRank];
     // the package earning now: the oldest still ACTIVE (top-ups wait in line), else the latest
     const currentPackage =
       user.packages.find((p) => p.status === "ACTIVE") ??
       user.packages[user.packages.length - 1] ??
       null;
     const isRoot = isRootWallet(user.walletAddress);
+    // the stored rank already counts Power Business (the plan queue checks it every few seconds)
     const next = RANKS[user.currentRank];
     // 25x cap (owner, 2026-10-18): every package adds its own $7,500 and the caps add up; all income
     // fills them oldest first. Totals over every package the member holds.
@@ -195,12 +187,13 @@ export class DashboardService {
       levelsUnlocked: unlockedLevels(user.activeDirectsCount),
       currentRank: user.currentRank,
       rankName: RANKS[user.currentRank - 1]?.name ?? null,
-      teamVolume: user.teamVolume,
-      // Left / Right business (DAO) and members (paid or not, all depths) of the placement tree
+      // Left / Right business (DAO) of the placement tree, Power Business included as normal business
+      // (one side, powerSides; owner 2026-10-20: never shown apart); members = real people (all depths)
+      teamVolume: pb.sides.left + pb.sides.right,
       legs: {
-        left: sides.left,
-        right: sides.right,
-        total: sides.left + sides.right,
+        left: pb.sides.left,
+        right: pb.sides.right,
+        total: pb.sides.left + pb.sides.right,
         leftMembers: perSide.left,
         rightMembers: perSide.right,
       },
@@ -211,7 +204,7 @@ export class DashboardService {
             volume: next.volume,
             rewardUsd: next.rewardUsd,
             // matched DAO so far: the smaller of the Left and Right sides
-            countedVolume: matchedVolume(legSummary),
+            countedVolume: matchedVolume(pb.summary),
           }
         : null,
       totalEarned: fromCents(toCents(levelIncomeUsd) + toCents(rankRewardsUsd) + toCents(bonusUsd)),
@@ -220,20 +213,6 @@ export class DashboardService {
       // fast-start bonus (Rocket Start $100 in 3 days / Fast Start $50 in 7 days): paid + progress
       bonusUsd,
       fastStart,
-      // Power Business (see powerSides): counts for this member's rank + rank rewards, never level income,
-      // balance or withdrawals.
-      // Its internal references / notes are not sent to the browser.
-      powerBusiness: {
-        totalUsd: fromCents(pb.totalCents),
-        dao: pb.dao,
-        // both sides with the virtual business added (official volume included)
-        legs: { left: pb.sides.left, right: pb.sides.right, matched: matchedVolume(pb.summary) },
-        rank: virtualRank,
-        rankName: RANKS[virtualRank - 1]?.name ?? null,
-        nextRank: nextVirtual
-          ? { rank: nextVirtual.rank, name: nextVirtual.name, volume: nextVirtual.volume }
-          : null,
-      },
       availableUsd: fromCents(balance.availableCents),
       pendingWithdrawalUsd: fromCents(balance.pendingCents),
       withdrawnUsd: fromCents(balance.withdrawnCents),

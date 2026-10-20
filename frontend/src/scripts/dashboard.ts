@@ -348,16 +348,15 @@ whenReady(async () => {
       dashboardData?.paymentsOpen ?? true,
       joinCode,
     );
-  // the rank the member sees includes Power Business (shown as normal business); money stays official
+  // the rank already counts Power Business like normal business (server)
   updateOverviewMetrics(
     activeDirects,
     totalEarned,
     capEarned,
     maxCap,
-    Math.max(dashboardData?.currentRank ?? 0, dashboardData?.powerBusiness?.rank ?? 0),
+    dashboardData?.currentRank ?? 0,
     pkg?.status,
   );
-  renderPowerBusiness(dashboardData);
   renderMoneyCards(dashboardData);
   initDvToken(dashboardData);
   initDvBox(account, dashboardData);
@@ -380,7 +379,7 @@ whenReady(async () => {
           toNumber(fresh.totalEarned, 0),
           toNumber(fresh.capEarnedUsd, capEarned),
           maxCap,
-          Math.max(fresh.currentRank ?? 0, fresh.powerBusiness?.rank ?? 0),
+          fresh.currentRank ?? 0,
           pkg?.status,
         );
         drawVaults(fresh);
@@ -973,34 +972,6 @@ function updateOverviewMetrics(
         : 'Unranked';
 }
 
-/**
- * Power Business cards (owner, 2026-10-15): shown only to a member who has Power Business given to
- * them (never to their upline); everyone else keeps the normal four cards. Display only: never
- * income, a reward, a withdrawal or DV tokens. Its rank uses the official both-sides rule.
- */
-function renderPowerBusiness(data: DashboardData | null): void {
-  const cards = document.querySelectorAll<HTMLElement>(
-    '.power-dao-metric, .power-business-total-metric',
-  );
-  const dao = document.getElementById('metricPowerDaoVal');
-  const daoNote = document.getElementById('metricPowerDaoNote');
-  const business = document.getElementById('metricPowerBusinessVal');
-  const businessNote = document.getElementById('metricPowerBusinessNote');
-  const rankNote = document.getElementById('metricPowerRankNote');
-  const pb = data?.powerBusiness;
-  const own = Number(pb?.totalUsd ?? 0);
-  const show = Boolean(pb) && own > 0;
-  cards.forEach((card) => {
-    card.hidden = !show;
-  });
-  if (!show || !pb || !dao || !daoNote || !business || !businessNote) return;
-  dao.textContent = `${pb.dao.toLocaleString('en-US')} DAO`;
-  daoNote.textContent = `Left ${pb.legs.left.toLocaleString('en-US')} · Right ${pb.legs.right.toLocaleString('en-US')} DAO`;
-  business.textContent = formatUsd(own);
-  businessNote.textContent = `${pb.legs.matched.toLocaleString('en-US')} DAO matched`;
-  if (rankNote) rankNote.textContent = `Rank: ${pb.rankName ?? 'Unranked'}`;
-}
-
 /** Header tag + metric captions, written from the live data so every line means something. */
 function updateMemberDetails(
   data: DashboardData | null,
@@ -1045,8 +1016,8 @@ function updateMemberDetails(
         ? 'Company root: its commission shares stay in the treasury'
         : 'Activate the $300 package to start earning',
   );
-  // same rank as the Current Rank card (Power Business counted as normal business)
-  const next = RANK_TIERS[Math.max(data?.currentRank ?? 0, data?.powerBusiness?.rank ?? 0)];
+  // same rank as the Current Rank card
+  const next = RANK_TIERS[data?.currentRank ?? 0];
   set(
     'metricRankNote',
     next ? `Next: ${next.name} at ${next.volume.toLocaleString()} DAO` : 'Top rank reached',
@@ -1088,9 +1059,10 @@ function renderLegs(data: DashboardData | null): void {
     'legNextTarget',
     `Next target: <strong>${next.name} &middot; ${need.toLocaleString()} DAO each side &middot; $${next.rewardUsd.toLocaleString()} reward</strong>`,
   );
-  set('legPowerVal', `${fmt(legs.left)} / ${fmt(need)} DAO`);
-  set('legOtherVal', `${fmt(legs.right)} / ${fmt(need)} DAO`);
-  set('legCountedVal', `${fmt(next.countedVolume)} / ${fmt(need)}`);
+  // capped at the target (owner 2026-10-20): a side that has 600 shows 25 / 25 for a 25 target, never 600 / 25
+  set('legPowerVal', `${fmt(Math.min(legs.left, need))} / ${fmt(need)} DAO`);
+  set('legOtherVal', `${fmt(Math.min(legs.right, need))} / ${fmt(need)} DAO`);
+  set('legCountedVal', `${fmt(Math.min(next.countedVolume, need))} / ${fmt(need)}`);
   window.setTimeout(() => {
     const p = document.getElementById('legPowerBar');
     const o = document.getElementById('legOtherBar');

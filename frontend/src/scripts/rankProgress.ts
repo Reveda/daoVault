@@ -65,8 +65,8 @@ function legNode(
 }
 
 /**
- * `legs` = the member's Left / Right business (binary placement, owner 2026-10-17), with Power
- * Business added when they have it
+ * `legs` = the member's Left / Right business (binary placement, owner 2026-10-17), Power Business
+ * already inside it (server, shown as normal business)
  */
 function legTree(
   legs: { left: number; right: number },
@@ -92,69 +92,30 @@ export function renderRankProgress(data: DashboardData | null): void {
   const list = document.getElementById('rankList');
   const chip = document.getElementById('rankAchievedChip');
   const tabs = document.getElementById('rankFilter');
-  const powerProgress = document.getElementById('powerRankProgress');
-  const powerDaoValue = document.getElementById('powerRankDaoValue');
-  const powerAmountValue = document.getElementById('powerRankAmountValue');
-  const powerNameValue = document.getElementById('powerRankNameValue');
-  const powerNextValue = document.getElementById('powerRankNextValue');
-  const powerFill = document.getElementById('powerRankFill');
   if (!list) return;
   const left = data?.legs.left ?? 0;
   const right = data?.legs.right ?? 0;
   const current = data?.currentRank ?? 0;
-  // counted after the Power Business rank is known (below): the cards and the counts must agree
-  let achieved = Math.min(current, RANK_TIERS.length);
+  const achieved = Math.min(current, RANK_TIERS.length);
 
-  // Power Business (owner, 2026-10-15; counts for ranks + rank rewards since 2026-10-19): same both-sides rule
-  const powerBusiness = data?.powerBusiness;
-  const hasVirtual = Boolean(powerBusiness && Number(powerBusiness.totalUsd) > 0);
-  const virtualLegs = hasVirtual ? powerBusiness!.legs : null;
-  const virtualRank = hasVirtual ? powerBusiness!.rank : 0;
-  if (
-    powerProgress &&
-    powerDaoValue &&
-    powerAmountValue &&
-    powerNameValue &&
-    powerNextValue &&
-    powerFill
-  ) {
-    powerProgress.hidden = !hasVirtual;
-    if (hasVirtual && powerBusiness) {
-      const next = powerBusiness.nextRank;
-      const matched = powerBusiness.legs.matched;
-      const money = (v: number | string) =>
-        `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-      powerDaoValue.textContent = `${num(matched)} DAO matched`;
-      powerAmountValue.textContent = `Business ${money(powerBusiness.totalUsd)}`;
-      powerNameValue.textContent = powerBusiness.rankName ?? 'Unranked';
-      powerNextValue.textContent = next
-        ? `Next: ${next.name} at ${num(next.volume)} DAO on each side`
-        : 'Highest rank reached';
-      powerFill.style.setProperty(
-        '--power-progress',
-        `${next ? Math.min(100, (matched / next.volume) * 100) : 100}%`,
-      );
-      requestAnimationFrame(() => powerProgress.classList.add('is-visible'));
-    }
-  }
-
-  const officialRank = current;
-  const shownRank = Math.max(current, virtualRank);
-  achieved = Math.min(shownRank, RANK_TIERS.length);
-  const shown = virtualLegs ?? { left, right };
+  // claim to collect (owner 2026-10-19): a reached rank's reward waits in its box until collected
+  const collected = new Map((data?.rankRewards ?? []).map((r) => [r.rank, r.collected]));
+  // Left / Right business from the server (Power Business already inside, shown as normal business)
+  const shown = { left, right };
   list.innerHTML = RANK_TIERS.map((tier, i) => {
     const rank = i + 1;
-    const state = rank <= shownRank ? 'achieved' : rank === shownRank + 1 ? 'current' : 'locked';
-    // reached with Power Business before the plan queue stored it (a few seconds): no reward line yet
-    const viaPowerBusiness = state === 'achieved' && rank > officialRank;
+    const state = rank <= current ? 'achieved' : rank === current + 1 ? 'current' : 'locked';
     const status =
       state === 'achieved' ? 'Achieved' : state === 'current' ? 'In progress' : 'Locked';
     const moreLeft = Math.max(0, tier.volume - shown.left);
     const moreRight = Math.max(0, tier.volume - shown.right);
-    const foot = viaPowerBusiness
-      ? 'Rank reached'
-      : state === 'achieved'
-        ? 'Rank reached &middot; reward credited to your balance'
+    const foot =
+      state === 'achieved'
+        ? collected.get(rank) === false
+          ? 'Rank reached &middot; reward ready to collect in its box'
+          : collected.get(rank)
+            ? 'Rank reached &middot; reward collected to your balance'
+            : 'Rank reached'
         : moreLeft || moreRight
           ? `Still needed: <b>${num(moreLeft)}</b> Left Leg &middot; <b>${num(moreRight)}</b> Right Leg`
           : 'Both sides matched &middot; unlocks with your next activation';
