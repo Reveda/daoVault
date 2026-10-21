@@ -444,7 +444,9 @@ frontend/  Vite 6 + vanilla TypeScript (no framework), three.js, gsap, lottie-we
   The deck observer stays on (owner 2026-10-19): leaving the screen resets revealedTier, so the active card replays its
   arrival every time the deck comes back. .meter-info wraps (label shrinks, value margin-left:auto) so meter lines never
   run past a card on phones.
-  Landing launch notice shows on every visit until VITE_LAUNCH_DATE ("We go live on 22 October"); dashboard one stays once.
+  Landing "We go live on 22 October" notice REMOVED (owner 2026-10-21). Hero countdown (app.ts initCountdown) = 2 stages in the
+  same place: until VITE_LAUNCH_DATE (22 Oct) "Official Genesis Mainnet Launch", then until VITE_PAYMENTS_OPEN_AT (Docker build arg = .env.prod
+  PAYMENTS_OPEN_AT, required; code default 2026-11-10 IST) "ACTIVATION STARTS ON 10 NOVEMBER", then hidden. Dashboard notice stays once.
   CSS for the motion layer is the last block of main.css and dashboard.css ("TPR motion layer").
   styles: src/styles/main.css (large, ~4.7k lines), dashboard.css
 ```

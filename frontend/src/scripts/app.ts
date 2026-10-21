@@ -25,7 +25,6 @@ import {
   formatAddress,
   showToast,
   copyTextToClipboard,
-  showLaunchNotice,
   confirmNotice,
   getPendingReferral,
   BSC_CHAIN_ID,
@@ -81,21 +80,7 @@ whenReady(async () => {
     document.documentElement.style.setProperty('--cursor-y', `${e.clientY}px`);
   });
 
-  // pre-launch notice on every visit until the launch moment (owner, 2026-10-11): short and
-  // simple; the date follows VITE_LAUNCH_DATE (shown in India time, e.g. "22 October")
-  if (Date.now() < launchDate().getTime()) {
-    const day = launchDate().toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      timeZone: 'Asia/Kolkata',
-    });
-    showLaunchNotice(
-      'landing',
-      `We go live on ${day}`,
-      'Until then, explore DAOVAULT: see how the 20 levels and 11 rank rewards work, and get ready to build your community.',
-      { everyVisit: true, kicker: null, button: 'Explore DAOVAULT' },
-    );
-  }
+  // the "We go live on 22 October" notice was removed (owner 2026-10-21); the hero countdown carries the dates
 
   // after the splash: the heavy setup as separate small tasks (one long task made Chrome
   // report "'setTimeout' handler took 108ms" and held the main thread)
@@ -495,16 +480,48 @@ function initMatrixCalculator(): void {
 }
 
 /**
- * Launch date the hero countdown runs to: one fixed moment, the same for every visitor.
- * (It used to be "now + 14 days" on every page load, so it never actually counted down.)
- * Override without a code change with VITE_LAUNCH_DATE (ISO 8601, e.g. 2026-10-22T00:00:00+05:30).
+ * The hero countdown (owner 2026-10-21) runs in two stages, the same fixed moments for every visitor:
+ *  1. until the site launch (VITE_LAUNCH_DATE, 22 October): "Official Genesis Mainnet Launch";
+ *  2. then, in the same place, until activation opens (VITE_PAYMENTS_OPEN_AT, 10 November, = the backend
+ *     PAYMENTS_OPEN_AT): "Activation starts on 10 November";
+ * after that the countdown is hidden. An open page moves to the next stage by itself.
  */
-const LAUNCH_DATE = new Date(import.meta.env.VITE_LAUNCH_DATE || '2026-10-22T00:00:00+05:30');
-const launchDate = () =>
-  Number.isNaN(LAUNCH_DATE.getTime()) ? new Date('2026-10-22T00:00:00+05:30') : LAUNCH_DATE;
+const dateOr = (value: string | undefined, fallback: string) => {
+  const d = new Date(value || fallback);
+  return Number.isNaN(d.getTime()) ? new Date(fallback) : d;
+};
+const LAUNCH_DATE = dateOr(import.meta.env.VITE_LAUNCH_DATE, '2026-10-22T00:00:00+05:30');
+const ACTIVATION_DATE = dateOr(import.meta.env.VITE_PAYMENTS_OPEN_AT, '2026-11-10T00:00:00+05:30');
 
 function initCountdown(): void {
-  const targetDate = launchDate();
+  const wrap = document.querySelector<HTMLElement>('.countdown-wrap');
+  const title = wrap?.querySelector<HTMLElement>('.cd-title-text');
+  const tag = wrap?.querySelector<HTMLElement>('.cd-phase-tag');
+  const activationDay = ACTIVATION_DATE.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    timeZone: 'Asia/Kolkata',
+  });
+  let targetDate = LAUNCH_DATE;
+  let timer = 0;
+  /** picks the stage for this moment; false = both dates passed (countdown hidden) */
+  const pickStage = (): boolean => {
+    const now = Date.now();
+    if (now < LAUNCH_DATE.getTime()) {
+      targetDate = LAUNCH_DATE;
+      return true;
+    }
+    if (now < ACTIVATION_DATE.getTime()) {
+      targetDate = ACTIVATION_DATE;
+      if (title) title.textContent = `ACTIVATION STARTS ON ${activationDay.toUpperCase()}`;
+      if (tag) tag.textContent = '$300 PACKAGE \u2022 BSC (BEP-20)';
+      return true;
+    }
+    if (wrap) wrap.hidden = true;
+    window.clearInterval(timer);
+    return false;
+  };
+  if (!pickStage()) return;
 
   const daysEl = document.getElementById('cdDays');
   const hoursEl = document.getElementById('cdHours');
@@ -530,11 +547,9 @@ function initCountdown(): void {
     const now = new Date().getTime();
     const diff = targetDate.getTime() - now;
 
+    // this stage is over: the next one (or none) takes the same place
     if (diff <= 0) {
-      if (daysEl) daysEl.textContent = '00';
-      if (hoursEl) hoursEl.textContent = '00';
-      if (minsEl) minsEl.textContent = '00';
-      if (secsEl) secsEl.textContent = '00';
+      if (pickStage()) update();
       return;
     }
 
@@ -550,7 +565,7 @@ function initCountdown(): void {
   };
 
   update();
-  setInterval(update, 1000);
+  timer = window.setInterval(update, 1000);
 }
 
 /**

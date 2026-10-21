@@ -278,6 +278,8 @@ services:
         VITE_ALLOW_MAINNET_PAYMENTS: ${VITE_ALLOW_MAINNET_PAYMENTS:-false}
         VITE_REWARD_PREVIEW: ${VITE_REWARD_PREVIEW:-false}
         VITE_LAUNCH_DATE: ${VITE_LAUNCH_DATE:-}
+        # activation opens (landing countdown): the SAME value as the backend PAYMENTS_OPEN_AT, required
+        VITE_PAYMENTS_OPEN_AT: ${PAYMENTS_OPEN_AT:?set PAYMENTS_OPEN_AT in .env.prod (activation opens, e.g. 2026-11-10T00:00:00+05:30)}
     image: daovault-web:prod
     ports:
       - "127.0.0.1:8080:8080"

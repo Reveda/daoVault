@@ -27,6 +27,8 @@ ARG VITE_ALLOW_MAINNET_PAYMENTS=false
 # "Preview the opening" on sealed rank reward boxes and the sealed DV token pot only when "true" (production: false)
 ARG VITE_REWARD_PREVIEW=false
 ARG VITE_LAUNCH_DATE
+# landing countdown stage 2 (activation opens); compose passes the backend PAYMENTS_OPEN_AT
+ARG VITE_PAYMENTS_OPEN_AT
 COPY . .
 RUN npm run build
 
